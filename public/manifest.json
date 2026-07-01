@@ -1,0 +1,40 @@
+{
+  "name": "MAGANG-CERDAS — BPJS Ketenagakerjaan",
+  "short_name": "MAGANG-CERDAS",
+  "description": "Sistem Manajemen Magang Cerdas dengan AI Adaptif untuk BPJS Ketenagakerjaan Cabang Cirebon",
+  "start_url": "/intern/login",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A0E1A",
+  "theme_color": "#003F7F",
+  "categories": ["productivity", "education", "business"],
+  "lang": "id-ID",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Check-In Hari Ini",
+      "short_name": "Check-In",
+      "url": "/intern/attendance",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Daily Quest",
+      "short_name": "Quest",
+      "url": "/intern/daily-quest",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

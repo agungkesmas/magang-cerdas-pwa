@@ -1,0 +1,275 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import {
+  Zap,
+  Flame,
+  Clock,
+  Award,
+  TrendingUp,
+  Trophy,
+  Loader2,
+  Target,
+  Star
+} from 'lucide-react';
+
+interface DashboardData {
+  profile: {
+    id: string;
+    name: string;
+    major: string;
+    department: string;
+    school_origin: string | null;
+    start_date: string;
+    end_date: string;
+    total_exp: number;
+    streak_count: number;
+    username: string;
+    level_info: { level: number; current: number; next: number; progress: number };
+    tier: string;
+    time_progress: number;
+    days_remaining: number;
+    duration_days: number;
+  };
+  today_attendance: any[];
+  tasks: any[];
+  completions: any[];
+  leaderboard: any[];
+  nudges: any[];
+}
+
+export default function InternHomePage() {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/dashboard/intern')
+      .then((r) => r.json())
+      .then((d) => d.success && setData(d))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading || !data) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-bpjs-yellow" />
+      </div>
+    );
+  }
+
+  const { profile } = data;
+  const { level_info } = profile;
+  const checkedIn = data.today_attendance.some((a) => a.type === 'Check-In');
+  const checkedOut = data.today_attendance.some((a) => a.type === 'Check-Out');
+
+  // My rank in leaderboard
+  const myRank = data.leaderboard.findIndex((l) => l.id === profile.id) + 1;
+
+  return (
+    <div className="space-y-5 animate-fade-in">
+      {/* Agent Card */}
+      <div className="glass-card p-5 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-bpjs-yellow/20 rounded-full blur-3xl"></div>
+        <div className="relative flex items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-bpjs-yellow to-amber-500 flex items-center justify-center text-bpjs-blue-dark font-bold text-2xl shadow-lg glow-yellow">
+            {profile.name.charAt(0).toUpperCase()}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl font-bold text-white">{profile.name}</h1>
+              <span className="text-xs px-2 py-0.5 bg-bpjs-yellow/20 text-bpjs-yellow rounded-full font-bold flex items-center gap-1">
+                <Star className="w-3 h-3 fill-bpjs-yellow" /> LEVEL {level_info.level}
+              </span>
+            </div>
+            <p className="text-sm text-white/60 mt-0.5">
+              {profile.major} • {profile.department}
+            </p>
+            <p className="text-xs text-white/40 mt-0.5">
+              {profile.school_origin || 'Magang BPJS Ketenagakerjaan'}
+            </p>
+          </div>
+        </div>
+
+        {/* EXP Bar */}
+        <div className="mt-4">
+          <div className="flex items-center justify-between text-xs mb-1.5">
+            <span className="text-bpjs-yellow font-bold">EXP {profile.total_exp}</span>
+            <span className="text-white/60">
+              {level_info.current} / {level_info.next} → Level {level_info.level + 1}
+            </span>
+          </div>
+          <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-bpjs-yellow to-amber-500 transition-all"
+              style={{ width: `${level_info.progress}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Dual Progress */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="glass-card p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Clock className="w-4 h-4 text-bpjs-blue-light" />
+            <span className="text-xs text-white/60 font-medium">Waktu Magang</span>
+          </div>
+          <div className="text-2xl font-bold text-white">{profile.time_progress}%</div>
+          <div className="text-xs text-white/50 mt-0.5">{profile.days_remaining} hari tersisa</div>
+          <div className="mt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div className="h-full bg-bpjs-blue-light" style={{ width: `${profile.time_progress}%` }} />
+          </div>
+        </div>
+
+        <div className="glass-card p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className="w-4 h-4 text-bpjs-green" />
+            <span className="text-xs text-white/60 font-medium">Tier saat ini</span>
+          </div>
+          <div className="text-2xl font-bold text-bpjs-yellow">{profile.tier}</div>
+          <div className="text-xs text-white/50 mt-0.5">
+            {profile.total_exp >= 1000
+              ? 'Tier Excellence tercapai!'
+              : `${1000 - profile.total_exp} EXP lagi ke Excellence`}
+          </div>
+          <div className="mt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-bpjs-yellow"
+              style={{ width: `${Math.min(100, (profile.total_exp / 1000) * 100)}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Streak + Today status */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="glass-card p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
+            <Flame className="w-5 h-5 text-orange-400" />
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-orange-400">{profile.streak_count}</div>
+            <div className="text-xs text-white/50">Streak Hari</div>
+          </div>
+        </div>
+
+        <div className="glass-card p-4 flex items-center gap-3">
+          <div
+            className={`w-10 h-10 rounded-full flex items-center justify-center ${
+              checkedIn ? 'bg-bpjs-green/20' : 'bg-white/5'
+            }`}
+          >
+            <Zap className={`w-5 h-5 ${checkedIn ? 'text-bpjs-green' : 'text-white/40'}`} />
+          </div>
+          <div>
+            <div className="text-sm font-bold text-white">
+              {checkedIn ? (checkedOut ? 'Selesai!' : 'Sudah Check-In') : 'Belum Check-In'}
+            </div>
+            <div className="text-xs text-white/50">{checkedIn ? '+20 EXP hari ini' : 'Ayo check-in!'}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tasks progress (mini) */}
+      {data.tasks.length > 0 && (
+        <div className="glass-card p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Target className="w-4 h-4 text-bpjs-yellow" />
+            <span className="text-sm font-semibold text-white">Progress Tugas</span>
+            <span className="text-xs text-white/40 ml-auto">{data.tasks.length} tugas</span>
+          </div>
+          <div className="space-y-2 max-h-40 overflow-y-auto">
+            {data.tasks.slice(0, 3).map((task: any) => {
+              const completion = data.completions.find((c) => c.task_id === task.id);
+              const done = completion?.completed_count || 0;
+              const pct = task.target_count > 0 ? Math.min(100, (done / task.target_count) * 100) : 0;
+              return (
+                <div key={task.id}>
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="text-white/80 truncate">{task.title}</span>
+                    <span className="text-white/50">
+                      {done}/{task.target_count}
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full bg-bpjs-yellow" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Leaderboard mini */}
+      {data.leaderboard.length > 0 && (
+        <div className="glass-card p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Trophy className="w-4 h-4 text-bpjs-yellow" />
+            <span className="text-sm font-semibold text-white">Leaderboard</span>
+            {myRank > 0 && (
+              <span className="text-xs text-bpjs-yellow ml-auto">Anda di peringkat #{myRank}</span>
+            )}
+          </div>
+          <div className="space-y-2">
+            {data.leaderboard.slice(0, 5).map((entry, idx) => (
+              <div
+                key={entry.id}
+                className={`flex items-center gap-3 p-2 rounded-lg ${
+                  entry.id === profile.id ? 'bg-bpjs-yellow/10 border border-bpjs-yellow/30' : ''
+                }`}
+              >
+                <div
+                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                    idx === 0
+                      ? 'bg-bpjs-yellow text-bpjs-blue-dark'
+                      : idx === 1
+                      ? 'bg-gray-300 text-gray-700'
+                      : idx === 2
+                      ? 'bg-orange-400 text-orange-900'
+                      : 'bg-white/10 text-white/60'
+                  }`}
+                >
+                  {idx + 1}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-white truncate">{entry.name}</div>
+                  <div className="text-xs text-white/40">{entry.department}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-bold text-bpjs-yellow">{entry.total_exp}</div>
+                  <div className="text-xs text-white/40">EXP</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Nudges */}
+      {data.nudges.length > 0 && (
+        <div className="glass-card p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Award className="w-4 h-4 text-bpjs-yellow" />
+            <span className="text-sm font-semibold text-white">Notifikasi Terbaru</span>
+          </div>
+          <div className="space-y-2">
+            {data.nudges.slice(0, 3).map((n) => (
+              <div
+                key={n.id}
+                className={`text-sm p-2 rounded-lg ${
+                  n.is_read ? 'bg-white/5 text-white/60' : 'bg-bpjs-yellow/10 text-white border border-bpjs-yellow/30'
+                }`}
+              >
+                {n.message}
+                <div className="text-xs text-white/40 mt-0.5">
+                  {new Date(n.created_at).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

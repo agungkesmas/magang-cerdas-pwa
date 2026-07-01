@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --bpjs-blue: #003F7F;
+  --bpjs-yellow: #FFD200;
+  --bpjs-green: #00A859;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  padding: 0;
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: #0A0E1A;
+  color: #E5E7EB;
+  min-height: 100vh;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 210, 0, 0.3);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 210, 0, 0.5); }
+
+/* Custom utility classes */
+.glass-card {
+  background: rgba(19, 24, 41, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 210, 0, 0.1);
+  border-radius: 16px;
+}
+
+.glow-yellow {
+  box-shadow: 0 0 20px rgba(255, 210, 0, 0.3), 0 0 40px rgba(255, 210, 0, 0.1);
+}
+
+.glow-blue {
+  box-shadow: 0 0 20px rgba(0, 102, 204, 0.3), 0 0 40px rgba(0, 102, 204, 0.1);
+}
+
+.gradient-bpjs {
+  background: linear-gradient(135deg, #003F7F 0%, #0066CC 100%);
+}
+
+.gradient-agent {
+  background: linear-gradient(135deg, #131829 0%, #1A2138 100%);
+}
+
+.text-gradient-yellow {
+  background: linear-gradient(135deg, #FFD200 0%, #FFA500 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Confetti animation */
+@keyframes confetti-fall {
+  0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+.confetti-piece {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+  animation: confetti-fall 3s ease-in forwards;
+  z-index: 9999;
+}
+
+/* Hide scrollbar but keep functionality */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Safe area for mobile */
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.safe-top { padding-top: env(safe-area-inset-top, 0px); }
