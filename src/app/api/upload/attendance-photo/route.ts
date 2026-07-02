@@ -1,5 +1,6 @@
 // ============================================================
 // /api/upload/attendance-photo — Upload selfie photo to Supabase Storage
+// Returns 400 for missing file (not 500)
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -14,14 +15,39 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const formData = await req.formData();
-    const file = formData.get('photo') as File | null;
-    if (!file) {
-      return NextResponse.json({ error: 'File foto wajib diupload' }, { status: 400 });
+    // Parse FormData safely — return 400 if malformed
+    let formData: FormData;
+    try {
+      formData = await req.formData();
+    } catch (e: any) {
+      return NextResponse.json(
+        { error: 'Request bukan FormData yang valid. Pastikan kirim multipart/form-data.' },
+        { status: 400 }
+      );
     }
 
+    const file = formData.get('photo') as File | null;
+    if (!file) {
+      return NextResponse.json(
+        { error: 'File foto wajib diupload. Field name harus "photo".' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: 'Ukuran foto maksimal 5MB' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Ukuran foto maksimal 5MB' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file is actually an image
+    if (!file.type.startsWith('image/')) {
+      return NextResponse.json(
+        { error: 'File harus berupa gambar (jpeg/png/webp)' },
+        { status: 400 }
+      );
     }
 
     const supabase = createServerClient();
@@ -33,6 +59,14 @@ export async function POST(req: NextRequest) {
       .upload(fileName, file, { contentType: file.type, upsert: false });
 
     if (error) {
+      console.error('[upload/attendance-photo] Storage error:', error);
+      // User-friendly messages for common storage errors
+      if (error.message.includes('Bucket not found')) {
+        return NextResponse.json(
+          { error: 'Storage bucket belum dibuat. Hubungi admin untuk setup.' },
+          { status: 500 }
+        );
+      }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -45,6 +79,7 @@ export async function POST(req: NextRequest) {
       url: urlData.publicUrl
     });
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    console.error('[upload/attendance-photo] error:', e);
+    return NextResponse.json({ error: 'Internal server error: ' + e.message }, { status: 500 });
   }
 }
