@@ -15,7 +15,8 @@ import {
   X,
   Clock,
   Award,
-  Flame
+  Flame,
+  Edit
 } from 'lucide-react';
 
 interface Intern {
@@ -50,6 +51,7 @@ export default function AdminInternsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [editingIntern, setEditingIntern] = useState<Intern | null>(null);
   const [createdCreds, setCreatedCreds] = useState<CreatedIntern | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
@@ -139,7 +141,10 @@ Selamat magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
           </p>
         </div>
         <button
-          onClick={() => setShowForm(true)}
+          onClick={() => {
+            setEditingIntern(null);
+            setShowForm(true);
+          }}
           className="inline-flex items-center gap-2 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white font-semibold px-4 py-2.5 rounded-lg shadow-md transition-colors"
         >
           <Plus className="w-4 h-4" />
@@ -277,6 +282,16 @@ Selamat magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
                       <RefreshCw className="w-3.5 h-3.5" />
                     </button>
                     <button
+                      onClick={() => {
+                        setEditingIntern(intern);
+                        setShowForm(true);
+                      }}
+                      title="Edit data magang"
+                      className="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                    </button>
+                    <button
                       onClick={() => handleToggleActive(intern.id)}
                       title={intern.is_active ? 'Nonaktifkan' : 'Aktifkan'}
                       className={`p-1.5 rounded-md ${
@@ -305,10 +320,17 @@ Selamat magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
       {/* Add Intern Modal */}
       {showForm && (
         <AddInternModal
-          onClose={() => setShowForm(false)}
-          onSuccess={(creds) => {
-            setCreatedCreds(creds);
+          editing={editingIntern}
+          onClose={() => {
             setShowForm(false);
+            setEditingIntern(null);
+          }}
+          onSuccess={(creds) => {
+            if (!editingIntern) {
+              setCreatedCreds(creds);
+            }
+            setShowForm(false);
+            setEditingIntern(null);
             fetchInterns();
           }}
         />
@@ -377,22 +399,42 @@ Selamat magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
 }
 
 function AddInternModal({
+  editing,
   onClose,
   onSuccess
 }: {
+  editing: Intern | null;
   onClose: () => void;
-  onSuccess: (creds: CreatedIntern) => void;
+  onSuccess: (creds: CreatedIntern | null) => void;
 }) {
   const [form, setForm] = useState({
-    name: '',
-    school_origin: '',
-    major: '',
-    department: 'Pelayanan',
-    start_date: new Date().toISOString().split('T')[0],
-    end_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    name: editing?.name || '',
+    school_origin: editing?.school_origin || '',
+    major: editing?.major || '',
+    department: editing?.department || 'Pelayanan',
+    start_date: editing?.start_date || new Date().toISOString().split('T')[0],
+    end_date: editing?.end_date || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [schools, setSchools] = useState<{ id: string; name: string; address?: string | null }[]>([]);
+  const [schoolsLoading, setSchoolsLoading] = useState(true);
+
+  // Fetch schools list on mount
+  useEffect(() => {
+    fetch('/api/schools')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) {
+          setSchools(d.schools || []);
+          // Auto-select first school if available AND not in edit mode AND no pre-selected
+          if (!editing && d.schools?.length > 0 && !form.school_origin) {
+            setForm((f) => ({ ...f, school_origin: d.schools[0].name }));
+          }
+        }
+      })
+      .finally(() => setSchoolsLoading(false));
+  }, []);
 
   const COMMON_MAJORS = [
     'SMK RPL',
@@ -415,20 +457,41 @@ function AddInternModal({
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/interns/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Gagal membuat magang');
-      onSuccess({
-        name: data.intern.name,
-        username: data.intern.username,
-        raw_password: data.intern.raw_password,
-        major: data.intern.major,
-        department: data.intern.department
-      });
+      if (editing) {
+        // Edit mode: call update API
+        const res = await fetch('/api/interns/update', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editing.id,
+            name: form.name,
+            school_origin: form.school_origin,
+            major: form.major,
+            department: form.department,
+            start_date: form.start_date,
+            end_date: form.end_date
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Gagal update magang');
+        onSuccess(null);
+      } else {
+        // Create mode
+        const res = await fetch('/api/interns/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Gagal membuat magang');
+        onSuccess({
+          name: data.intern.name,
+          username: data.intern.username,
+          raw_password: data.intern.raw_password,
+          major: data.intern.major,
+          department: data.intern.department
+        });
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -440,7 +503,9 @@ function AddInternModal({
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="flex items-center justify-between p-5 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl">
-          <h3 className="text-lg font-bold text-gray-900">Tambah Magang Baru</h3>
+          <h3 className="text-lg font-bold text-gray-900">
+            {editing ? 'Edit Data Magang' : 'Tambah Magang Baru'}
+          </h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
             <X className="w-5 h-5" />
           </button>
@@ -456,19 +521,71 @@ function AddInternModal({
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
               placeholder="Budi Santoso"
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Username & password akan otomatis di-generate berdasarkan nama
-            </p>
+            {!editing && (
+              <p className="text-xs text-gray-500 mt-1">
+                Username & password akan otomatis di-generate berdasarkan nama
+              </p>
+            )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Asal Sekolah/Kampus</label>
-            <input
-              value={form.school_origin}
-              onChange={(e) => setForm({ ...form, school_origin: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
-              placeholder="SMK Negeri 1 Cirebon"
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Asal Sekolah/Kampus *
+              <span className="text-xs text-gray-500 font-normal ml-2">
+                (Pilih dari daftar — agar BKK bisa pantau)
+              </span>
+            </label>
+            {schoolsLoading ? (
+              <div className="w-full px-3 py-2 border border-gray-200 rounded-lg text-gray-400 text-sm">
+                Memuat daftar sekolah...
+              </div>
+            ) : schools.length === 0 ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                <p className="font-medium mb-1">Belum ada sekolah terdaftar</p>
+                <p className="text-xs mb-2">Tambahkan sekolah dulu sebelum membuat akun magang.</p>
+                <a
+                  href="/admin/schools"
+                  className="inline-flex items-center gap-1 text-bpjs-blue hover:underline font-medium text-xs"
+                >
+                  → Buka halaman Sekolah
+                </a>
+              </div>
+            ) : (
+              <>
+                <select
+                  required
+                  value={form.school_origin}
+                  onChange={(e) => setForm({ ...form, school_origin: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40 bg-white"
+                >
+                  <option value="" disabled>
+                    -- Pilih Sekolah --
+                  </option>
+                  {schools.map((s) => (
+                    <option key={s.id} value={s.name}>
+                      {s.name}
+                    </option>
+                  ))}
+                  {/* If editing and current school_origin not in list, show as "Other" option */}
+                  {editing && form.school_origin && !schools.find((s) => s.name === form.school_origin) && (
+                    <option value={form.school_origin}>
+                      ⚠️ Lainnya (data lama): {form.school_origin}
+                    </option>
+                  )}
+                </select>
+                {editing && form.school_origin && !schools.find((s) => s.name === form.school_origin) && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    ⚠️ Sekolah saat ini tidak ada di daftar. Pilih dari daftar untuk update.
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  {schools.length} sekolah tersedia •{' '}
+                  <a href="/admin/schools" className="text-bpjs-blue hover:underline">
+                    Kelola daftar sekolah
+                  </a>
+                </p>
+              </>
+            )}
           </div>
 
           <div>
@@ -542,7 +659,7 @@ function AddInternModal({
               className="flex-1 px-4 py-2.5 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white font-semibold rounded-lg disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              Buat Magang
+              {editing ? 'Simpan Perubahan' : 'Buat Magang'}
             </button>
           </div>
         </form>
