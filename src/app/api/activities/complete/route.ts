@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     const intern = await getInternToken();
     if (!intern) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { activity_id } = await req.json();
+    const { activity_id, completion_notes } = await req.json();
     if (!activity_id) return NextResponse.json({ error: 'activity_id wajib diisi' }, { status: 400 });
 
     const supabase = createServerClient();
@@ -73,20 +73,22 @@ export async function POST(req: NextRequest) {
 
     // 4. Mark as completed
     if (activity.intern_id) {
-      // Mode per-intern: update completed_by_intern_id di activities
+      // Mode per-intern: update completed_by_intern_id + completion_notes di activities
       const { error: uErr } = await supabase
         .from('activities')
         .update({
           completed_by_intern_id: intern.intern_id,
-          completed_at: new Date().toISOString()
+          completed_at: new Date().toISOString(),
+          completion_notes: completion_notes?.trim() || null
         })
         .eq('id', activity_id);
       if (uErr) return NextResponse.json({ error: uErr.message }, { status: 500 });
     } else {
-      // Mode per-departemen: insert ke activity_completions
+      // Mode per-departemen: insert ke activity_completions with notes
       const { error: iErr } = await supabase.from('activity_completions').insert({
         activity_id,
-        intern_id: intern.intern_id
+        intern_id: intern.intern_id,
+        completion_notes: completion_notes?.trim() || null
       });
       if (iErr) {
         if (iErr.code === '23505') {

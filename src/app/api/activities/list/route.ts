@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
       const { data: activities, error: aErr } = await supabase
         .from('activities')
         .select('*')
+        .eq('is_archived', false)
         .order('created_at', { ascending: false });
       if (aErr) return NextResponse.json({ error: aErr.message }, { status: 500 });
 
@@ -80,6 +81,7 @@ export async function GET(req: NextRequest) {
       .from('activities')
       .select('*')
       .eq('is_active', true)
+      .eq('is_archived', false)
       .or(`intern_id.eq.${intern!.intern_id},and(intern_id.is.null,department.eq.${internData.department})`)
       .order('created_at', { ascending: false });
     if (aErr) return NextResponse.json({ error: aErr.message }, { status: 500 });
