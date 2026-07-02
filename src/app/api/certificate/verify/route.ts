@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
     const supabase = createServerClient();
     const { data: cert, error } = await supabase
-      .from('Certificates')
+      .from('certificates')
       .select('*, Interns!inner(name, major, department, school_origin, start_date, end_date, total_exp), Officials(name, nip, position, signature_url)')
       .eq('verification_id', id.toUpperCase())
       .single();

@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
         const supabase = createServerClient();
         // Upsert: find existing completion record, update ai_instruction
         const { data: existing } = await supabase
-          .from('Task_Completions')
+          .from('task_completions')
           .select('id')
           .eq('intern_id', intern_id)
           .eq('task_id', task_id)
@@ -43,11 +43,11 @@ export async function POST(req: NextRequest) {
 
         if (existing) {
           await supabase
-            .from('Task_Completions')
+            .from('task_completions')
             .update({ ai_instruction: result.text })
             .eq('id', existing.id);
         } else {
-          await supabase.from('Task_Completions').insert({
+          await supabase.from('task_completions').insert({
             intern_id,
             task_id,
             chunk_index: 0,

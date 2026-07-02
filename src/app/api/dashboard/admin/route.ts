@@ -19,7 +19,7 @@ export async function GET() {
 
     // All interns with progress info
     const { data: interns } = await supabase
-      .from('Interns')
+      .from('interns')
       .select('id, name, school_origin, major, department, start_date, end_date, total_exp, streak_count, is_active, certificate_unlocked, username, raw_password, created_at')
       .order('created_at', { ascending: false });
 
@@ -29,7 +29,7 @@ export async function GET() {
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
     const { data: todayAtt } = await supabase
-      .from('Attendance')
+      .from('attendance')
       .select('*, Interns!inner(name, major, department)')
       .gte('timestamp', todayStart.toISOString())
       .lte('timestamp', todayEnd.toISOString())
@@ -39,17 +39,17 @@ export async function GET() {
     const now = new Date();
     const fourteenDaysAhead = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
     const { data: nearEnd } = await supabase
-      .from('Interns')
+      .from('interns')
       .select('id, name, major, department, end_date, total_exp')
       .eq('is_active', true)
       .lte('end_date', fourteenDaysAhead.toISOString().split('T')[0])
       .order('end_date', { ascending: true });
 
     // All tasks
-    const { data: tasks } = await supabase.from('Tasks').select('*').order('created_at', { ascending: false });
+    const { data: tasks } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
 
     // Active officials
-    const { data: officials } = await supabase.from('Officials').select('*').order('is_active', { ascending: false });
+    const { data: officials } = await supabase.from('officials').select('*').order('is_active', { ascending: false });
 
     // Stats
     const checkedInToday = new Set((todayAtt || []).filter((a) => a.type === 'Check-In').map((a) => a.intern_id));

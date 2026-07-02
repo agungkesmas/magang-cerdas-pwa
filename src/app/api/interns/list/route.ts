@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
     const supabase = createServerClient();
     const { data, error } = await supabase
-      .from('Interns')
+      .from('interns')
       .select('id, name, school_origin, major, department, start_date, end_date, total_exp, streak_count, username, raw_password, is_active, certificate_unlocked, created_at')
       .order('created_at', { ascending: false });
 

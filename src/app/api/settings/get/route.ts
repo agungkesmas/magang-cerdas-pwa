@@ -17,7 +17,7 @@ export async function GET() {
 
     const supabase = createServerClient();
     const { data, error } = await supabase
-      .from('App_Settings')
+      .from('app_settings')
       .select('office_lat, office_lng, geofence_radius_meters, llm_provider, llm_model, office_name, office_address')
       .eq('id', 1)
       .single();

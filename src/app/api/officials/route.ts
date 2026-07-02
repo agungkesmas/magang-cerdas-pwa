@@ -15,7 +15,7 @@ export async function GET() {
 
     const supabase = createServerClient();
     const { data, error } = await supabase
-      .from('Officials')
+      .from('officials')
       .select('*')
       .order('is_active', { ascending: false })
       .order('created_at', { ascending: false });
@@ -43,11 +43,11 @@ export async function POST(req: NextRequest) {
 
     // If set_active, deactivate all others first
     if (set_active) {
-      await supabase.from('Officials').update({ is_active: false }).neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('officials').update({ is_active: false }).neq('id', '00000000-0000-0000-0000-000000000000');
     }
 
     const { data, error } = await supabase
-      .from('Officials')
+      .from('officials')
       .insert({
         name: name.trim(),
         nip: nip?.trim() || '',
@@ -79,7 +79,7 @@ export async function PUT(req: NextRequest) {
     const supabase = createServerClient();
 
     if (set_active) {
-      await supabase.from('Officials').update({ is_active: false }).neq('id', id);
+      await supabase.from('officials').update({ is_active: false }).neq('id', id);
     }
 
     const updates: Record<string, unknown> = {};
@@ -88,7 +88,7 @@ export async function PUT(req: NextRequest) {
     if (position !== undefined) updates.position = position.trim();
     if (set_active !== undefined) updates.is_active = !!set_active;
 
-    const { error } = await supabase.from('Officials').update(updates).eq('id', id);
+    const { error } = await supabase.from('officials').update(updates).eq('id', id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
   } catch (e: any) {
@@ -110,7 +110,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const supabase = createServerClient();
-    const { error } = await supabase.from('Officials').delete().eq('id', id);
+    const { error } = await supabase.from('officials').delete().eq('id', id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
   } catch (e: any) {

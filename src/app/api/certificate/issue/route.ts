@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     // Get intern data
     const { data: intern } = await supabase
-      .from('Interns')
+      .from('interns')
       .select('*')
       .eq('id', intern_id)
       .single();
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 
     // Get active official
     const { data: official } = await supabase
-      .from('Officials')
+      .from('officials')
       .select('*')
       .eq('is_active', true)
       .maybeSingle();
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
     // Create certificate record
     const { data: cert, error: certError } = await supabase
-      .from('Certificates')
+      .from('certificates')
       .insert({
         intern_id,
         official_id: official.id,
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 
     // Update intern profile: unlock vault, set certificate_id
     await supabase
-      .from('Interns')
+      .from('interns')
       .update({
         certificate_unlocked: true,
         certificate_id: cert.id

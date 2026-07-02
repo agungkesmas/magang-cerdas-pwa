@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
     // Update official record
     await supabase
-      .from('Officials')
+      .from('officials')
       .update({ signature_url: urlData.publicUrl })
       .eq('id', officialId);
 

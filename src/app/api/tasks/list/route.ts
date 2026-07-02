@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     }
 
     const supabase = createServerClient();
-    let query = supabase.from('Tasks').select('*').eq('is_active', true).order('created_at', { ascending: false });
+    let query = supabase.from('tasks').select('*').eq('is_active', true).order('created_at', { ascending: false });
 
     // Intern sees only tasks for their department
     if (intern && !admin) {

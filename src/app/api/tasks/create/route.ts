@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerClient();
     const { data, error } = await supabase
-      .from('Tasks')
+      .from('tasks')
       .insert({
         title: title.trim(),
         department,

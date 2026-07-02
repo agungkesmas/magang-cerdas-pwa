@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
     const supabase = createServerClient();
     const { data, error } = await supabase
-      .from('Task_Completions')
+      .from('task_completions')
       .select('*, Tasks!inner(*)')
       .eq('intern_id', intern.intern_id);
 

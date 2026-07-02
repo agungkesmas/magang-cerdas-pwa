@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 
     const supabase = createServerClient();
     let query = supabase
-      .from('Attendance')
+      .from('attendance')
       .select('*')
       .order('timestamp', { ascending: false })
       .limit(limit);
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
       const internIds = [...new Set((data || []).map((a) => a.intern_id))];
       if (internIds.length > 0) {
         const { data: interns } = await supabase
-          .from('Interns')
+          .from('interns')
           .select('id, name, major, department')
           .in('id', internIds);
         const internMap = new Map((interns || []).map((i) => [i.id, i]));

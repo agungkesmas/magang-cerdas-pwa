@@ -19,7 +19,7 @@ export async function GET() {
 
     // Get full intern profile
     const { data: profile } = await supabase
-      .from('Interns')
+      .from('interns')
       .select('*')
       .eq('id', intern.intern_id)
       .single();
@@ -34,7 +34,7 @@ export async function GET() {
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
     const { data: todayAtt } = await supabase
-      .from('Attendance')
+      .from('attendance')
       .select('*')
       .eq('intern_id', intern.intern_id)
       .gte('timestamp', todayStart.toISOString())
@@ -43,7 +43,7 @@ export async function GET() {
 
     // Tasks for this department
     const { data: tasks } = await supabase
-      .from('Tasks')
+      .from('tasks')
       .select('*')
       .eq('department', profile.department)
       .eq('is_active', true)
@@ -51,13 +51,13 @@ export async function GET() {
 
     // Task completions for this intern
     const { data: completions } = await supabase
-      .from('Task_Completions')
+      .from('task_completions')
       .select('*')
       .eq('intern_id', intern.intern_id);
 
     // Leaderboard (all active interns, top 10)
     const { data: leaderboard } = await supabase
-      .from('Interns')
+      .from('interns')
       .select('id, name, major, department, total_exp, streak_count')
       .eq('is_active', true)
       .order('total_exp', { ascending: false })
@@ -65,7 +65,7 @@ export async function GET() {
 
     // Active official
     const { data: official } = await supabase
-      .from('Officials')
+      .from('officials')
       .select('*')
       .eq('is_active', true)
       .maybeSingle();
@@ -74,7 +74,7 @@ export async function GET() {
     let certificate = null;
     if (profile.certificate_id) {
       const { data: cert } = await supabase
-        .from('Certificates')
+        .from('certificates')
         .select('*')
         .eq('id', profile.certificate_id)
         .single();
@@ -83,7 +83,7 @@ export async function GET() {
 
     // Recent nudges
     const { data: nudges } = await supabase
-      .from('Nudges')
+      .from('nudges')
       .select('*')
       .eq('intern_id', intern.intern_id)
       .order('created_at', { ascending: false })

@@ -20,7 +20,7 @@ export async function GET() {
 
     // Get interns from this teacher's school
     const { data: interns, error: iErr } = await supabase
-      .from('Interns')
+      .from('interns')
       .select('id, name, major, department, school_origin, start_date, end_date, total_exp, streak_count, is_active, certificate_unlocked, certificate_id')
       .eq('school_origin', teacher.school_origin)
       .order('created_at', { ascending: false });
@@ -35,7 +35,7 @@ export async function GET() {
     if (internIds.length > 0) {
       // Get all attendance for these interns (only fields needed for summary)
       const { data: att } = await supabase
-        .from('Attendance')
+        .from('attendance')
         .select('intern_id, type, timestamp')
         .in('intern_id', internIds)
         .order('timestamp', { ascending: false });
@@ -49,7 +49,7 @@ export async function GET() {
       }, {} as Record<string, { check_in_count: number; check_out_count: number; last_attendance: string | null }>);
 
       // Get logbook counts (don't return full entries here — separate endpoint)
-      const { data: log } = await supabase.from('Logbook').select('intern_id').in('intern_id', internIds);
+      const { data: log } = await supabase.from('logbook').select('intern_id').in('intern_id', internIds);
       logbookCounts = (log || []).reduce((acc, row) => {
         acc[row.intern_id] = (acc[row.intern_id] || 0) + 1;
         return acc;

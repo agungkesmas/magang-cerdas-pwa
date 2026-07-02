@@ -23,14 +23,14 @@ export async function POST(req: NextRequest) {
     const supabase = createServerClient();
 
     // Get task to know target_count and base_description
-    const { data: task } = await supabase.from('Tasks').select('*').eq('id', task_id).single();
+    const { data: task } = await supabase.from('tasks').select('*').eq('id', task_id).single();
     if (!task) {
       return NextResponse.json({ error: 'Task tidak ditemukan' }, { status: 404 });
     }
 
     // Get or create Task_Completions record
     let { data: completion } = await supabase
-      .from('Task_Completions')
+      .from('task_completions')
       .select('*')
       .eq('intern_id', intern.intern_id)
       .eq('task_id', task_id)
@@ -41,13 +41,13 @@ export async function POST(req: NextRequest) {
       // Generate AI instruction for this intern's major
       // Fetch intern major
       const { data: internData } = await supabase
-        .from('Interns')
+        .from('interns')
         .select('major')
         .eq('id', intern.intern_id)
         .single();
       const aiResult = await generateTaskInstruction(task.base_description, internData?.major || 'Umum');
       const { data: newCompletion, error } = await supabase
-        .from('Task_Completions')
+        .from('task_completions')
         .insert({
           intern_id: intern.intern_id,
           task_id,
@@ -68,21 +68,21 @@ export async function POST(req: NextRequest) {
     // Grant EXP for completing a micro-quest
     const expGained = EXP_REWARDS.TASK_MICRO_CHUNK;
     const { data: internData } = await supabase
-      .from('Interns')
+      .from('interns')
       .select('total_exp')
       .eq('id', intern.intern_id)
       .single();
     const newTotalExp = (internData?.total_exp || 0) + expGained;
 
     await supabase
-      .from('Task_Completions')
+      .from('task_completions')
       .update({
         completed_count: newCompleted,
         last_completed_at: new Date().toISOString()
       })
       .eq('id', completion.id);
 
-    await supabase.from('Interns').update({ total_exp: newTotalExp }).eq('id', intern.intern_id);
+    await supabase.from('interns').update({ total_exp: newTotalExp }).eq('id', intern.intern_id);
 
     // Check if full task complete (last chunk)
     const fullComplete = newCompleted >= task.target_count;
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
     if (fullComplete) {
       bonusExp = EXP_REWARDS.TASK_FULL_COMPLETE;
       await supabase
-        .from('Interns')
+        .from('interns')
         .update({ total_exp: newTotalExp + bonusExp })
         .eq('id', intern.intern_id);
     }

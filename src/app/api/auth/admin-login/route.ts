@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
     // Find admin by email
     const { data: admin, error } = await supabase
-      .from('Admins')
+      .from('admins')
       .select('*')
       .eq('email', email.toLowerCase().trim())
       .single();

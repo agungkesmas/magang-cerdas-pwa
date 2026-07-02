@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     // Get office coords from App_Settings
     const supabase = createServerClient();
     const { data: settings } = await supabase
-      .from('App_Settings')
+      .from('app_settings')
       .select('office_lat, office_lng, geofence_radius_meters')
       .eq('id', 1)
       .single();
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const { data: existing } = await supabase
-      .from('Attendance')
+      .from('attendance')
       .select('id')
       .eq('intern_id', intern.intern_id)
       .eq('type', 'Check-In')
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
 
     // Insert attendance
     const { data: att, error } = await supabase
-      .from('Attendance')
+      .from('attendance')
       .insert({
         intern_id: intern.intern_id,
         type: 'Check-In',
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
 
     // Grant EXP
     const { data: internData } = await supabase
-      .from('Interns')
+      .from('interns')
       .select('total_exp, streak_count')
       .eq('id', intern.intern_id)
       .single();
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
       const newExp = (internData.total_exp || 0) + EXP_REWARDS.CHECK_IN;
       const newStreak = (internData.streak_count || 0) + 1;
       await supabase
-        .from('Interns')
+        .from('interns')
         .update({ total_exp: newExp, streak_count: newStreak })
         .eq('id', intern.intern_id);
     }

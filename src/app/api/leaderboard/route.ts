@@ -9,7 +9,7 @@ export async function GET() {
   try {
     const supabase = createServerClient();
     const { data, error } = await supabase
-      .from('Interns')
+      .from('interns')
       .select('id, name, major, department, total_exp, streak_count')
       .eq('is_active', true)
       .order('total_exp', { ascending: false })

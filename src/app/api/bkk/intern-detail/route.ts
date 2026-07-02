@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
     // Verify this intern belongs to teacher's school
     const { data: intern, error: iErr } = await supabase
-      .from('Interns')
+      .from('interns')
       .select('id, name, major, department, school_origin, start_date, end_date, total_exp, streak_count, is_active, certificate_unlocked, certificate_id, created_at')
       .eq('id', internId)
       .single();
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
 
     // Fetch attendance summary (NO photo_url, NO lat/lng)
     const { data: att } = await supabase
-      .from('Attendance')
+      .from('attendance')
       .select('type, timestamp, is_within_geofence, distance_meters')
       .eq('intern_id', internId)
       .order('timestamp', { ascending: false })
@@ -49,14 +49,14 @@ export async function GET(req: NextRequest) {
 
     // Fetch logbook entries (full text — for teacher review)
     const { data: logbook } = await supabase
-      .from('Logbook')
+      .from('logbook')
       .select('id, entry_date, activity, learning_summary, difficulties, created_at')
       .eq('intern_id', internId)
       .order('entry_date', { ascending: false });
 
     // Fetch task completion summary (only counts, not AI instructions)
     const { data: completions } = await supabase
-      .from('Task_Completions')
+      .from('task_completions')
       .select('task_id, completed_count, last_completed_at, Tasks!inner(title, target_count, department)')
       .eq('intern_id', internId);
 
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
     let certificate = null;
     if (intern.certificate_id) {
       const { data: cert } = await supabase
-        .from('Certificates')
+        .from('certificates')
         .select('verification_id, tier, issue_date')
         .eq('id', intern.certificate_id)
         .single();

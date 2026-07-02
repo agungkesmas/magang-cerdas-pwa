@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerClient();
     const { data, error } = await supabase
-      .from('Interns')
+      .from('interns')
       .insert({
         name: name.trim(),
         school_origin: school_origin?.trim() || null,

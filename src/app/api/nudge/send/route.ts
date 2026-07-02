@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerClient();
     const { data, error } = await supabase
-      .from('Nudges')
+      .from('nudges')
       .insert({
         intern_id,
         message,

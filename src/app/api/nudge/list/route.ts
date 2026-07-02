@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     const internIdParam = searchParams.get('intern_id');
 
     const supabase = createServerClient();
-    let query = supabase.from('Nudges').select('*').order('created_at', { ascending: false }).limit(50);
+    let query = supabase.from('nudges').select('*').order('created_at', { ascending: false }).limit(50);
 
     if (admin && internIdParam) {
       query = query.eq('intern_id', internIdParam);
@@ -49,7 +49,7 @@ export async function PUT(req: NextRequest) {
 
     const supabase = createServerClient();
     const { error } = await supabase
-      .from('Nudges')
+      .from('nudges')
       .update({ is_read: true })
       .eq('id', nudge_id)
       .eq('intern_id', intern.intern_id);

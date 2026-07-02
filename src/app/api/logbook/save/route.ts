@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
 
     // Upsert (one entry per intern per date)
     const { data: existing } = await supabase
-      .from('Logbook')
+      .from('logbook')
       .select('id')
       .eq('intern_id', intern.intern_id)
       .eq('entry_date', entry_date)
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     let expGained = 0;
     if (existing) {
       const { data, error } = await supabase
-        .from('Logbook')
+        .from('logbook')
         .update({
           activity,
           learning_summary: learning_summary || null,
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, logbook: data, exp_gained: 0, updated: true });
     } else {
       const { data, error } = await supabase
-        .from('Logbook')
+        .from('logbook')
         .insert({
           intern_id: intern.intern_id,
           entry_date,
@@ -60,13 +60,13 @@ export async function POST(req: NextRequest) {
       // Grant EXP for new entry
       expGained = EXP_REWARDS.LOGBOOK_ENTRY;
       const { data: internData } = await supabase
-        .from('Interns')
+        .from('interns')
         .select('total_exp')
         .eq('id', intern.intern_id)
         .single();
       if (internData) {
         await supabase
-          .from('Interns')
+          .from('interns')
           .update({ total_exp: (internData.total_exp || 0) + expGained })
           .eq('id', intern.intern_id);
       }

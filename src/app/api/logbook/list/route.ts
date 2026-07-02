@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
     const supabase = createServerClient();
     let query = supabase
-      .from('Logbook')
+      .from('logbook')
       .select('*')
       .order('entry_date', { ascending: false });
 

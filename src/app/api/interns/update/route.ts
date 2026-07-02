@@ -25,7 +25,7 @@ export async function PUT(req: NextRequest) {
     if (action === 'regenerate_password') {
       // Fetch current intern
       const { data: intern } = await supabase
-        .from('Interns')
+        .from('interns')
         .select('name')
         .eq('id', id)
         .single();
@@ -35,7 +35,7 @@ export async function PUT(req: NextRequest) {
       const { password } = generateInternCredentials(intern.name);
       const hash = await hashPassword(password);
       const { error } = await supabase
-        .from('Interns')
+        .from('interns')
         .update({ password_hash: hash, raw_password: password })
         .eq('id', id);
       if (error) {
@@ -46,7 +46,7 @@ export async function PUT(req: NextRequest) {
 
     if (action === 'toggle_active') {
       const { data: intern } = await supabase
-        .from('Interns')
+        .from('interns')
         .select('is_active')
         .eq('id', id)
         .single();
@@ -54,7 +54,7 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json({ error: 'Intern not found' }, { status: 404 });
       }
       const { error } = await supabase
-        .from('Interns')
+        .from('interns')
         .update({ is_active: !intern.is_active })
         .eq('id', id);
       if (error) {
@@ -73,7 +73,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
     }
 
-    const { error } = await supabase.from('Interns').update(cleanUpdates).eq('id', id);
+    const { error } = await supabase.from('interns').update(cleanUpdates).eq('id', id);
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
@@ -97,7 +97,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const supabase = createServerClient();
-    const { error } = await supabase.from('Interns').delete().eq('id', id);
+    const { error } = await supabase.from('interns').delete().eq('id', id);
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }

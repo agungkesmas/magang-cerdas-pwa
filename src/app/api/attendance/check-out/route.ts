@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const { data: checkIn } = await supabase
-      .from('Attendance')
+      .from('attendance')
       .select('id')
       .eq('intern_id', intern.intern_id)
       .eq('type', 'Check-In')
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     // Check not already checked out
     const { data: checkOut } = await supabase
-      .from('Attendance')
+      .from('attendance')
       .select('id')
       .eq('intern_id', intern.intern_id)
       .eq('type', 'Check-Out')
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { data: settings } = await supabase
-      .from('App_Settings')
+      .from('app_settings')
       .select('office_lat, office_lng, geofence_radius_meters')
       .eq('id', 1)
       .single();
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     const isWithin = distance !== null ? distance <= radius : false;
 
     const { data: att, error } = await supabase
-      .from('Attendance')
+      .from('attendance')
       .insert({
         intern_id: intern.intern_id,
         type: 'Check-Out',
@@ -80,14 +80,14 @@ export async function POST(req: NextRequest) {
 
     // Grant EXP
     const { data: internData } = await supabase
-      .from('Interns')
+      .from('interns')
       .select('total_exp')
       .eq('id', intern.intern_id)
       .single();
 
     if (internData) {
       const newExp = (internData.total_exp || 0) + EXP_REWARDS.CHECK_OUT;
-      await supabase.from('Interns').update({ total_exp: newExp }).eq('id', intern.intern_id);
+      await supabase.from('interns').update({ total_exp: newExp }).eq('id', intern.intern_id);
     }
 
     return NextResponse.json({

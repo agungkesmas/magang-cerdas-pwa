@@ -16,7 +16,7 @@ export async function GET() {
 
     const supabase = createServerClient();
     const { data } = await supabase
-      .from('Interns')
+      .from('interns')
       .select('survival_kit_progress')
       .eq('id', intern.intern_id)
       .single();
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerClient();
     const { data: internData } = await supabase
-      .from('Interns')
+      .from('interns')
       .select('survival_kit_progress')
       .eq('id', intern.intern_id)
       .single();
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     };
 
     await supabase
-      .from('Interns')
+      .from('interns')
       .update({ survival_kit_progress: progress })
       .eq('id', intern.intern_id);
 
@@ -64,12 +64,12 @@ export async function POST(req: NextRequest) {
     if (quiz_passed && !wasPassed) {
       expGained = EXP_REWARDS.SURVIVAL_KIT_QUIZ_PASS;
       const { data: i2 } = await supabase
-        .from('Interns')
+        .from('interns')
         .select('total_exp')
         .eq('id', intern.intern_id)
         .single();
       await supabase
-        .from('Interns')
+        .from('interns')
         .update({ total_exp: (i2?.total_exp || 0) + expGained })
         .eq('id', intern.intern_id);
     }

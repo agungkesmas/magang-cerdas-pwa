@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerClient();
     const { data: teacher, error } = await supabase
-      .from('BKK_Teachers')
+      .from('bkk_teachers')
       .select('*')
       .eq('email', email.toLowerCase().trim())
       .eq('is_active', true)
