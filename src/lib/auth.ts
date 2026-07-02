@@ -75,7 +75,8 @@ export interface BKKTokenPayload {
   teacher_id: string;
   email: string;
   name: string;
-  school_origin: string;
+  // Schools this teacher can supervise (array of school names for filtering interns)
+  schools: string[];
   type: 'bkk';
 }
 

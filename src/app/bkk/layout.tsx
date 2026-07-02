@@ -7,5 +7,9 @@ export const dynamic = 'force-dynamic';
 export default async function BKKLayout({ children }: { children: React.ReactNode }) {
   const teacher = await getBKKToken();
   if (!teacher) return <>{children}</>;
-  return <BKKShell teacher={teacher}>{children}</BKKShell>;
+  return (
+    <BKKShell teacher={{ name: teacher.name, schools: teacher.schools }}>
+      {children}
+    </BKKShell>
+  );
 }

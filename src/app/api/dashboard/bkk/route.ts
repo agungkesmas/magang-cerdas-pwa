@@ -1,7 +1,6 @@
 // ============================================================
 // /api/dashboard/bkk — Aggregated data for BKK teacher dashboard
-// Privacy-aware: only shows data from teacher's school_origin
-// Excludes: photo URLs, GPS coords, raw passwords, AI instructions
+// Privacy-aware: only shows interns from teacher's linked schools
 // ============================================================
 
 import { NextResponse } from 'next/server';
@@ -16,13 +15,33 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (!teacher.schools || teacher.schools.length === 0) {
+      return NextResponse.json({
+        success: true,
+        teacher: {
+          name: teacher.name,
+          email: teacher.email,
+          schools: []
+        },
+        stats: {
+          total_interns: 0,
+          active_interns: 0,
+          avg_exp: 0,
+          certified_count: 0,
+          near_end_count: 0
+        },
+        interns: [],
+        warning: 'Akun BKK Anda belum di-link ke sekolah manapun. Hubungi admin untuk setup.'
+      });
+    }
+
     const supabase = createServerClient();
 
-    // Get interns from this teacher's school
+    // Get interns from all linked schools
     const { data: interns, error: iErr } = await supabase
       .from('interns')
       .select('id, name, major, department, school_origin, start_date, end_date, total_exp, streak_count, is_active, certificate_unlocked, certificate_id')
-      .eq('school_origin', teacher.school_origin)
+      .in('school_origin', teacher.schools)
       .order('created_at', { ascending: false });
 
     if (iErr) return NextResponse.json({ error: iErr.message }, { status: 500 });
@@ -33,7 +52,6 @@ export async function GET() {
     let logbookCounts: Record<string, number> = {};
 
     if (internIds.length > 0) {
-      // Get all attendance for these interns (only fields needed for summary)
       const { data: att } = await supabase
         .from('attendance')
         .select('intern_id, type, timestamp')
@@ -48,7 +66,6 @@ export async function GET() {
         return acc;
       }, {} as Record<string, { check_in_count: number; check_out_count: number; last_attendance: string | null }>);
 
-      // Get logbook counts (don't return full entries here — separate endpoint)
       const { data: log } = await supabase.from('logbook').select('intern_id').in('intern_id', internIds);
       logbookCounts = (log || []).reduce((acc, row) => {
         acc[row.intern_id] = (acc[row.intern_id] || 0) + 1;
@@ -67,7 +84,6 @@ export async function GET() {
       tier: (i.total_exp || 0) >= 1000 ? 'Excellence' : (i.total_exp || 0) >= 500 ? 'Competent' : 'Participation'
     }));
 
-    // Compute stats
     const totalInterns = internsEnriched.length;
     const activeInterns = internsEnriched.filter((i) => i.is_active).length;
     const totalExp = internsEnriched.reduce((sum, i) => sum + (i.total_exp || 0), 0);
@@ -80,7 +96,7 @@ export async function GET() {
       teacher: {
         name: teacher.name,
         email: teacher.email,
-        school_origin: teacher.school_origin
+        schools: teacher.schools
       },
       stats: {
         total_interns: totalInterns,

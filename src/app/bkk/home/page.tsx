@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 interface DashboardData {
-  teacher: { name: string; email: string; school_origin: string };
+  teacher: { name: string; email: string; schools: string[] };
   stats: {
     total_interns: number;
     active_interns: number;
@@ -25,6 +25,7 @@ interface DashboardData {
     near_end_count: number;
   };
   interns: any[];
+  warning?: string;
 }
 
 export default function BKKHomePage() {
@@ -60,13 +61,40 @@ export default function BKKHomePage() {
             <h1 className="text-2xl font-bold" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
               Selamat Datang, {teacher.name.split(' ')[0]}!
             </h1>
-            <p className="text-white/80 text-sm">{teacher.school_origin}</p>
+            <p className="text-white/80 text-sm">
+              {teacher.schools.length > 0
+                ? `Membimbing ${teacher.schools.length} sekolah`
+                : 'Belum ada sekolah yang dibimbing'}
+            </p>
           </div>
         </div>
-        <p className="text-white/80 text-sm mt-2">
+        {teacher.schools.length > 0 && (
+          <div className="flex items-center gap-2 mt-3 flex-wrap">
+            {teacher.schools.map((school) => (
+              <span
+                key={school}
+                className="text-xs px-2 py-1 bg-white/15 text-white rounded-full font-medium"
+              >
+                🏫 {school}
+              </span>
+            ))}
+          </div>
+        )}
+        <p className="text-white/80 text-sm mt-3">
           Pantau perkembangan siswa-siswi Anda selama magang di BPJS Ketenagakerjaan Cabang Cirebon.
         </p>
       </div>
+
+      {/* Warning if no schools */}
+      {data.warning && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-amber-900">Belum Ada Sekolah</p>
+            <p className="text-sm text-amber-700 mt-1">{data.warning}</p>
+          </div>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -168,8 +196,13 @@ export default function BKKHomePage() {
         <div className="text-sm text-blue-900">
           <p className="font-semibold">Tentang Dashboard BKK</p>
           <p className="text-blue-700 mt-1">
-            Anda hanya dapat melihat data siswa dari sekolah <strong>{teacher.school_origin}</strong>. Data yang ditampilkan
-            difilter untuk privacy: foto selfie, koordinat GPS, dan detail tugas internal BPJS tidak ditampilkan.
+            Anda hanya dapat melihat data siswa dari {teacher.schools.length} sekolah yang Anda bimbing
+            {teacher.schools.length > 0 && (
+              <>
+                : <strong>{teacher.schools.join(', ')}</strong>
+              </>
+            )}
+            . Data yang ditampilkan difilter untuk privacy: foto selfie, koordinat GPS, dan detail tugas internal BPJS tidak ditampilkan.
           </p>
         </div>
       </div>

@@ -71,7 +71,7 @@ function InternList() {
           Daftar Pemagang
         </h1>
         <p className="text-gray-500 text-sm mt-1">
-          {data.interns.length} siswa dari {data.teacher.school_origin}
+          {data.interns.length} siswa dari {data.teacher.schools.length} sekolah yang Anda bimbing
         </p>
       </div>
 

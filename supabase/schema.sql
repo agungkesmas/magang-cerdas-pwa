@@ -220,24 +220,75 @@ INSERT INTO Officials (name, nip, position, is_active) VALUES
 ON CONFLICT DO NOTHING;
 
 -- ============================================================
--- Table: BKK_Teachers (Guru Bursa Kerja Khusus dari sekolah)
+-- Table: Schools (Master Sekolah)
 -- ============================================================
-CREATE TABLE BKK_Teachers (
+CREATE TABLE schools (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  school_origin VARCHAR(255) NOT NULL, -- akan difilter ke Interns.school_origin
-  phone VARCHAR(50),
-  is_active BOOLEAN DEFAULT TRUE,
+  name VARCHAR(255) UNIQUE NOT NULL,
+  address TEXT,
+  contact_person VARCHAR(255),
+  contact_phone VARCHAR(50),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-ALTER TABLE BKK_Teachers ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "BKK Teachers self read" ON BKK_Teachers FOR SELECT USING (TRUE);
+ALTER TABLE schools ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read schools" ON schools FOR SELECT USING (TRUE);
 
--- Default BKK teacher (email: bkk@magang-cerdas.local, password: bkk123456)
+-- ============================================================
+-- Table: BKK_Teachers (Guru Bursa Kerja Khusus)
+-- Updated: school_origin column REMOVED (now via junction table)
+-- ============================================================
+CREATE TABLE bkk_teachers (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  raw_password VARCHAR(100) NOT NULL, -- For admin to share (same pattern as interns)
+  name VARCHAR(255) NOT NULL,
+  phone VARCHAR(50),
+  is_active BOOLEAN DEFAULT TRUE,
+  last_login_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE bkk_teachers ENABLE ROW LEVEL SECURITY;
+-- NO public SELECT policy — write/read only via service role in API routes
+
+-- ============================================================
+-- Table: bkk_teacher_schools (Junction: 1 BKK teacher = many schools)
+-- ============================================================
+CREATE TABLE bkk_teacher_schools (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  bkk_teacher_id UUID NOT NULL REFERENCES bkk_teachers(id) ON DELETE CASCADE,
+  school_id UUID NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(bkk_teacher_id, school_id)
+);
+
+ALTER TABLE bkk_teacher_schools ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read bkk_teacher_schools" ON bkk_teacher_schools FOR SELECT USING (TRUE);
+
+-- ============================================================
+-- Seed: Sample schools
+-- ============================================================
+INSERT INTO schools (name, address) VALUES
+  ('SMK Negeri 1 Cirebon', 'Jl. Perjuangan No. 1, Cirebon'),
+  ('SMK Negeri 2 Cirebon', 'Jl. Pemuda No. 2, Cirebon'),
+  ('SMK Negeri 3 Cirebon', 'Jl. DR. Cipto Mangunkusumo, Cirebon'),
+  ('SMK Bina Karya Cirebon', 'Jl. Latumenang, Cirebon'),
+  ('SMK Muhammadiyah Cirebon', 'Jl. Pangeran Kejaksan, Cirebon')
+ON CONFLICT (name) DO NOTHING;
+
+-- ============================================================
+-- Seed: Default BKK teacher (email: bkk@magang-cerdas.local, password: bkk123456)
+-- Linked to SMK Negeri 1 Cirebon
+-- ============================================================
 -- Hash generated with bcryptjs for "bkk123456"
-INSERT INTO BKK_Teachers (email, password_hash, name, school_origin, phone, is_active) VALUES
-  ('bkk@magang-cerdas.local', '$2a$10$eTiKZxQp9vvqxOFcQaq6Se4RS8SUvXDDz.c7CHTqnPUq5ZMDFt8UK', 'BKK Default Teacher', 'SMK Negeri 1 Cirebon', '', TRUE)
+INSERT INTO bkk_teachers (email, password_hash, raw_password, name, phone, is_active) VALUES
+  ('bkk@magang-cerdas.local', '$2a$10$eTiKZxQp9vvqxOFcQaq6Se4RS8SUvXDDz.c7CHTqnPUq5ZMDFt8UK', 'bkk123456', 'BKK Default Teacher', '', TRUE)
 ON CONFLICT (email) DO NOTHING;
+
+-- Link default BKK teacher to SMK Negeri 1 Cirebon
+INSERT INTO bkk_teacher_schools (bkk_teacher_id, school_id)
+SELECT bt.id, s.id FROM bkk_teachers bt, schools s
+WHERE bt.email = 'bkk@magang-cerdas.local' AND s.name = 'SMK Negeri 1 Cirebon'
+ON CONFLICT DO NOTHING;

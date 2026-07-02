@@ -1,13 +1,14 @@
 // ============================================================
 // /api/bkk/intern-detail — Detail view for one intern (BKK teacher)
 // Returns: profile, attendance summary, logbook entries, task completion summary
-// Excludes: photos, GPS coords, AI instructions, raw passwords
+// Privacy-filtered: NO photos, GPS, AI instructions, raw passwords
+// Access control: intern's school_origin must be in teacher's schools[]
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getBKKToken } from '@/lib/auth';
-import { calculateTimeProgress, daysRemaining, internshipDuration, calculateLevel, formatDateID } from '@/lib/utils';
+import { calculateTimeProgress, daysRemaining, internshipDuration, calculateLevel } from '@/lib/utils';
 
 export async function GET(req: NextRequest) {
   try {
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest) {
 
     const supabase = createServerClient();
 
-    // Verify this intern belongs to teacher's school
+    // Fetch intern
     const { data: intern, error: iErr } = await supabase
       .from('interns')
       .select('id, name, major, department, school_origin, start_date, end_date, total_exp, streak_count, is_active, certificate_unlocked, certificate_id, created_at')
@@ -35,8 +36,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Intern tidak ditemukan' }, { status: 404 });
     }
 
-    if (intern.school_origin !== teacher.school_origin) {
-      return NextResponse.json({ error: 'Akses ditolak: intern bukan dari sekolah Anda' }, { status: 403 });
+    // Verify this intern's school is in teacher's linked schools
+    if (!teacher.schools || !teacher.schools.includes(intern.school_origin)) {
+      return NextResponse.json({ error: 'Akses ditolak: intern bukan dari sekolah yang Anda bimbing' }, { status: 403 });
     }
 
     // Fetch attendance summary (NO photo_url, NO lat/lng)
@@ -47,17 +49,17 @@ export async function GET(req: NextRequest) {
       .order('timestamp', { ascending: false })
       .limit(100);
 
-    // Fetch logbook entries (full text — for teacher review)
+    // Fetch logbook entries
     const { data: logbook } = await supabase
       .from('logbook')
       .select('id, entry_date, activity, learning_summary, difficulties, created_at')
       .eq('intern_id', internId)
       .order('entry_date', { ascending: false });
 
-    // Fetch task completion summary (only counts, not AI instructions)
+    // Fetch task completion summary (lowercase relationship name for PostgREST)
     const { data: completions } = await supabase
       .from('task_completions')
-      .select('task_id, completed_count, last_completed_at, Tasks!inner(title, target_count, department)')
+      .select('task_id, completed_count, last_completed_at, tasks!inner(title, target_count, department)')
       .eq('intern_id', internId);
 
     // Fetch certificate if unlocked
@@ -71,12 +73,11 @@ export async function GET(req: NextRequest) {
       certificate = cert;
     }
 
-    // Compute attendance stats
     const checkIns = (att || []).filter((a) => a.type === 'Check-In');
     const checkOuts = (att || []).filter((a) => a.type === 'Check-Out');
     const durationDays = internshipDuration(intern.start_date, intern.end_date);
 
-    // Compute last 7 days attendance
+    // Last 7 days attendance
     const last7Days: { date: string; check_in: boolean; check_out: boolean }[] = [];
     for (let i = 0; i < 7; i++) {
       const d = new Date();
@@ -104,12 +105,12 @@ export async function GET(req: NextRequest) {
         last_7_days: last7Days
       },
       logbook_entries: logbook || [],
-      task_completions: (completions || []).map((c) => ({
+      task_completions: (completions || []).map((c: any) => ({
         task_id: c.task_id,
-        task_title: (c.Tasks as any)?.title,
-        task_department: (c.Tasks as any)?.department,
+        task_title: c.tasks?.title,
+        task_department: c.tasks?.department,
         completed_count: c.completed_count,
-        target_count: (c.Tasks as any)?.target_count,
+        target_count: c.tasks?.target_count,
         last_completed_at: c.last_completed_at
       })),
       certificate

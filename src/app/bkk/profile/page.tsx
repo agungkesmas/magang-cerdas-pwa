@@ -1,0 +1,260 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import {
+  UserCircle,
+  Mail,
+  Phone,
+  School as SchoolIcon,
+  Lock,
+  Loader2,
+  Check,
+  AlertCircle,
+  Calendar
+} from 'lucide-react';
+
+interface ProfileData {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  is_active: boolean;
+  last_login_at: string | null;
+  created_at: string;
+  schools: { id: string; name: string; address: string | null }[];
+}
+
+export default function BKKProfilePage() {
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/bkk/profile')
+      .then((r) => r.json())
+      .then((d) => d.success && setProfile(d.profile))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMsg(null);
+
+    if (form.new_password !== form.confirm_password) {
+      setMsg({ type: 'error', text: 'Password baru dan konfirmasi tidak cocok' });
+      return;
+    }
+    if (form.new_password.length < 8) {
+      setMsg({ type: 'error', text: 'Password baru minimal 8 karakter' });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch('/api/bkk/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          current_password: form.current_password,
+          new_password: form.new_password
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setMsg({ type: 'success', text: 'Password berhasil diganti!' });
+      setForm({ current_password: '', new_password: '', confirm_password: '' });
+    } catch (err: any) {
+      setMsg({ type: 'error', text: err.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-bpjs-green" />
+      </div>
+    );
+  }
+
+  if (!profile) return null;
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+          Profil Saya
+        </h1>
+        <p className="text-gray-500 text-sm mt-1">Kelola informasi akun dan keamanan</p>
+      </div>
+
+      {/* Profile info */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
+        <div className="flex items-start gap-4 mb-5">
+          <div className="w-16 h-16 rounded-2xl bg-bpjs-green/10 flex items-center justify-center flex-shrink-0">
+            <UserCircle className="w-10 h-10 text-bpjs-green" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">{profile.name}</h2>
+            <p className="text-sm text-gray-500">Guru BKK — Pembimbing Sekolah</p>
+            {profile.last_login_at && (
+              <p className="text-xs text-gray-400 mt-1">
+                Login terakhir: {new Date(profile.last_login_at).toLocaleString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs text-gray-500 font-medium uppercase tracking-wider">Email</label>
+            <div className="flex items-center gap-2 mt-1">
+              <Mail className="w-4 h-4 text-bpjs-green" />
+              <span className="text-sm font-medium text-gray-900">{profile.email}</span>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 font-medium uppercase tracking-wider">No. Telepon</label>
+            <div className="flex items-center gap-2 mt-1">
+              <Phone className="w-4 h-4 text-bpjs-green" />
+              <span className="text-sm text-gray-900">{profile.phone || '-'}</span>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 font-medium uppercase tracking-wider">Bergabung Sejak</label>
+            <div className="flex items-center gap-2 mt-1">
+              <Calendar className="w-4 h-4 text-bpjs-green" />
+              <span className="text-sm text-gray-900">
+                {new Date(profile.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </span>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 font-medium uppercase tracking-wider">Status</label>
+            <div className="mt-1">
+              {profile.is_active ? (
+                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-bpjs-green/10 text-bpjs-green rounded-full font-medium">
+                  <Check className="w-3 h-3" /> Aktif
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-red-100 text-red-700 rounded-full font-medium">
+                  Nonaktif
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Schools */}
+        <div className="mt-5">
+          <label className="text-xs text-gray-500 font-medium uppercase tracking-wider">Sekolah yang Dibimbing</label>
+          <div className="mt-2 flex items-center gap-2 flex-wrap">
+            {profile.schools.length === 0 ? (
+              <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                Belum di-link ke sekolah manapun. Hubungi admin untuk setup.
+              </div>
+            ) : (
+              profile.schools.map((s) => (
+                <div
+                  key={s.id}
+                  className="bg-bpjs-green/10 border border-bpjs-green/20 rounded-lg p-3 max-w-xs"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <SchoolIcon className="w-4 h-4 text-bpjs-green" />
+                    <span className="text-sm font-semibold text-gray-900">{s.name}</span>
+                  </div>
+                  {s.address && <p className="text-xs text-gray-500">{s.address}</p>}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Change Password */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Lock className="w-5 h-5 text-bpjs-green" />
+          <h2 className="text-lg font-bold text-gray-900">Ganti Password</h2>
+        </div>
+
+        <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password Saat Ini *</label>
+            <input
+              type="password"
+              required
+              value={form.current_password}
+              onChange={(e) => setForm({ ...form, current_password: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
+              placeholder="••••••••"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password Baru *</label>
+            <input
+              type="password"
+              required
+              value={form.new_password}
+              onChange={(e) => setForm({ ...form, new_password: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
+              placeholder="Minimal 8 karakter"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Password Baru *</label>
+            <input
+              type="password"
+              required
+              value={form.confirm_password}
+              onChange={(e) => setForm({ ...form, confirm_password: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
+              placeholder="Ulangi password baru"
+            />
+          </div>
+
+          {msg && (
+            <div
+              className={`rounded-lg p-3 text-sm flex items-start gap-2 ${
+                msg.type === 'success'
+                  ? 'bg-green-50 border border-green-200 text-green-800'
+                  : 'bg-red-50 border border-red-200 text-red-700'
+              }`}
+            >
+              {msg.type === 'success' ? (
+                <Check className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              )}
+              {msg.text}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={saving}
+            className="bg-bpjs-green hover:bg-bpjs-green-dark text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50 flex items-center gap-2"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+            Ganti Password
+          </button>
+        </form>
+      </div>
+
+      {/* Note */}
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+        <AlertCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+        <div className="text-xs text-blue-900">
+          <p className="font-semibold mb-1">Butuh bantuan?</p>
+          <p className="text-blue-700">
+            Jika lupa password atau ingin mengubah data profil (nama, email, telepon, sekolah),
+            hubungi Admin BPJS Ketenagakerjaan Cabang Cirebon untuk reset.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

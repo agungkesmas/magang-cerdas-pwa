@@ -12,7 +12,8 @@ import {
   Building2,
   Cpu,
   MapPin,
-  Crown
+  Crown,
+  Edit
 } from 'lucide-react';
 import { LLM_PROVIDERS, LLMProvider } from '@/types';
 
@@ -43,6 +44,7 @@ export default function AdminSettingsPage() {
   const [officials, setOfficials] = useState<Official[]>([]);
   const [saving, setSaving] = useState(false);
   const [showOfficialForm, setShowOfficialForm] = useState(false);
+  const [editingOfficial, setEditingOfficial] = useState<Official | null>(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -351,7 +353,10 @@ export default function AdminSettingsPage() {
           ) : (
             <div className="grid gap-2">
               {officials.map((o) => (
-                <OfficialCard key={o.id} official={o} onUpdated={fetchAll} />
+                <OfficialCard key={o.id} official={o} onUpdated={fetchAll} onEdit={() => {
+                  setEditingOfficial(o);
+                  setShowOfficialForm(true);
+                }} />
               ))}
             </div>
           )}
@@ -360,9 +365,14 @@ export default function AdminSettingsPage() {
 
       {showOfficialForm && (
         <OfficialFormModal
-          onClose={() => setShowOfficialForm(false)}
+          editing={editingOfficial}
+          onClose={() => {
+            setShowOfficialForm(false);
+            setEditingOfficial(null);
+          }}
           onSuccess={() => {
             setShowOfficialForm(false);
+            setEditingOfficial(null);
             fetchAll();
           }}
         />
@@ -371,7 +381,7 @@ export default function AdminSettingsPage() {
   );
 }
 
-function OfficialCard({ official, onUpdated }: { official: Official; onUpdated: () => void }) {
+function OfficialCard({ official, onUpdated, onEdit }: { official: Official; onUpdated: () => void; onEdit: () => void }) {
   const [uploading, setUploading] = useState(false);
 
   const handleUpload = async (file: File) => {
@@ -431,6 +441,12 @@ function OfficialCard({ official, onUpdated }: { official: Official; onUpdated: 
       </div>
 
       <div className="flex items-center gap-2 mt-3 flex-wrap">
+        <button
+          onClick={onEdit}
+          className="inline-flex items-center gap-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs font-medium px-2.5 py-1.5 rounded-md"
+        >
+          <Edit className="w-3 h-3" /> Edit
+        </button>
         <label className="inline-flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium px-2.5 py-1.5 rounded-md cursor-pointer">
           {uploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
           Upload TTD
@@ -460,21 +476,52 @@ function OfficialCard({ official, onUpdated }: { official: Official; onUpdated: 
   );
 }
 
-function OfficialFormModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
-  const [form, setForm] = useState({ name: '', nip: '', position: 'Kepala Kantor Cabang', set_active: true });
+function OfficialFormModal({
+  editing,
+  onClose,
+  onSuccess
+}: {
+  editing: Official | null;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [form, setForm] = useState({
+    name: editing?.name || '',
+    nip: editing?.nip || '',
+    position: editing?.position || 'Kepala Kantor Cabang',
+    set_active: editing ? editing.is_active : true
+  });
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch('/api/officials', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (editing) {
+        // Update existing official
+        const res = await fetch('/api/officials', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editing.id,
+            name: form.name,
+            nip: form.nip,
+            position: form.position,
+            set_active: form.set_active
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+      } else {
+        // Create new official
+        const res = await fetch('/api/officials', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+      }
       onSuccess();
     } catch (e: any) {
       alert('Error: ' + e.message);
@@ -487,7 +534,9 @@ function OfficialFormModal({ onClose, onSuccess }: { onClose: () => void; onSucc
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
         <div className="flex items-center justify-between p-5 border-b border-gray-100">
-          <h3 className="text-lg font-bold text-gray-900">Tambah Kepala Cabang</h3>
+          <h3 className="text-lg font-bold text-gray-900">
+            {editing ? 'Edit Kepala Cabang' : 'Tambah Kepala Cabang'}
+          </h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
             <X className="w-5 h-5" />
           </button>
@@ -534,7 +583,7 @@ function OfficialFormModal({ onClose, onSuccess }: { onClose: () => void; onSucc
             className="w-full bg-bpjs-blue hover:bg-bpjs-blue-dark text-white font-semibold py-2.5 rounded-lg disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-            Simpan
+            {editing ? 'Simpan Perubahan' : 'Simpan'}
           </button>
         </form>
       </div>

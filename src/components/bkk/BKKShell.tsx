@@ -3,19 +3,20 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Users, BookHeart, LogOut, GraduationCap, Menu, X } from 'lucide-react';
+import { Home, Users, BookHeart, LogOut, GraduationCap, Menu, X, UserCircle } from 'lucide-react';
 
 const NAV = [
   { href: '/bkk/home', label: 'Beranda', icon: Home },
   { href: '/bkk/interns', label: 'Pemagang', icon: Users },
-  { href: '/bkk/logbook', label: 'Logbook', icon: BookHeart }
+  { href: '/bkk/logbook', label: 'Logbook', icon: BookHeart },
+  { href: '/bkk/profile', label: 'Profil', icon: UserCircle }
 ];
 
 export default function BKKShell({
   teacher,
   children
 }: {
-  teacher: { name: string; school_origin: string };
+  teacher: { name: string; schools?: string[] };
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -74,7 +75,11 @@ export default function BKKShell({
         <div className="p-4 border-t border-white/10">
           <div className="px-4 py-3 mb-2 bg-white/5 rounded-lg">
             <p className="text-sm font-semibold">{teacher.name}</p>
-            <p className="text-xs text-white/60 mt-0.5 truncate">{teacher.school_origin}</p>
+            <p className="text-xs text-white/60 mt-0.5 truncate">
+              {teacher.schools && teacher.schools.length > 0
+                ? `${teacher.schools.length} sekolah dibimbing`
+                : 'Belum ada sekolah'}
+            </p>
           </div>
           <button
             onClick={handleLogout}

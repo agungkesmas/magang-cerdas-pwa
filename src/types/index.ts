@@ -111,13 +111,24 @@ export interface AppSettings {
   updated_at: string;
 }
 
+export interface School {
+  id: string;
+  name: string;
+  address: string | null;
+  contact_person: string | null;
+  contact_phone: string | null;
+  created_at: string;
+}
+
 export interface BKKTeacher {
   id: string;
   email: string;
   name: string;
-  school_origin: string;
   phone: string | null;
   is_active: boolean;
+  last_login_at: string | null;
+  raw_password?: string; // Only visible to admin
+  schools?: School[]; // Populated via junction table
   created_at: string;
 }
 

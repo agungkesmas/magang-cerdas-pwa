@@ -1,5 +1,6 @@
 // ============================================================
 // /api/auth/bkk-login — BKK Teacher email+password login
+// Returns: token + teacher info + schools array
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -30,12 +31,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email atau password salah' }, { status: 401 });
     }
 
+    // Get linked schools
+    const { data: junctions } = await supabase
+      .from('bkk_teacher_schools')
+      .select('schools(id, name)')
+      .eq('bkk_teacher_id', teacher.id);
+    const schools = (junctions || []).map((j: any) => j.schools?.name).filter(Boolean) as string[];
+
+    // Update last_login_at
+    await supabase
+      .from('bkk_teachers')
+      .update({ last_login_at: new Date().toISOString() })
+      .eq('id', teacher.id);
+
     const token = signBKKToken({
       sub: teacher.id,
       teacher_id: teacher.id,
       email: teacher.email,
       name: teacher.name,
-      school_origin: teacher.school_origin
+      schools
     });
     await setBKKCookie(token);
 
@@ -45,7 +59,7 @@ export async function POST(req: NextRequest) {
         id: teacher.id,
         email: teacher.email,
         name: teacher.name,
-        school_origin: teacher.school_origin
+        schools
       }
     });
   } catch (e: any) {
