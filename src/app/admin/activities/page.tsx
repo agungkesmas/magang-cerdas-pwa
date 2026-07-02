@@ -36,6 +36,16 @@ interface Activity {
   assigned_intern_name: string | null;
   completions: { intern_id: string; intern_name: string; completed_at: string; completion_notes: string | null }[];
   completion_count: number;
+  // Recurring fields
+  is_recurring?: boolean;
+  start_date?: string | null;
+  end_date?: string | null;
+  skip_weekend?: boolean;
+  daily_deadline_hour?: number;
+  daily_completions?: any[];
+  today_completion_count?: number;
+  is_today_in_range?: boolean;
+  working_days_in_range?: number | null;
 }
 
 interface Intern {
@@ -170,12 +180,26 @@ export default function AdminActivitiesPage() {
                           <Users className="w-3 h-3" /> {act.department}
                         </span>
                       )}
-                      {act.due_date && (
+                      {act.due_date && !act.is_recurring && (
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1 ${
                           isOverdue ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
                         }`}>
                           <Clock className="w-3 h-3" />
                           {isOverdue ? 'Lewat deadline' : new Date(act.due_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                        </span>
+                      )}
+                      {act.is_recurring && act.start_date && act.end_date && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1 ${
+                          act.is_today_in_range ? 'bg-bpjs-green/10 text-bpjs-green' : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          <span>🔁</span>
+                          {new Date(act.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} → {new Date(act.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                          {act.is_today_in_range && ' (aktif hari ini)'}
+                        </span>
+                      )}
+                      {act.is_recurring && act.today_completion_count !== undefined && act.today_completion_count > 0 && (
+                        <span className="text-xs px-2 py-0.5 bg-bpjs-yellow/20 text-amber-800 rounded-full font-medium">
+                          ✓ {act.today_completion_count} selesai hari ini
                         </span>
                       )}
                     </div>
@@ -337,7 +361,13 @@ function ActivityFormModal({
     department: 'Pelayanan',
     intern_id: '',
     due_date: '',
-    due_time: '16:00'
+    due_time: '16:00',
+    // Recurring fields
+    is_recurring: false,
+    start_date: '',
+    end_date: '',
+    skip_weekend: true,
+    daily_deadline_hour: 17
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -377,6 +407,17 @@ function ActivityFormModal({
         dueDateISO = new Date(`${form.due_date}T${form.due_time}:00`).toISOString();
       }
       const body: any = { title: form.title, description: form.description, due_date: dueDateISO };
+
+      // Recurring fields
+      if (form.is_recurring) {
+        body.is_recurring = true;
+        body.start_date = form.start_date;
+        body.end_date = form.end_date;
+        body.skip_weekend = form.skip_weekend;
+        body.daily_deadline_hour = Number(form.daily_deadline_hour);
+      } else {
+        body.is_recurring = false;
+      }
       if (form.assignMode === 'department') {
         body.department = form.department;
       } else {
@@ -487,16 +528,75 @@ function ActivityFormModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Deadline (opsional)</label>
-            <div className="grid grid-cols-2 gap-2">
-              <input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white" />
-              <select value={form.due_time} onChange={(e) => setForm({ ...form, due_time: e.target.value })}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white">
-                {['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'].map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Mode Aktivitas</label>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <button type="button" onClick={() => setForm({ ...form, is_recurring: false })}
+                className={`p-3 rounded-lg border text-left ${!form.is_recurring ? 'border-bpjs-blue bg-bpjs-blue/5' : 'border-gray-200'}`}>
+                <div className="font-semibold text-sm flex items-center gap-1">📋 Sekali Selesai</div>
+                <div className="text-xs text-gray-500 mt-0.5">Intern kerjakan 1x, dapat +20 EXP</div>
+              </button>
+              <button type="button" onClick={() => setForm({ ...form, is_recurring: true })}
+                className={`p-3 rounded-lg border text-left ${form.is_recurring ? 'border-bpjs-green bg-bpjs-green/5' : 'border-gray-200'}`}>
+                <div className="font-semibold text-sm flex items-center gap-1">🔁 Harian Berulang</div>
+                <div className="text-xs text-gray-500 mt-0.5">Muncul tiap hari di rentang, +20 EXP/hari</div>
+              </button>
             </div>
           </div>
+
+          {form.is_recurring ? (
+            <div className="bg-bpjs-green/5 border border-bpjs-green/30 rounded-lg p-4 space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">📅 Rentang Tanggal *</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] text-gray-500">Mulai</span>
+                    <input type="date" required={form.is_recurring} value={form.start_date}
+                      onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-gray-500">Selesai</span>
+                    <input type="date" required={form.is_recurring} value={form.end_date}
+                      onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white" />
+                  </div>
+                </div>
+                {form.start_date && form.end_date && (
+                  <p className="text-[10px] text-bpjs-green mt-1">
+                    Durasi: {Math.ceil((new Date(form.end_date).getTime() - new Date(form.start_date).getTime()) / (1000*60*60*24)) + 1} hari kalender
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="skip_weekend" checked={form.skip_weekend}
+                  onChange={(e) => setForm({ ...form, skip_weekend: e.target.checked })}
+                  className="w-4 h-4 rounded border-gray-300 text-bpjs-green focus:ring-bpjs-green" />
+                <label htmlFor="skip_weekend" className="text-xs text-gray-700">Skip weekend (Sabtu & Minggu tidak muncul)</label>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">⏰ Deadline Harian (WIB)</label>
+                <select value={form.daily_deadline_hour} onChange={(e) => setForm({ ...form, daily_deadline_hour: Number(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white">
+                  {[15, 16, 17, 18, 19, 20].map(h => (
+                    <option key={h} value={h}>{h}:00 WIB</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-gray-500 mt-0.5">Intern harus complete sebelum jam ini setiap hari</p>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Deadline (opsional)</label>
+              <div className="grid grid-cols-2 gap-2">
+                <input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white" />
+                <select value={form.due_time} onChange={(e) => setForm({ ...form, due_time: e.target.value })}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white">
+                  {['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'].map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
 
           {error && <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm flex items-start gap-2"><AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />{error}</div>}
 

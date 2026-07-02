@@ -2,11 +2,53 @@
 // /api/activities/list — List aktivitas
 // Admin: semua aktivitas (with completion info)
 // Intern: aktivitas yang assigned ke mereka (per-intern ATAU per-departemen mereka)
+//
+// Recurring mode:
+//   - Aktivitas muncul untuk intern hanya jika today dalam range start_date..end_date
+//   - Intern bisa complete 1x per hari (anti-double via UNIQUE constraint)
+//   - my_daily_completion: status complete hari ini (untuk UI)
+//   - my_progress: progress mingguan { completed_days, total_days }
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getAdminToken, getInternToken } from '@/lib/auth';
+
+// Helper: hitung jumlah hari kerja dalam range (exclude weekend jika skip_weekend)
+function countWorkingDays(start: Date, end: Date, skipWeekend: boolean): number {
+  let count = 0;
+  const cur = new Date(start);
+  cur.setHours(0, 0, 0, 0);
+  const endCopy = new Date(end);
+  endCopy.setHours(0, 0, 0, 0);
+  while (cur <= endCopy) {
+    const day = cur.getDay(); // 0=Sun, 6=Sat
+    if (skipWeekend && (day === 0 || day === 6)) {
+      cur.setDate(cur.getDate() + 1);
+      continue;
+    }
+    count++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return count;
+}
+
+// Helper: cek apakah today adalah hari kerja dalam range
+function isTodayInRange(start: string | null, end: string | null, skipWeekend: boolean): boolean {
+  if (!start || !end) return true; // tidak ada range = selalu tampil (backward compat)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const sd = new Date(start);
+  sd.setHours(0, 0, 0, 0);
+  const ed = new Date(end);
+  ed.setHours(0, 0, 0, 0);
+  if (today < sd || today > ed) return false;
+  if (skipWeekend) {
+    const day = today.getDay();
+    if (day === 0 || day === 6) return false;
+  }
+  return true;
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,19 +59,19 @@ export async function GET(req: NextRequest) {
     }
 
     const supabase = createServerClient();
+    const todayStr = new Date().toISOString().split('T')[0];
 
     if (admin && !intern) {
-      // Admin: list SEMUA aktivitas (including archived) with completion count
+      // Admin: list SEMUA aktivitas (including archived) with completion info
       const { data: activities, error: aErr } = await supabase
         .from('activities')
         .select('*')
         .order('created_at', { ascending: false });
       if (aErr) return NextResponse.json({ error: aErr.message }, { status: 500 });
 
-      // Tidak filter archived — admin perlu lihat semua (aktif + arsip)
       const allActivities = activities || [];
 
-      // Get completions untuk mode department
+      // Get completions untuk mode department (single completion)
       const { data: completions } = await supabase
         .from('activity_completions')
         .select('activity_id, intern_id, completed_at, interns!inner(name)')
@@ -45,7 +87,26 @@ export async function GET(req: NextRequest) {
         });
       });
 
-      // For per-intern activities, get intern name
+      // Get daily completions (untuk mode recurring)
+      const { data: dailyCompletions } = await supabase
+        .from('activity_daily_completions')
+        .select('activity_id, intern_id, completion_date, exp_awarded, bonus_exp_awarded, completed_at, interns!inner(name)')
+        .in('activity_id', (allActivities || []).map((a) => a.id));
+
+      const dailyCompletionsMap: Record<string, any[]> = {};
+      (dailyCompletions || []).forEach((c: any) => {
+        if (!dailyCompletionsMap[c.activity_id]) dailyCompletionsMap[c.activity_id] = [];
+        dailyCompletionsMap[c.activity_id].push({
+          intern_id: c.intern_id,
+          intern_name: c.interns?.name,
+          completion_date: c.completion_date,
+          exp_awarded: c.exp_awarded,
+          bonus_exp_awarded: c.bonus_exp_awarded,
+          completed_at: c.completed_at
+        });
+      });
+
+      // Get intern names untuk per-intern activities
       const internIds = (allActivities || []).filter((a) => a.intern_id).map((a) => a.intern_id);
       let internNamesMap: Record<string, string> = {};
       if (internIds.length > 0) {
@@ -58,19 +119,37 @@ export async function GET(req: NextRequest) {
         });
       }
 
-      const result = (allActivities || []).map((a) => ({
-        ...a,
-        assigned_intern_name: a.intern_id ? internNamesMap[a.intern_id] || 'Unknown' : null,
-        completions: completionsMap[a.id] || [],
-        completion_count: a.completed_by_intern_id ? 1 : (completionsMap[a.id]?.length || 0)
-      }));
+      const result = (allActivities || []).map((a: any) => {
+        const isRecurring = a.is_recurring;
+        const todayInRange = isTodayInRange(a.start_date, a.end_date, a.skip_weekend);
+
+        // Hitung progress hari ini
+        let todayCompletions = 0;
+        let totalTargetInterns = 0;
+        if (isRecurring && dailyCompletionsMap[a.id]) {
+          todayCompletions = dailyCompletionsMap[a.id].filter(
+            (c) => c.completion_date === todayStr
+          ).length;
+        }
+
+        return {
+          ...a,
+          assigned_intern_name: a.intern_id ? internNamesMap[a.intern_id] || 'Unknown' : null,
+          completions: completionsMap[a.id] || [],
+          daily_completions: dailyCompletionsMap[a.id] || [],
+          completion_count: a.completed_by_intern_id ? 1 : (completionsMap[a.id]?.length || 0),
+          today_completion_count: todayCompletions,
+          is_today_in_range: todayInRange,
+          working_days_in_range: a.start_date && a.end_date
+            ? countWorkingDays(new Date(a.start_date), new Date(a.end_date), a.skip_weekend)
+            : null
+        };
+      });
 
       return NextResponse.json({ success: true, activities: result });
     }
 
-    // Intern: list aktivitas yang assigned ke mereka
-    // 1. Aktivitas per-intern (intern_id = current)
-    // 2. Aktivitas per-departemen (department = intern.department, intern_id IS NULL)
+    // === INTERN VIEW ===
     const { data: internData } = await supabase
       .from('interns')
       .select('department')
@@ -90,7 +169,7 @@ export async function GET(req: NextRequest) {
     // Filter archived di code
     const allActivities = (activities || []).filter((a: any) => !a.is_archived);
 
-    // Get completions by this intern
+    // Get single completions by this intern (mode lama)
     const { data: myCompletions } = await supabase
       .from('activity_completions')
       .select('activity_id, completed_at')
@@ -102,12 +181,65 @@ export async function GET(req: NextRequest) {
       myCompletionMap[c.activity_id] = c.completed_at;
     });
 
-    const result = (allActivities || []).map((a) => ({
-      ...a,
-      my_completion: a.completed_by_intern_id === intern!.intern_id ? a.completed_at : (myCompletionMap[a.id] || null),
-      is_completed: a.completed_by_intern_id === intern!.intern_id || !!myCompletionMap[a.id],
-      is_overdue: a.due_date ? new Date(a.due_date).getTime() < Date.now() : false
-    }));
+    // Get daily completions by this intern (mode recurring)
+    const { data: myDailyCompletions } = await supabase
+      .from('activity_daily_completions')
+      .select('activity_id, completion_date, exp_awarded, bonus_exp_awarded, completed_at, completion_notes')
+      .eq('intern_id', intern!.intern_id)
+      .in('activity_id', (allActivities || []).map((a) => a.id));
+
+    const myDailyCompletionsMap: Record<string, any[]> = {};
+    (myDailyCompletions || []).forEach((c: any) => {
+      if (!myDailyCompletionsMap[c.activity_id]) myDailyCompletionsMap[c.activity_id] = [];
+      myDailyCompletionsMap[c.activity_id].push(c);
+    });
+
+    const result = (allActivities || []).map((a: any) => {
+      const isRecurring = a.is_recurring;
+      const todayInRange = isTodayInRange(a.start_date, a.end_date, a.skip_weekend);
+
+      // Untuk recurring: cek apakah sudah complete hari ini
+      let completedToday = false;
+      let todayCompletionData = null;
+      if (isRecurring && myDailyCompletionsMap[a.id]) {
+        todayCompletionData = myDailyCompletionsMap[a.id].find(
+          (c) => c.completion_date === todayStr
+        );
+        completedToday = !!todayCompletionData;
+      }
+
+      // Hitung progress mingguan untuk recurring
+      let progressCompletedDays = 0;
+      let progressTotalDays = 0;
+      if (isRecurring && a.start_date && a.end_date) {
+        progressTotalDays = countWorkingDays(new Date(a.start_date), new Date(a.end_date), a.skip_weekend);
+        progressCompletedDays = (myDailyCompletionsMap[a.id] || []).length;
+      }
+
+      // Cek apakah sudah lewat deadline harian (untuk recurring)
+      let isPastDailyDeadline = false;
+      if (isRecurring && a.daily_deadline_hour) {
+        const now = new Date();
+        // WIB = UTC+7
+        const wibHour = (now.getUTCHours() + 7) % 24;
+        isPastDailyDeadline = wibHour >= a.daily_deadline_hour;
+      }
+
+      return {
+        ...a,
+        my_completion: a.completed_by_intern_id === intern!.intern_id ? a.completed_at : (myCompletionMap[a.id] || null),
+        is_completed: a.completed_by_intern_id === intern!.intern_id || !!myCompletionMap[a.id],
+        is_overdue: a.due_date ? new Date(a.due_date).getTime() < Date.now() : false,
+        // Recurring fields
+        is_today_in_range: todayInRange,
+        completed_today: completedToday,
+        today_completion: todayCompletionData,
+        progress_completed_days: progressCompletedDays,
+        progress_total_days: progressTotalDays,
+        is_past_daily_deadline: isPastDailyDeadline,
+        my_daily_history: myDailyCompletionsMap[a.id] || []
+      };
+    });
 
     return NextResponse.json({ success: true, activities: result });
   } catch (e: any) {

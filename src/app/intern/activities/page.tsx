@@ -13,7 +13,9 @@ import {
   X,
   Send,
   FileText,
-  History
+  History,
+  Calendar,
+  Repeat
 } from 'lucide-react';
 
 interface Activity {
@@ -26,6 +28,19 @@ interface Activity {
   is_overdue: boolean;
   created_by_intern: boolean;
   created_at: string;
+  // Recurring fields
+  is_recurring?: boolean;
+  start_date?: string | null;
+  end_date?: string | null;
+  skip_weekend?: boolean;
+  daily_deadline_hour?: number;
+  is_today_in_range?: boolean;
+  completed_today?: boolean;
+  today_completion?: any;
+  progress_completed_days?: number;
+  progress_total_days?: number;
+  is_past_daily_deadline?: boolean;
+  my_daily_history?: any[];
 }
 
 interface HistoryItem {
@@ -37,9 +52,25 @@ interface HistoryItem {
   source: string;
 }
 
+interface RecurringHistoryItem {
+  id: string;
+  activity_id: string;
+  title: string;
+  description: string;
+  mode: 'recurring';
+  start_date: string | null;
+  end_date: string | null;
+  created_at: string;
+  source: string;
+  daily_completions: any[];
+  total_exp_gained: number;
+  last_completed_at: string;
+}
+
 export default function InternActivitiesPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [recurringHistory, setRecurringHistory] = useState<RecurringHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState<string | null>(null);
   const [recentExp, setRecentExp] = useState<number | null>(null);
@@ -59,7 +90,10 @@ export default function InternActivitiesPage() {
       const actData = await actRes.json();
       const histData = await histRes.json();
       if (actData.success) setActivities(actData.activities || []);
-      if (histData.success) setHistory(histData.history || []);
+      if (histData.success) {
+        setHistory(histData.history || []);
+        setRecurringHistory(histData.recurring_history || []);
+      }
     } finally {
       setLoading(false);
     }
@@ -78,14 +112,20 @@ export default function InternActivitiesPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setRecentExp(data.exp_gained);
+        const totalGain = data.total_exp_gained || data.exp_gained || 0;
+        const bonus = data.bonus_exp || 0;
+        setRecentExp(totalGain);
+        if (data.all_complete && bonus > 0) {
+          setErrorMsg(`🎉 Selamat! Anda menyelesaikan SEMUA hari kerja. Bonus +${bonus} EXP!`);
+          setTimeout(() => setErrorMsg(null), 5000);
+        }
         setTimeout(() => setRecentExp(null), 3000);
         setShowCompleteModal(null);
         setCompletionNotes('');
         fetchAll();
       } else {
         setErrorMsg(data.error);
-        setTimeout(() => setErrorMsg(null), 4000);
+        setTimeout(() => setErrorMsg(null), 5000);
       }
     } catch (e: any) {
       setErrorMsg(e.message);
@@ -98,9 +138,22 @@ export default function InternActivitiesPage() {
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-bpjs-yellow" /></div>;
   }
 
-  const pending = activities.filter((a) => !a.is_completed && !a.is_overdue);
-  const completed = activities.filter((a) => a.is_completed);
-  const overdue = activities.filter((a) => !a.is_completed && a.is_overdue);
+  // Filter logic: untuk recurring, tampilkan hanya yang is_today_in_range = true
+  // Untuk non-recurring, tampilkan semua yang assigned
+  const visibleActivities = activities.filter((a) => {
+    if (a.is_recurring) return a.is_today_in_range !== false;
+    return true;
+  });
+  // Pending: belum selesai (untuk recurring: belum complete hari ini)
+  const pending = visibleActivities.filter((a) => {
+    if (a.is_recurring) return !a.completed_today;
+    return !a.is_completed && !a.is_overdue;
+  });
+  const completed = visibleActivities.filter((a) => {
+    if (a.is_recurring) return a.completed_today;
+    return a.is_completed;
+  });
+  const overdue = visibleActivities.filter((a) => !a.is_recurring && !a.is_completed && a.is_overdue);
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -172,18 +225,61 @@ export default function InternActivitiesPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-bold text-white">{act.title}</h3>
+                            {act.is_recurring && (
+                              <span className="text-xs px-2 py-0.5 bg-bpjs-green/20 text-bpjs-green rounded-full font-medium flex items-center gap-1">
+                                🔁 Harian
+                              </span>
+                            )}
                             {act.created_by_intern && (
                               <span className="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded-full">Dibuat sendiri</span>
                             )}
-                            {act.due_date && (
+                            {act.due_date && !act.is_recurring && (
                               <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded-full flex items-center gap-1">
                                 <Clock className="w-3 h-3" /> {new Date(act.due_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
                               </span>
                             )}
+                            {act.is_recurring && act.start_date && act.end_date && (
+                              <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded-full flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {new Date(act.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} → {new Date(act.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                              </span>
+                            )}
                           </div>
                           <p className="text-sm text-white/70 leading-relaxed mt-1 whitespace-pre-line">{act.description}</p>
+
+                          {/* Recurring progress bar */}
+                          {act.is_recurring && act.progress_total_days && act.progress_total_days > 0 && (
+                            <div className="mt-3 bg-white/5 rounded-lg p-2">
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <span className="text-white/60">📊 Progress minggu ini</span>
+                                <span className="text-bpjs-yellow font-bold">{act.progress_completed_days}/{act.progress_total_days} hari</span>
+                              </div>
+                              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-bpjs-green to-bpjs-yellow"
+                                  style={{ width: `${Math.min(100, ((act.progress_completed_days || 0) / act.progress_total_days) * 100)}%` }}
+                                />
+                              </div>
+                              {act.daily_deadline_hour && (
+                                <p className="text-[10px] text-white/40 mt-1">⏰ Complete sebelum jam {act.daily_deadline_hour}:00 WIB setiap hari</p>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
+
+                      {/* Recurring: tampilkan history mini hari ini */}
+                      {act.is_recurring && act.my_daily_history && act.my_daily_history.length > 0 && (
+                        <div className="mt-2 flex items-center gap-1 flex-wrap">
+                          <span className="text-[10px] text-white/40">Riwayat:</span>
+                          {act.my_daily_history.slice(-7).map((dc, i) => (
+                            <span key={i} className="text-[10px] px-1.5 py-0.5 bg-bpjs-green/20 text-bpjs-green rounded-full" title={`+${(dc.exp_awarded || 0) + (dc.bonus_exp_awarded || 0)} EXP`}>
+                              ✓ {new Date(dc.completion_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
                       {showCompleteModal === act.id ? (
                         <div className="mt-3 space-y-2">
                           <textarea
@@ -200,20 +296,25 @@ export default function InternActivitiesPage() {
                             >Batal</button>
                             <button
                               onClick={() => handleComplete(act.id)}
-                              disabled={completing === act.id}
+                              disabled={completing === act.id || (act.is_recurring && act.is_past_daily_deadline)}
                               className="flex-1 px-3 py-2 bg-bpjs-yellow text-bpjs-blue-dark font-bold text-sm rounded-lg disabled:opacity-50 flex items-center justify-center gap-1"
                             >
                               {completing === act.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                              Selesai (+20 EXP)
+                              {act.is_recurring ? 'Selesai Hari Ini (+20 EXP)' : 'Selesai (+20 EXP)'}
                             </button>
                           </div>
                         </div>
                       ) : (
                         <button
                           onClick={() => { setShowCompleteModal(act.id); setCompletionNotes(''); }}
-                          className="w-full mt-2 flex items-center justify-center gap-2 bg-bpjs-yellow hover:bg-bpjs-yellow-dark text-bpjs-blue-dark font-bold py-2.5 rounded-lg transition-colors text-sm"
+                          disabled={act.is_recurring && act.is_past_daily_deadline}
+                          className="w-full mt-2 flex items-center justify-center gap-2 bg-bpjs-yellow hover:bg-bpjs-yellow-dark text-bpjs-blue-dark font-bold py-2.5 rounded-lg transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <CheckCircle2 className="w-4 h-4" /> Tandai Selesai
+                          {act.is_recurring && act.is_past_daily_deadline ? (
+                            <><Clock className="w-4 h-4" /> Waktu Selesai Hari Ini (lewat deadline)</>
+                          ) : (
+                            <><CheckCircle2 className="w-4 h-4" /> {act.is_recurring ? 'Tandai Selesai Hari Ini' : 'Tandai Selesai'}</>
+                          )}
                         </button>
                       )}
                     </div>
@@ -225,16 +326,19 @@ export default function InternActivitiesPage() {
               {completed.length > 0 && (
                 <div className="space-y-3">
                   <h2 className="text-sm font-semibold text-bpjs-green flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4" /> Selesai ({completed.length})
+                    <CheckCircle2 className="w-4 h-4" /> Selesai Hari Ini ({completed.length})
                   </h2>
                   {completed.map((act) => (
                     <div key={act.id} className="glass-card p-3 opacity-70">
                       <div className="flex items-start gap-2">
                         <CheckCircle2 className="w-5 h-5 text-bpjs-green flex-shrink-0 mt-0.5" />
                         <div className="flex-1">
-                          <h3 className="font-bold text-white text-sm line-through opacity-60">{act.title}</h3>
-                          {act.my_completion && (
+                          <h3 className="font-bold text-white text-sm">{act.title} {act.is_recurring && <span className="text-xs text-bpjs-green ml-1">(hari ini)</span>}</h3>
+                          {act.my_completion && !act.is_recurring && (
                             <p className="text-xs text-white/50 mt-0.5">📝 {new Date(act.my_completion).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                          )}
+                          {act.is_recurring && act.today_completion && (
+                            <p className="text-xs text-white/50 mt-0.5">📝 Selesai hari ini {new Date(act.today_completion.completed_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} • +{(act.today_completion.exp_awarded || 0) + (act.today_completion.bonus_exp_awarded || 0)} EXP</p>
                           )}
                         </div>
                       </div>
@@ -259,31 +363,73 @@ export default function InternActivitiesPage() {
               <p className="text-white/60">Belum ada riwayat aktivitas yang diselesaikan.</p>
             </div>
           ) : (
-            history.map((item) => (
-              <div key={item.id + item.completed_at} className="glass-card p-3">
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-bpjs-green flex-shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="text-sm font-semibold text-white">{item.title}</h4>
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                        item.source === 'self' ? 'bg-purple-500/20 text-purple-300' :
-                        item.source === 'department' ? 'bg-blue-500/20 text-blue-300' :
-                        'bg-gray-500/20 text-gray-300'
-                      }`}>
-                        {item.source === 'self' ? 'Dibuat sendiri' : item.source === 'department' ? 'Departemen' : 'Ditugaskan'}
-                      </span>
+            <>
+              {history.map((item) => (
+                <div key={item.id + item.completed_at} className="glass-card p-3">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-bpjs-green flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-sm font-semibold text-white">{item.title}</h4>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                          item.source === 'self' ? 'bg-purple-500/20 text-purple-300' :
+                          item.source === 'department' ? 'bg-blue-500/20 text-blue-300' :
+                          'bg-gray-500/20 text-gray-300'
+                        }`}>
+                          {item.source === 'self' ? 'Dibuat sendiri' : item.source === 'department' ? 'Departemen' : 'Ditugaskan'}
+                        </span>
+                      </div>
+                      {item.completion_notes && (
+                        <p className="text-xs text-white/60 mt-1">📝 {item.completion_notes}</p>
+                      )}
+                      <p className="text-xs text-white/40 mt-0.5">
+                        {new Date(item.completed_at).toLocaleString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
                     </div>
-                    {item.completion_notes && (
-                      <p className="text-xs text-white/60 mt-1">📝 {item.completion_notes}</p>
-                    )}
-                    <p className="text-xs text-white/40 mt-0.5">
-                      {new Date(item.completed_at).toLocaleString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </p>
                   </div>
                 </div>
-              </div>
-            ))
+              ))}
+
+              {/* Recurring history (grouped) */}
+              {recurringHistory.length > 0 && (
+                <div className="mt-4 space-y-3">
+                  <h3 className="text-sm font-semibold text-bpjs-yellow flex items-center gap-2">
+                    <Repeat className="w-4 h-4" /> Aktivitas Harian Berulang
+                  </h3>
+                  {recurringHistory.map((rh) => (
+                    <div key={rh.activity_id} className="glass-card p-4 border-bpjs-green/30">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex-1">
+                          <h4 className="font-bold text-white text-sm flex items-center gap-2">
+                            🔁 {rh.title}
+                          </h4>
+                          <p className="text-xs text-white/60 mt-0.5">
+                            📅 {rh.start_date && new Date(rh.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            {' → '}
+                            {rh.end_date && new Date(rh.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-bpjs-yellow font-bold text-sm">+{rh.total_exp_gained} EXP</div>
+                          <div className="text-[10px] text-white/50">{rh.daily_completions.length} hari</div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-7 gap-1 mt-2">
+                        {rh.daily_completions.slice(0, 14).map((dc, i) => (
+                          <div
+                            key={i}
+                            className="text-[9px] text-center py-1 px-1 rounded bg-bpjs-green/20 text-bpjs-green"
+                            title={`+${(dc.exp_awarded || 0) + (dc.bonus_exp_awarded || 0)} EXP • ${dc.completion_notes || ''}`}
+                          >
+                            {new Date(dc.completion_date).getDate()}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

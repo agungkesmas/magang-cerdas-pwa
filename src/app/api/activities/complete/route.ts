@@ -1,7 +1,11 @@
 // ============================================================
 // /api/activities/complete — Intern tandai aktivitas selesai
-// +20 EXP per aktivitas
-// Anti-exploit: cek apakah sudah completed sebelumnya
+// Mode 1 (non-recurring): +20 EXP (1x saja)
+// Mode 2 (recurring harian): +20 EXP per hari, anti-double per hari
+//   - Cek jam: harus sebelum daily_deadline_hour (default 17 WIB)
+//   - Cek range: today harus dalam start_date..end_date
+//   - Cek weekend: kalau skip_weekend, Sabtu/Minggu tidak bisa complete
+//   - Bonus: +50 EXP kalau selesai SEMUA hari kerja di range
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -9,6 +13,26 @@ import { createServerClient } from '@/lib/supabase';
 import { getInternToken } from '@/lib/auth';
 
 const EXP_REWARD = 20;
+const BONUS_EXP_ALL_COMPLETE = 50;
+
+// Helper: hitung jumlah hari kerja dalam range
+function countWorkingDays(start: Date, end: Date, skipWeekend: boolean): number {
+  let count = 0;
+  const cur = new Date(start);
+  cur.setHours(0, 0, 0, 0);
+  const endCopy = new Date(end);
+  endCopy.setHours(0, 0, 0, 0);
+  while (cur <= endCopy) {
+    const day = cur.getDay();
+    if (skipWeekend && (day === 0 || day === 6)) {
+      cur.setDate(cur.getDate() + 1);
+      continue;
+    }
+    count++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return count;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,11 +56,8 @@ export async function POST(req: NextRequest) {
     if (!activity.is_active) {
       return NextResponse.json({ error: 'Aktivitas sudah tidak aktif' }, { status: 400 });
     }
-    if (activity.due_date && new Date(activity.due_date).getTime() < Date.now()) {
-      return NextResponse.json({ error: 'Aktivitas sudah lewat deadline' }, { status: 400 });
-    }
 
-    // 2. Verify access: per-intern (intern_id match) ATAU per-departemen (department match)
+    // 2. Verify access
     let hasAccess = false;
     if (activity.intern_id) {
       hasAccess = activity.intern_id === intern.intern_id;
@@ -52,14 +73,136 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Anda tidak punya akses ke aktivitas ini' }, { status: 403 });
     }
 
-    // 3. Anti-exploit: cek apakah sudah completed
+    // ============================================================
+    // BRANCH 1: RECURRING MODE (HARIAN)
+    // ============================================================
+    if (activity.is_recurring) {
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+
+      // Validasi range
+      if (activity.start_date && activity.end_date) {
+        const todayMidnight = new Date(today);
+        todayMidnight.setHours(0, 0, 0, 0);
+        const sd = new Date(activity.start_date);
+        sd.setHours(0, 0, 0, 0);
+        const ed = new Date(activity.end_date);
+        ed.setHours(0, 0, 0, 0);
+
+        if (todayMidnight < sd || todayMidnight > ed) {
+          return NextResponse.json({ error: 'Hari ini di luar rentang aktivitas' }, { status: 400 });
+        }
+      }
+
+      // Validasi weekend
+      if (activity.skip_weekend) {
+        const day = today.getDay();
+        if (day === 0 || day === 6) {
+          return NextResponse.json({ error: 'Akhir pekan (Sabtu/Minggu) tidak ada aktivitas' }, { status: 400 });
+        }
+      }
+
+      // Validasi jam
+      if (activity.daily_deadline_hour) {
+        const wibHour = (today.getUTCHours() + 7) % 24;
+        if (wibHour >= activity.daily_deadline_hour) {
+          return NextResponse.json({
+            error: `Waktu complete sudah habis. Aktivitas harus diselesaikan sebelum jam ${activity.daily_deadline_hour}:00 WIB.`
+          }, { status: 400 });
+        }
+      }
+
+      // Anti-double: cek apakah sudah complete hari ini
+      const { data: existingToday } = await supabase
+        .from('activity_daily_completions')
+        .select('id')
+        .eq('activity_id', activity_id)
+        .eq('intern_id', intern.intern_id)
+        .eq('completion_date', todayStr)
+        .maybeSingle();
+      if (existingToday) {
+        return NextResponse.json({ error: 'Anda sudah menyelesaikan aktivitas ini hari ini' }, { status: 409 });
+      }
+
+      // Insert completion harian
+      const { error: iErr } = await supabase.from('activity_daily_completions').insert({
+        activity_id,
+        intern_id: intern.intern_id,
+        completion_date: todayStr,
+        completion_notes: completion_notes?.trim() || null,
+        exp_awarded: EXP_REWARD,
+        bonus_exp_awarded: 0
+      });
+      if (iErr) {
+        if (iErr.code === '23505') {
+          return NextResponse.json({ error: 'Anda sudah menyelesaikan aktivitas ini hari ini' }, { status: 409 });
+        }
+        return NextResponse.json({ error: iErr.message }, { status: 500 });
+      }
+
+      // Cek bonus: apakah sudah complete SEMUA hari kerja di range?
+      let bonusExp = 0;
+      let allComplete = false;
+      if (activity.start_date && activity.end_date) {
+        const totalDays = countWorkingDays(new Date(activity.start_date), new Date(activity.end_date), activity.skip_weekend);
+        const { data: allMyCompletions } = await supabase
+          .from('activity_daily_completions')
+          .select('id, completion_date')
+          .eq('activity_id', activity_id)
+          .eq('intern_id', intern.intern_id);
+        const myCount = (allMyCompletions || []).length;
+
+        if (myCount >= totalDays) {
+          // Sudah complete semua → bonus
+          bonusExp = BONUS_EXP_ALL_COMPLETE;
+          allComplete = true;
+          // Update baris terakhir dengan bonus_exp
+          await supabase
+            .from('activity_daily_completions')
+            .update({ bonus_exp_awarded: bonusExp })
+            .eq('activity_id', activity_id)
+            .eq('intern_id', intern.intern_id)
+            .eq('completion_date', todayStr);
+        }
+      }
+
+      // Grant EXP
+      const totalExpGain = EXP_REWARD + bonusExp;
+      const { data: internData } = await supabase
+        .from('interns')
+        .select('total_exp')
+        .eq('id', intern.intern_id)
+        .single();
+      const newTotalExp = (internData?.total_exp || 0) + totalExpGain;
+      await supabase.from('interns').update({ total_exp: newTotalExp }).eq('id', intern.intern_id);
+
+      return NextResponse.json({
+        success: true,
+        mode: 'recurring',
+        exp_gained: EXP_REWARD,
+        bonus_exp: bonusExp,
+        total_exp_gained: totalExpGain,
+        new_total_exp: newTotalExp,
+        all_complete: allComplete,
+        message: allComplete
+          ? `🎉 Selamat! Anda menyelesaikan SEMUA hari kerja. Bonus +${bonusExp} EXP!`
+          : `+${EXP_REWARD} EXP! Tugas akan muncul lagi besok.`
+      });
+    }
+
+    // ============================================================
+    // BRANCH 2: NON-RECURRING MODE (MODE LAMA)
+    // ============================================================
+    if (activity.due_date && new Date(activity.due_date).getTime() < Date.now()) {
+      return NextResponse.json({ error: 'Aktivitas sudah lewat deadline' }, { status: 400 });
+    }
+
+    // Anti-exploit
     if (activity.intern_id) {
-      // Mode per-intern: cek completed_by_intern_id
       if (activity.completed_by_intern_id === intern.intern_id) {
         return NextResponse.json({ error: 'Anda sudah menyelesaikan aktivitas ini' }, { status: 409 });
       }
     } else {
-      // Mode per-departemen: cek activity_completions
       const { data: existing } = await supabase
         .from('activity_completions')
         .select('id')
@@ -71,9 +214,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 4. Mark as completed
+    // Mark as completed
     if (activity.intern_id) {
-      // Mode per-intern: update completed_by_intern_id + completion_notes di activities
       const { error: uErr } = await supabase
         .from('activities')
         .update({
@@ -84,7 +226,6 @@ export async function POST(req: NextRequest) {
         .eq('id', activity_id);
       if (uErr) return NextResponse.json({ error: uErr.message }, { status: 500 });
     } else {
-      // Mode per-departemen: insert ke activity_completions with notes
       const { error: iErr } = await supabase.from('activity_completions').insert({
         activity_id,
         intern_id: intern.intern_id,
@@ -98,7 +239,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 5. Grant EXP
+    // Grant EXP
     const { data: internData } = await supabase
       .from('interns')
       .select('total_exp')
@@ -109,8 +250,13 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      mode: 'single',
       exp_gained: EXP_REWARD,
-      new_total_exp: newTotalExp
+      bonus_exp: 0,
+      total_exp_gained: EXP_REWARD,
+      new_total_exp: newTotalExp,
+      all_complete: true,
+      message: `+${EXP_REWARD} EXP!`
     });
   } catch (e: any) {
     console.error('[activities/complete] error:', e);
