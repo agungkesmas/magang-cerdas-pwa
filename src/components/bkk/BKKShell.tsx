@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Users, BookHeart, LogOut, GraduationCap, Menu, X, UserCircle } from 'lucide-react';
+import { Home, Users, BookHeart, LogOut, GraduationCap, Menu, X, UserCircle, Award } from 'lucide-react';
 
 const NAV = [
   { href: '/bkk/home', label: 'Beranda', icon: Home },
   { href: '/bkk/interns', label: 'Peserta Magang', icon: Users },
+  { href: '/bkk/certificates', label: 'Sertifikat', icon: Award },
   { href: '/bkk/logbook', label: 'Logbook', icon: BookHeart },
   { href: '/bkk/profile', label: 'Profil', icon: UserCircle }
 ];

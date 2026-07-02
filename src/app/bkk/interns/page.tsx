@@ -15,7 +15,8 @@ import {
   CheckCircle2,
   XCircle,
   BookHeart,
-  AlertTriangle
+  AlertTriangle,
+  ExternalLink
 } from 'lucide-react';
 
 export default function BKKInternsPage() {
@@ -422,9 +423,19 @@ function InternDetail({ internId }: { internId: string }) {
               <p className="text-xs text-gray-700">Tier: {certificate.tier} • Diterbitkan: {new Date(certificate.issue_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
             </div>
           </div>
-          <p className="text-xs text-gray-600">
-            Verification ID: <span className="font-mono font-bold">{certificate.verification_id}</span>
-          </p>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="text-xs text-gray-600">
+              Verification ID: <span className="font-mono font-bold">{certificate.verification_id}</span>
+            </p>
+            <a
+              href={`/api/certificate/verify?id=${certificate.verification_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs bg-bpjs-blue text-white px-3 py-1.5 rounded-lg font-medium hover:bg-bpjs-blue-dark"
+            >
+              <ExternalLink className="w-3 h-3" /> Verifikasi Sertifikat
+            </a>
+          </div>
         </div>
       )}
 
