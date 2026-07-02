@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Users,
-  ListChecks,
   MapPin,
   Award,
   Settings,
@@ -19,7 +18,6 @@ import {
 
 const NAV = [
   { href: '/admin/interns', label: 'Peserta Magang', icon: Users },
-  { href: '/admin/tasks', label: 'Tugas', icon: ListChecks },
   { href: '/admin/attendance', label: 'Kehadiran', icon: MapPin },
   { href: '/admin/certificate', label: 'Sertifikat', icon: Award },
   { href: '/admin/schools', label: 'Institusi & BKK', icon: School },

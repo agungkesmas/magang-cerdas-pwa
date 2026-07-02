@@ -7,7 +7,6 @@ import {
   Home,
   MapPin,
   BookOpen,
-  Swords,
   BookHeart,
   Trophy,
   LogOut,
@@ -21,7 +20,6 @@ const NAV_ALL = [
   { href: '/intern/home', label: 'Home', icon: Home },
   { href: '/intern/attendance', label: 'Check-In', icon: MapPin },
   { href: '/intern/survival-kit', label: 'Survival Kit', icon: BookOpen },
-  { href: '/intern/daily-quest', label: 'Daily Quest', icon: Swords },
   { href: '/intern/logbook', label: 'Logbook', icon: BookHeart },
   { href: '/intern/certificate', label: 'Vault', icon: Trophy }
 ];

@@ -66,7 +66,7 @@ export default function HomePage() {
               Agent Academy
             </h2>
             <p className="text-white/60 text-sm mb-4">
-              Dashboard peserta magang: check-in, daily quest, logbook, survival kit, sertifikat.
+              Dashboard peserta magang: check-in, logbook, survival kit, sertifikat.
             </p>
             <div className="inline-flex items-center gap-1 text-bpjs-yellow text-sm font-semibold group-hover:gap-2 transition-all">
               Masuk sebagai Peserta Magang
