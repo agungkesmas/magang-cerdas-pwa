@@ -12,7 +12,7 @@ import pg from 'pg';
 
 const SETUP_SECRET = 'magang-cerdas-setup-2024';
 
-async function tryConnect(config: pg.ClientConfig): Promise<pg.Client | null> {
+async function tryConnect(config: pg.ClientConfig): Promise<{ client: pg.Client | null; error: string | null }> {
   const client = new pg.Client({
     ...config,
     ssl: { rejectUnauthorized: false },
@@ -20,10 +20,10 @@ async function tryConnect(config: pg.ClientConfig): Promise<pg.Client | null> {
   });
   try {
     await client.connect();
-    return client;
-  } catch (e) {
+    return { client, error: null };
+  } catch (e: any) {
     try { await client.end(); } catch (_) {}
-    return null;
+    return { client: null, error: e.message };
   }
 }
 
@@ -106,13 +106,14 @@ export async function POST(req: NextRequest) {
 
     for (const attempt of connectionAttempts) {
       connectionLog.push(`Trying ${attempt.label}...`);
-      client = await tryConnect(attempt.config);
-      if (client) {
+      const { client: c, error } = await tryConnect(attempt.config);
+      if (c) {
+        client = c;
         usedLabel = attempt.label;
         connectionLog.push(`✅ Connected via ${attempt.label}`);
         break;
       } else {
-        connectionLog.push(`❌ ${attempt.label} failed`);
+        connectionLog.push(`❌ ${attempt.label} failed: ${error}`);
       }
     }
 
