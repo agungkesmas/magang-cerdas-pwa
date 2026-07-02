@@ -15,7 +15,8 @@ import {
   Sparkles,
   Wand2,
   Archive,
-  RotateCcw
+  RotateCcw,
+  Edit
 } from 'lucide-react';
 
 interface Activity {
@@ -53,6 +54,8 @@ export default function AdminActivitiesPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [archiving, setArchiving] = useState<string | null>(null);
+  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  const [showEditForm, setShowEditForm] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -210,6 +213,13 @@ export default function AdminActivitiesPage() {
                   <div className="flex flex-col items-end gap-1">
                     <div className="flex items-center gap-1">
                       <button
+                        onClick={() => { setEditingActivity(act); setShowEditForm(true); }}
+                        title="Edit aktivitas"
+                        className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={() => handleArchive(act.id, act.title)}
                         disabled={archiving === act.id}
                         title="Arsipkan (sembunyikan dari peserta, bisa diaktifkan lagi)"
@@ -251,6 +261,13 @@ export default function AdminActivitiesPage() {
                 </div>
                 <div className="flex items-center gap-1">
                   <button
+                    onClick={() => { setEditingActivity(act); setShowEditForm(true); }}
+                    title="Edit aktivitas"
+                    className="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                  </button>
+                  <button
                     onClick={() => handleReactivate(act.id, act.title)}
                     disabled={archiving === act.id}
                     title="Aktifkan kembali (reset completion)"
@@ -277,6 +294,18 @@ export default function AdminActivitiesPage() {
           onClose={() => setShowForm(false)}
           onSuccess={() => {
             setShowForm(false);
+            fetchAll();
+          }}
+        />
+      )}
+
+      {showEditForm && editingActivity && (
+        <EditActivityModal
+          activity={editingActivity}
+          onClose={() => { setShowEditForm(false); setEditingActivity(null); }}
+          onSuccess={() => {
+            setShowEditForm(false);
+            setEditingActivity(null);
             fetchAll();
           }}
         />
@@ -469,6 +498,128 @@ function ActivityFormModal({
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50">Batal</button>
             <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white font-semibold rounded-lg disabled:opacity-50 flex items-center justify-center gap-2">
               {loading && <Loader2 className="w-4 h-4 animate-spin" />} Assign
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// EditActivityModal — Edit aktivitas (aktif atau arsip)
+// ============================================================
+function EditActivityModal({
+  activity,
+  onClose,
+  onSuccess
+}: {
+  activity: Activity;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [form, setForm] = useState({
+    title: activity.title,
+    description: activity.description,
+    due_date: activity.due_date ? new Date(activity.due_date).toISOString().slice(0, 10) : '',
+    due_time: activity.due_date ? new Date(activity.due_date).toTimeString().slice(0, 5) : '16:00'
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      let dueDateISO: string | null = null;
+      if (form.due_date) {
+        dueDateISO = new Date(`${form.due_date}T${form.due_time}:00`).toISOString();
+      }
+      const res = await fetch('/api/activities/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: activity.id,
+          title: form.title,
+          description: form.description,
+          due_date: dueDateISO
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100 sticky top-0 bg-white">
+          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <Edit className="w-5 h-5 text-blue-600" /> Edit Aktivitas
+          </h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Judul Aktivitas *</label>
+            <input
+              required
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi *</label>
+            <textarea
+              required
+              rows={6}
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+            />
+            <p className="text-xs text-gray-500 mt-1">Edit instruksi sesuai kebutuhan</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Deadline (opsional)</label>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="date"
+                value={form.due_date}
+                onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white"
+              />
+              <select
+                value={form.due_time}
+                onChange={(e) => setForm({ ...form, due_time: e.target.value })}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white"
+              >
+                {['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'].map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {activity.is_archived && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              Aktivitas ini sedang diarsip. Edit akan tersimpan, aktivitas tetap diarsip sampai di-reactivate.
+            </div>
+          )}
+
+          {error && <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">{error}</div>}
+
+          <div className="flex gap-2 pt-2">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50">Batal</button>
+            <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white font-semibold rounded-lg disabled:opacity-50 flex items-center justify-center gap-2">
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />} Simpan Perubahan
             </button>
           </div>
         </form>
