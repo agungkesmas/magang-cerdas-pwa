@@ -13,7 +13,8 @@ import {
   Zap,
   Menu,
   X,
-  Bell
+  Bell,
+  UserCircle
 } from 'lucide-react';
 
 const NAV_ALL = [
@@ -21,7 +22,8 @@ const NAV_ALL = [
   { href: '/intern/attendance', label: 'Check-In', icon: MapPin },
   { href: '/intern/activities', label: 'Aktivitas', icon: CheckSquare },
   { href: '/intern/logbook', label: 'Logbook', icon: BookHeart },
-  { href: '/intern/certificate', label: 'Vault', icon: Trophy }
+  { href: '/intern/certificate', label: 'Vault', icon: Trophy },
+  { href: '/intern/profile', label: 'Profil', icon: UserCircle }
 ];
 
 export default function InternShell({

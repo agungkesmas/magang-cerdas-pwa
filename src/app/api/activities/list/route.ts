@@ -19,21 +19,21 @@ export async function GET(req: NextRequest) {
     const supabase = createServerClient();
 
     if (admin && !intern) {
-      // Admin: list semua aktivitas with completion count
+      // Admin: list SEMUA aktivitas (including archived) with completion count
       const { data: activities, error: aErr } = await supabase
         .from('activities')
         .select('*')
         .order('created_at', { ascending: false });
       if (aErr) return NextResponse.json({ error: aErr.message }, { status: 500 });
 
-      // Filter archived di code (kolom is_archived mungkin belum ada jika migration belum di-run)
-      const activeActivities = (activities || []).filter((a: any) => !a.is_archived);
+      // Tidak filter archived — admin perlu lihat semua (aktif + arsip)
+      const allActivities = activities || [];
 
       // Get completions untuk mode department
       const { data: completions } = await supabase
         .from('activity_completions')
         .select('activity_id, intern_id, completed_at, interns!inner(name)')
-        .in('activity_id', (activeActivities || []).map((a) => a.id));
+        .in('activity_id', (allActivities || []).map((a) => a.id));
 
       const completionsMap: Record<string, any[]> = {};
       (completions || []).forEach((c: any) => {
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
       });
 
       // For per-intern activities, get intern name
-      const internIds = (activeActivities || []).filter((a) => a.intern_id).map((a) => a.intern_id);
+      const internIds = (allActivities || []).filter((a) => a.intern_id).map((a) => a.intern_id);
       let internNamesMap: Record<string, string> = {};
       if (internIds.length > 0) {
         const { data: interns } = await supabase
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
         });
       }
 
-      const result = (activeActivities || []).map((a) => ({
+      const result = (allActivities || []).map((a) => ({
         ...a,
         assigned_intern_name: a.intern_id ? internNamesMap[a.intern_id] || 'Unknown' : null,
         completions: completionsMap[a.id] || [],
@@ -88,21 +88,21 @@ export async function GET(req: NextRequest) {
     if (aErr) return NextResponse.json({ error: aErr.message }, { status: 500 });
 
     // Filter archived di code
-    const activeActivities = (activities || []).filter((a: any) => !a.is_archived);
+    const allActivities = (activities || []).filter((a: any) => !a.is_archived);
 
     // Get completions by this intern
     const { data: myCompletions } = await supabase
       .from('activity_completions')
       .select('activity_id, completed_at')
       .eq('intern_id', intern!.intern_id)
-      .in('activity_id', (activeActivities || []).map((a) => a.id));
+      .in('activity_id', (allActivities || []).map((a) => a.id));
 
     const myCompletionMap: Record<string, string | null> = {};
     (myCompletions || []).forEach((c: any) => {
       myCompletionMap[c.activity_id] = c.completed_at;
     });
 
-    const result = (activeActivities || []).map((a) => ({
+    const result = (allActivities || []).map((a) => ({
       ...a,
       my_completion: a.completed_by_intern_id === intern!.intern_id ? a.completed_at : (myCompletionMap[a.id] || null),
       is_completed: a.completed_by_intern_id === intern!.intern_id || !!myCompletionMap[a.id],

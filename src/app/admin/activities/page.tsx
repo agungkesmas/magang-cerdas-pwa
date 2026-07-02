@@ -63,13 +63,13 @@ export default function AdminActivitiesPage() {
       ]);
       const aData = await aRes.json();
       const iData = await iRes.json();
-      if (aData.success) setActivities(aData.activities);
+      if (aData.success) {
+        // Split active vs archived client-side
+        const all = aData.activities || [];
+        setActivities(all.filter((a: Activity) => !a.is_archived));
+        setArchived(all.filter((a: Activity) => a.is_archived));
+      }
       if (iData.success) setInterns(iData.interns.filter((i: Intern) => i.is_active));
-
-      // Fetch archived activities
-      const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      // Actually, we need an API for archived. Let's use a query param or separate fetch.
-      // For now, let's fetch all and filter client-side
     } finally {
       setLoading(false);
     }

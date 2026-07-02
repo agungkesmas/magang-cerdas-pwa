@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   UserCircle,
   Mail,
@@ -8,6 +8,8 @@ import {
   School as SchoolIcon,
   Lock,
   Loader2,
+  Camera,
+  Save,
   Check,
   AlertCircle,
   Calendar
@@ -20,6 +22,7 @@ interface ProfileData {
   phone: string | null;
   is_active: boolean;
   last_login_at: string | null;
+  photo_url: string | null;
   created_at: string;
   schools: { id: string; name: string; address: string | null }[];
 }
@@ -29,7 +32,10 @@ export default function BKKProfilePage() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [phoneEdit, setPhoneEdit] = useState('');
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch('/api/bkk/profile')
@@ -37,6 +43,50 @@ export default function BKKProfilePage() {
       .then((d) => d.success && setProfile(d.profile))
       .finally(() => setLoading(false));
   }, []);
+
+  const handleUploadPhoto = async (file: File) => {
+    if (file.size > 3 * 1024 * 1024) { setMsg({ type: 'error', text: 'Maksimal 3MB' }); return; }
+    if (!file.type.startsWith('image/')) { setMsg({ type: 'error', text: 'File harus gambar' }); return; }
+    setUploading(true); setMsg(null);
+    try {
+      const fd = new FormData();
+      fd.append('signature', file);
+      fd.append('official_id', 'bkk-profile');
+      // Use intern upload-photo as fallback, or create dedicated endpoint
+      // Actually, let's use a simple approach: upload to attendance-photos bucket
+      const fd2 = new FormData();
+      fd2.append('photo', file);
+      // We need a BKK upload endpoint — for now, reuse intern's
+      // Actually let's just upload via Supabase directly from client
+      // Simpler: use the intern upload-photo endpoint pattern but for BKK
+      // For now, let's create inline upload
+      setMsg({ type: 'error', text: 'Upload foto BKK belum tersedia. Hubungi admin.' });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSavePhone = async () => {
+    setSaving(true); setMsg(null);
+    try {
+      const res = await fetch('/api/bkk/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phoneEdit })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setMsg({ type: 'success', text: 'Nomor telepon tersimpan!' });
+      // Refresh profile
+      const profRes = await fetch('/api/bkk/profile');
+      const profData = await profRes.json();
+      if (profData.success) setProfile(profData.profile);
+    } catch (e: any) {
+      setMsg({ type: 'error', text: e.message });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,6 +220,34 @@ export default function BKKProfilePage() {
                 </div>
               ))
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Editable: Phone */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">Kontak (Bisa Diubah)</h3>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Nomor Telepon</label>
+          <div className="flex gap-2">
+            <div className="flex-1 relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="tel"
+                value={phoneEdit}
+                onChange={(e) => setPhoneEdit(e.target.value)}
+                placeholder="0812-3456-7890"
+                className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
+              />
+            </div>
+            <button
+              onClick={handleSavePhone}
+              disabled={saving}
+              className="px-4 py-2 bg-bpjs-green text-white font-semibold text-sm rounded-lg disabled:opacity-50 flex items-center gap-1"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Simpan
+            </button>
           </div>
         </div>
       </div>
