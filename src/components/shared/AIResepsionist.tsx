@@ -23,6 +23,10 @@ interface AIResepsionistProps {
   dashboard: 'admin' | 'bkk' | 'intern';
   welcomeName?: string;
   accentColor?: 'blue' | 'green' | 'purple';
+  // Tailwind class untuk posisi bottom tombol floating & panel chat.
+  // Default 'bottom-6' (cukup untuk Admin/BKK tanpa bottom nav).
+  // Untuk Intern (ada bottom nav mobile), pass 'bottom-20'.
+  bottomOffset?: 'bottom-6' | 'bottom-20';
 }
 
 const ACCENT_MAP = {
@@ -76,7 +80,8 @@ const SUGGESTED_QUESTIONS: Record<string, string[]> = {
 export default function AIResepsionist({
   dashboard,
   welcomeName,
-  accentColor = 'blue'
+  accentColor = 'blue',
+  bottomOffset = 'bottom-6'
 }: AIResepsionistProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -92,8 +97,8 @@ export default function AIResepsionist({
   useEffect(() => {
     if (open && messages.length === 0) {
       const greet = welcomeName
-        ? `Halo ${welcomeName}! 👋 Saya **Pandai**, AI Resepsionis MAGANG-CERDAS. Saya siap bantu kamu navigasi dashboard ${DASHBOARD_LABEL[dashboard]}. Ada yang bisa saya bantu?`
-        : `Halo! 👋 Saya **Pandai**, AI Resepsionis MAGANG-CERDAS. Saya siap bantu kamu navigasi dashboard ${DASHBOARD_LABEL[dashboard]}. Ada yang bisa saya bantu?`;
+        ? `Halo ${welcomeName}! 👋 Saya **Si Pandai**, AI Resepsionis MAGANG-CERDAS. Saya siap bantu kamu navigasi dashboard ${DASHBOARD_LABEL[dashboard]}. Ada yang bisa saya bantu?`
+        : `Halo! 👋 Saya **Si Pandai**, AI Resepsionis MAGANG-CERDAS. Saya siap bantu kamu navigasi dashboard ${DASHBOARD_LABEL[dashboard]}. Ada yang bisa saya bantu?`;
       setMessages([{ role: 'assistant', content: greet, ts: Date.now() }]);
     }
   }, [open, messages.length, dashboard, welcomeName]);
@@ -156,20 +161,20 @@ export default function AIResepsionist({
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className={`fixed bottom-6 right-6 z-40 ${accent.btn} text-white rounded-full shadow-2xl hover:scale-105 transition-all flex items-center gap-2 px-4 py-3 group`}
-          aria-label="Buka AI Resepsionis"
+          className={`fixed ${bottomOffset} right-4 sm:right-6 z-40 ${accent.btn} text-white rounded-full shadow-2xl hover:scale-105 transition-all flex items-center gap-2 px-3 sm:px-4 py-3 group`}
+          aria-label="Buka Si Pandai"
         >
           <div className="relative">
-            <Sparkles className="w-6 h-6" />
+            <Sparkles className="w-5 h-5 sm:w-6 sm:h-6" />
             <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse" />
           </div>
-          <span className="font-semibold text-sm hidden sm:inline">Tanya Pandai</span>
+          <span className="font-semibold text-sm hidden sm:inline">Tanya Si Pandai</span>
         </button>
       )}
 
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-6 right-6 z-50 w-[calc(100vw-3rem)] sm:w-96 max-w-md">
+        <div className={`fixed ${bottomOffset} right-4 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-96 max-w-md`}>
           <div className="bg-white rounded-2xl shadow-2xl flex flex-col border border-gray-200 overflow-hidden" style={{ height: 'min(70vh, 540px)' }}>
             {/* Header */}
             <div className={`${accent.header} text-white p-4 flex items-center justify-between flex-shrink-0`}>
@@ -178,7 +183,7 @@ export default function AIResepsionist({
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="font-bold text-sm leading-tight">Pandai</p>
+                  <p className="font-bold text-sm leading-tight">Si Pandai</p>
                   <p className="text-xs text-white/70 leading-tight">AI Resepsionis</p>
                 </div>
               </div>
@@ -271,7 +276,7 @@ export default function AIResepsionist({
                 </button>
               </div>
               <p className="text-[10px] text-gray-400 mt-1.5 text-center">
-                Pandai hanya menjawab seputar dashboard ini
+                Si Pandai hanya menjawab seputar dashboard ini
               </p>
             </form>
           </div>

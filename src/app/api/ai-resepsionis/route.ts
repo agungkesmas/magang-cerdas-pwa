@@ -14,7 +14,7 @@ import { callLLM, LLMMessage } from '@/lib/llm';
 // ============================================================
 
 const SYSTEM_PROMPTS: Record<string, string> = {
-  admin: `Kamu adalah "Pandai" — AI Resepsionis untuk Dashboard Admin MAGANG-CERDAS di BPJS Ketenagakerjaan Cabang Cirebon.
+  admin: `Kamu adalah "Si Pandai" — AI Resepsionis untuk Dashboard Admin MAGANG-CERDAS di BPJS Ketenagakerjaan Cabang Cirebon.
 
 PERAN:
 - Menyambut admin BPJTK & membantu menjelaskan fitur dashboard
@@ -45,7 +45,7 @@ CONTOH JAWABAN:
 
 Jika user bertanya di luar konteks, jawab singkat: "Maaf, saya hanya melayani pertanyaan seputar dashboard admin MAGANG-CERDAS. Ada yang bisa saya bantu terkait menu di dashboard ini?"`,
 
-  bkk: `Kamu adalah "Pandai" — AI Resepsionis untuk Dashboard BKK (Bursa Kerja Khusus) MAGANG-CERDAS di BPJS Ketenagakerjaan Cabang Cirebon.
+  bkk: `Kamu adalah "Si Pandai" — AI Resepsionis untuk Dashboard BKK (Bursa Kerja Khusus) MAGANG-CERDAS di BPJS Ketenagakerjaan Cabang Cirebon.
 
 PERAN:
 - Menyambut guru BKK & membantu menjelaskan fitur dashboard
@@ -81,7 +81,7 @@ CONTOH JAWABAN:
 
 Jika user bertanya di luar konteks, jawab singkat: "Maaf, saya hanya melayani pertanyaan seputar dashboard BKK MAGANG-CERDAS. Ada yang bisa saya bantu terkait pengajuan magang atau data peserta?"`,
 
-  intern: `Kamu adalah "Pandai" — AI Resepsionis untuk Dashboard Peserta Magang MAGANG-CERDAS di BPJS Ketenagakerjaan Cabang Cirebon.
+  intern: `Kamu adalah "Si Pandai" — AI Resepsionis untuk Dashboard Peserta Magang MAGANG-CERDAS di BPJS Ketenagakerjaan Cabang Cirebon.
 
 PERAN:
 - Menyambut peserta magang & membantu menjelaskan fitur dashboard
@@ -128,7 +128,7 @@ function stubAnswer(dashboard: string, question: string): string {
   const q = question.toLowerCase();
   const greetings = ['halo', 'hai', 'hello', 'hi', 'assalam', 'selamat pagi', 'selamat siang', 'selamat sore', 'selamat malam'];
   if (greetings.some((g) => q.includes(g))) {
-    return 'Halo! Saya Pandai, AI Resepsionis MAGANG-CERDAS. Ada yang bisa saya bantu terkait menu di dashboard ini?';
+    return 'Halo! Saya Si Pandai, AI Resepsionis MAGANG-CERDAS. Ada yang bisa saya bantu terkait menu di dashboard ini?';
   }
   if (q.includes('terima kasih') || q.includes('makasih') || q.includes('thanks')) {
     return 'Sama-sama! Senang bisa membantu. Jika ada pertanyaan lain, jangan ragu tanya ya.';

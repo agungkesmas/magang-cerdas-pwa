@@ -190,7 +190,7 @@ export default function InternShell({
       `}</style>
 
       {/* AI Resepsionis */}
-      <AIResepsionist dashboard="intern" welcomeName={intern.name?.split(' ')[0]} accentColor="purple" />
+      <AIResepsionist dashboard="intern" welcomeName={intern.name?.split(' ')[0]} accentColor="purple" bottomOffset="bottom-20" />
     </div>
   );
 }
