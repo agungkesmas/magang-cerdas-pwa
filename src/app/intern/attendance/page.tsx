@@ -369,12 +369,32 @@ export default function InternAttendancePage() {
                 <CameraOff className="w-12 h-12 text-red-400 mb-3" />
                 <p className="text-white font-medium mb-2">Kamera Tidak Tersedia</p>
                 <p className="text-white/60 text-xs mb-4">{cameraError}</p>
-                <button
-                  onClick={closeCamera}
-                  className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg"
-                >
-                  Tutup
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={closeCamera}
+                    className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg"
+                  >
+                    Tutup
+                  </button>
+                  <label className="px-4 py-2 bg-bpjs-yellow text-bpjs-blue-dark text-sm font-semibold rounded-lg cursor-pointer hover:bg-bpjs-yellow-dark">
+                    <Camera className="w-4 h-4 inline mr-1" /> Upload dari File
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="user"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setPhotoFile(file);
+                        const reader = new FileReader();
+                        reader.onload = () => setPhoto(reader.result as string);
+                        reader.readAsDataURL(file);
+                        closeCamera();
+                      }}
+                    />
+                  </label>
+                </div>
               </div>
             ) : (
               <video
