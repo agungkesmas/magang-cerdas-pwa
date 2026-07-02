@@ -14,7 +14,7 @@ export async function GET() {
     const supabase = createServerClient();
     const { data: t, error } = await supabase
       .from('bkk_teachers')
-      .select('id, email, name, phone, photo_url, is_active, last_login_at, created_at')
+      .select('id, email, name, phone, whatsapp, photo_url, is_active, last_login_at, created_at')
       .eq('id', teacher.teacher_id)
       .single();
     if (error || !t) return NextResponse.json({ error: 'Teacher tidak ditemukan' }, { status: 404 });
@@ -69,9 +69,10 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    // Mode 2: Update profile (phone + photo_url only — strict whitelist)
+    // Mode 2: Update profile (phone, whatsapp, photo_url only — strict whitelist)
     const updates: Record<string, unknown> = {};
     if (body.phone !== undefined) updates.phone = body.phone?.trim() || null;
+    if (body.whatsapp !== undefined) updates.whatsapp = body.whatsapp?.trim() || null;
     if (body.photo_url !== undefined) updates.photo_url = body.photo_url || null;
 
     if (Object.keys(updates).length === 0) {

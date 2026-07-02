@@ -34,13 +34,20 @@ export default function BKKProfilePage() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [phoneEdit, setPhoneEdit] = useState('');
+  const [waEdit, setWaEdit] = useState('');
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch('/api/bkk/profile')
       .then((r) => r.json())
-      .then((d) => d.success && setProfile(d.profile))
+      .then((d) => {
+        if (d.success) {
+          setProfile(d.profile);
+          setPhoneEdit(d.profile.phone || '');
+          setWaEdit(d.profile.whatsapp || '');
+        }
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -72,11 +79,11 @@ export default function BKKProfilePage() {
       const res = await fetch('/api/bkk/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: phoneEdit })
+        body: JSON.stringify({ phone: phoneEdit, whatsapp: waEdit })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setMsg({ type: 'success', text: 'Nomor telepon tersimpan!' });
+      setMsg({ type: 'success', text: 'Kontak tersimpan!' });
       // Refresh profile
       const profRes = await fetch('/api/bkk/profile');
       const profData = await profRes.json();
@@ -224,30 +231,45 @@ export default function BKKProfilePage() {
         </div>
       </div>
 
-      {/* Editable: Phone */}
+      {/* Editable: Phone + WhatsApp */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6">
         <h3 className="text-sm font-semibold text-gray-700 mb-3">Kontak (Bisa Diubah)</h3>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nomor Telepon</label>
-          <div className="flex gap-2">
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
             <div className="flex-1 relative">
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="tel"
-                value={phoneEdit}
-                onChange={(e) => setPhoneEdit(e.target.value)}
+                value={waEdit}
+                onChange={(e) => setWaEdit(e.target.value)}
                 placeholder="0812-3456-7890"
                 className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
               />
             </div>
-            <button
-              onClick={handleSavePhone}
-              disabled={saving}
-              className="px-4 py-2 bg-bpjs-green text-white font-semibold text-sm rounded-lg disabled:opacity-50 flex items-center gap-1"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Simpan
-            </button>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nomor Telepon Lain</label>
+            <div className="flex gap-2">
+              <div className="flex-1 relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="tel"
+                  value={phoneEdit}
+                  onChange={(e) => setPhoneEdit(e.target.value)}
+                  placeholder="0812-3456-7890"
+                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
+                />
+              </div>
+              <button
+                onClick={handleSavePhone}
+                disabled={saving}
+                className="px-4 py-2 bg-bpjs-green text-white font-semibold text-sm rounded-lg disabled:opacity-50 flex items-center gap-1"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Simpan Semua
+              </button>
+            </div>
           </div>
         </div>
       </div>
