@@ -11,8 +11,9 @@ import {
   CheckCircle2,
   Users,
   User,
-  Calendar,
-  AlertCircle
+  AlertCircle,
+  Sparkles,
+  Wand2
 } from 'lucide-react';
 
 interface Activity {
@@ -195,10 +196,37 @@ function ActivityFormModal({
     assignMode: 'department' as 'department' | 'intern',
     department: 'Pelayanan',
     intern_id: '',
-    due_date: ''
+    due_date: '',
+    due_time: '16:00'
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [composing, setComposing] = useState(false);
+  const [composeSource, setComposeSource] = useState<'llm' | 'stub' | null>(null);
+
+  const handleCompose = async () => {
+    if (!form.title.trim()) {
+      setError('Isi judul dulu sebelum klik Magic');
+      return;
+    }
+    setComposing(true);
+    setError('');
+    try {
+      const res = await fetch('/api/activities/compose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: form.title })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setForm({ ...form, description: data.description });
+      setComposeSource(data.source);
+    } catch (err: any) {
+      setError('AI compose gagal: ' + err.message);
+    } finally {
+      setComposing(false);
+    }
+  };
 
   const filteredInterns = form.department
     ? interns.filter((i) => i.department === form.department)
@@ -209,10 +237,16 @@ function ActivityFormModal({
     setLoading(true);
     setError('');
     try {
+      // Combine due_date + due_time jadi ISO string
+      let dueDateISO: string | undefined;
+      if (form.due_date) {
+        dueDateISO = new Date(`${form.due_date}T${form.due_time}:00`).toISOString();
+      }
+
       const body: any = {
         title: form.title,
         description: form.description,
-        due_date: form.due_date || undefined
+        due_date: dueDateISO
       };
       if (form.assignMode === 'department') {
         body.department = form.department;
@@ -252,27 +286,56 @@ function ActivityFormModal({
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Judul Aktivitas *</label>
-            <input
-              required
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
-              placeholder="Verifikasi 10 dokumen JHT"
-            />
+            <div className="flex gap-2">
+              <input
+                required
+                value={form.title}
+                onChange={(e) => {
+                  setForm({ ...form, title: e.target.value });
+                  setComposeSource(null);
+                }}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+                placeholder="Verifikasi 10 dokumen JHT"
+              />
+              <button
+                type="button"
+                onClick={handleCompose}
+                disabled={composing || !form.title.trim()}
+                title="AI generate langkah-langkah dari judul"
+                className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-lg disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+              >
+                {composing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                {composing ? 'Composing...' : 'Magic ✨'}
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Isi judul singkat, lalu klik Magic untuk generate langkah-langkah otomatis
+            </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+              Deskripsi *
+              {composeSource && (
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                  composeSource === 'llm'
+                    ? 'bg-bpjs-green/10 text-bpjs-green'
+                    : 'bg-orange-100 text-orange-700'
+                }`}>
+                  {composeSource === 'llm' ? '✨ AI Generated' : '📋 Template (AI tidak aktif)'}
+                </span>
+              )}
+            </label>
             <textarea
               required
-              rows={3}
+              rows={6}
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
               placeholder="Buka sistem JMO, cari dokumen JHT tanggal hari ini, verifikasi kelengkapannya..."
             />
             <p className="text-xs text-gray-500 mt-1">
-              Tulis instruksi konkret yang mudah dipahami peserta magang
+              Edit detail kalau perlu — peserta akan lihat instruksi ini
             </p>
           </div>
 
@@ -346,12 +409,34 @@ function ActivityFormModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Deadline (opsional)</label>
-            <input
-              type="datetime-local"
-              value={form.due_date}
-              onChange={(e) => setForm({ ...form, due_date: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
-            />
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="date"
+                value={form.due_date}
+                onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40 bg-white"
+              />
+              <select
+                value={form.due_time}
+                onChange={(e) => setForm({ ...form, due_time: e.target.value })}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40 bg-white"
+              >
+                <option value="07:00">07:00 (pagi)</option>
+                <option value="08:00">08:00</option>
+                <option value="09:00">09:00</option>
+                <option value="10:00">10:00</option>
+                <option value="11:00">11:00</option>
+                <option value="12:00">12:00 (siang)</option>
+                <option value="13:00">13:00</option>
+                <option value="14:00">14:00</option>
+                <option value="15:00">15:00</option>
+                <option value="16:00">16:00 (sore)</option>
+                <option value="17:00">17:00 (pulang)</option>
+              </select>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Pilih tanggal + jam deadline. Kosongkan jika tidak ada deadline.
+            </p>
           </div>
 
           {error && (
