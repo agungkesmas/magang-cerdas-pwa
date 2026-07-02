@@ -209,12 +209,35 @@ CREATE INDEX idx_certificates_verification ON Certificates(verification_id);
 -- SEED: Default admin + default active official
 -- ============================================================
 -- Default admin (email: admin@magang-cerdas.local, password: admin123456)
--- Password hash is bcrypt for "admin123456" - will be replaced by Supabase Auth later
+-- Hash generated with bcryptjs (10 rounds) — matches lib/auth.ts implementation
 INSERT INTO Admins (email, password_hash, name, role) VALUES
-  ('admin@magang-cerdas.local', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Super Admin', 'admin')
+  ('admin@magang-cerdas.local', '$2a$10$b/Ctb1MRQdhFkgCgW4lz4.AZGBQCLgespi9UBelcLASiYENCEB4BO', 'Super Admin', 'admin')
 ON CONFLICT (email) DO NOTHING;
 
 -- Default active official: Zainal Abidin A
 INSERT INTO Officials (name, nip, position, is_active) VALUES
   ('Zainal Abidin A', '', 'Kepala Kantor Cabang', TRUE)
 ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- Table: BKK_Teachers (Guru Bursa Kerja Khusus dari sekolah)
+-- ============================================================
+CREATE TABLE BKK_Teachers (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  school_origin VARCHAR(255) NOT NULL, -- akan difilter ke Interns.school_origin
+  phone VARCHAR(50),
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE BKK_Teachers ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "BKK Teachers self read" ON BKK_Teachers FOR SELECT USING (TRUE);
+
+-- Default BKK teacher (email: bkk@magang-cerdas.local, password: bkk123456)
+-- Hash generated with bcryptjs for "bkk123456"
+INSERT INTO BKK_Teachers (email, password_hash, name, school_origin, phone, is_active) VALUES
+  ('bkk@magang-cerdas.local', '$2a$10$eTiKZxQp9vvqxOFcQaq6Se4RS8SUvXDDz.c7CHTqnPUq5ZMDFt8UK', 'BKK Default Teacher', 'SMK Negeri 1 Cirebon', '', TRUE)
+ON CONFLICT (email) DO NOTHING;

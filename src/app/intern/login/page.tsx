@@ -111,6 +111,10 @@ export default function InternLoginPage() {
           <a href="/admin/login" className="text-white/40 hover:text-bpjs-yellow text-sm">
             ← Admin Console
           </a>
+          <span className="mx-2 text-white/30">•</span>
+          <a href="/bkk/login" className="text-white/40 hover:text-bpjs-yellow text-sm">
+            Login BKK →
+          </a>
         </div>
       </div>
     </div>

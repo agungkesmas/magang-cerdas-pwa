@@ -9,6 +9,7 @@ import { cookies } from 'next/headers';
 const JWT_SECRET = process.env.JWT_SECRET || 'magang-cerdas-jwt-secret-fallback-change-me';
 const ADMIN_COOKIE = 'magang_admin_token';
 const INTERN_COOKIE = 'magang_intern_token';
+const BKK_COOKIE = 'magang_bkk_token';
 
 export async function hashPassword(plain: string): Promise<string> {
   return bcrypt.hash(plain, 10);
@@ -69,6 +70,15 @@ export interface InternTokenPayload {
   type: 'intern';
 }
 
+export interface BKKTokenPayload {
+  sub: string;
+  teacher_id: string;
+  email: string;
+  name: string;
+  school_origin: string;
+  type: 'bkk';
+}
+
 export function signAdminToken(payload: Omit<AdminTokenPayload, 'type'>): string {
   return jwt.sign({ ...payload, type: 'admin' }, JWT_SECRET, { expiresIn: '24h' });
 }
@@ -77,7 +87,11 @@ export function signInternToken(payload: Omit<InternTokenPayload, 'type'>): stri
   return jwt.sign({ ...payload, type: 'intern' }, JWT_SECRET, { expiresIn: '7d' });
 }
 
-export function verifyToken<T = AdminTokenPayload | InternTokenPayload>(token: string): T | null {
+export function signBKKToken(payload: Omit<BKKTokenPayload, 'type'>): string {
+  return jwt.sign({ ...payload, type: 'bkk' }, JWT_SECRET, { expiresIn: '7d' });
+}
+
+export function verifyToken<T = AdminTokenPayload | InternTokenPayload | BKKTokenPayload>(token: string): T | null {
   try {
     return jwt.verify(token, JWT_SECRET) as T;
   } catch {
@@ -120,6 +134,22 @@ export async function clearInternCookie(): Promise<void> {
   store.delete(INTERN_COOKIE);
 }
 
+export async function setBKKCookie(token: string): Promise<void> {
+  const store = await cookies();
+  store.set(BKK_COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7 // 7d
+  });
+}
+
+export async function clearBKKCookie(): Promise<void> {
+  const store = await cookies();
+  store.delete(BKK_COOKIE);
+}
+
 export async function getAdminToken(): Promise<AdminTokenPayload | null> {
   const store = await cookies();
   const token = store.get(ADMIN_COOKIE)?.value;
@@ -138,15 +168,25 @@ export async function getInternToken(): Promise<InternTokenPayload | null> {
   return payload;
 }
 
+export async function getBKKToken(): Promise<BKKTokenPayload | null> {
+  const store = await cookies();
+  const token = store.get(BKK_COOKIE)?.value;
+  if (!token) return null;
+  const payload = verifyToken<BKKTokenPayload>(token);
+  if (!payload || payload.type !== 'bkk') return null;
+  return payload;
+}
+
 // ============================================================
 // Client-side auth helpers (for browser)
 // ============================================================
 export const CLIENT_ADMIN_COOKIE = 'magang_admin_token';
 export const CLIENT_INTERN_COOKIE = 'magang_intern_token';
+export const CLIENT_BKK_COOKIE = 'magang_bkk_token';
 
-export function getClientToken(type: 'admin' | 'intern'): string | null {
+export function getClientToken(type: 'admin' | 'intern' | 'bkk'): string | null {
   if (typeof document === 'undefined') return null;
-  const name = type === 'admin' ? CLIENT_ADMIN_COOKIE : CLIENT_INTERN_COOKIE;
+  const name = type === 'admin' ? CLIENT_ADMIN_COOKIE : type === 'intern' ? CLIENT_INTERN_COOKIE : CLIENT_BKK_COOKIE;
   const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
   return match ? match[2] : null;
 }

@@ -30,9 +30,19 @@ export function middleware(req: NextRequest) {
     }
   }
 
+  // Protect /bkk/* EXCEPT /bkk/login
+  if (path.startsWith('/bkk') && !path.startsWith('/bkk/login')) {
+    const token = req.cookies.get('magang_bkk_token')?.value;
+    if (!token) {
+      const loginUrl = new URL('/bkk/login', req.url);
+      loginUrl.searchParams.set('from', path);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/intern/:path*']
+  matcher: ['/admin/:path*', '/intern/:path*', '/bkk/:path*']
 };

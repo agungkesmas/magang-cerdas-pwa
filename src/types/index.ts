@@ -111,6 +111,16 @@ export interface AppSettings {
   updated_at: string;
 }
 
+export interface BKKTeacher {
+  id: string;
+  email: string;
+  name: string;
+  school_origin: string;
+  phone: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface Nudge {
   id: string;
   intern_id: string;
