@@ -128,14 +128,16 @@ export default function InternAttendancePage() {
       });
       streamRef.current = stream;
 
-      // tunggu video element ready
-      setTimeout(() => {
+      // Set cameraStarting ke false DULU supaya video element ter-render
+      setCameraStarting(false);
+
+      // Lalu set srcObject di next tick (video element sudah ada di DOM)
+      requestAnimationFrame(() => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.play().catch(() => {});
         }
-        setCameraStarting(false);
-      }, 200);
+      });
     } catch (e: any) {
       let msg = 'Gagal mengakses kamera';
       if (e.name === 'NotAllowedError') {
@@ -359,13 +361,27 @@ export default function InternAttendancePage() {
 
           {/* Video preview */}
           <div className="relative w-full max-w-md aspect-[4/3] bg-black rounded-2xl overflow-hidden">
-            {cameraStarting ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
+            {/* Selalu render video element supaya ref tidak null */}
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full h-full object-cover"
+              style={{ transform: 'scaleX(-1)' }}
+            />
+
+            {/* Overlay: loading saat starting */}
+            {cameraStarting && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black">
                 <Loader2 className="w-10 h-10 text-bpjs-yellow animate-spin mb-2" />
                 <p className="text-white/70 text-sm">Memulai kamera...</p>
               </div>
-            ) : cameraError ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+            )}
+
+            {/* Overlay: error */}
+            {cameraError && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-black">
                 <CameraOff className="w-12 h-12 text-red-400 mb-3" />
                 <p className="text-white font-medium mb-2">Kamera Tidak Tersedia</p>
                 <p className="text-white/60 text-xs mb-4">{cameraError}</p>
@@ -396,15 +412,6 @@ export default function InternAttendancePage() {
                   </label>
                 </div>
               </div>
-            ) : (
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover"
-                style={{ transform: 'scaleX(-1)' }}
-              />
             )}
           </div>
 
@@ -697,7 +704,8 @@ function LeaveForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: () 
   };
 
   const diffDays = Math.ceil((new Date(form.end_date).getTime() - new Date(form.start_date).getTime()) / (1000 * 60 * 60 * 24));
-  const needMedical = form.type === 'sakit' && diffDays > 0;
+  const uploadLabel = form.type === 'sakit' ? 'Surat Dokter' : form.type === 'dinas-luar' ? 'Surat Tugas / Bukti Dinas' : 'Surat Izin / Bukti';
+  const uploadOptional = form.type !== 'sakit' || diffDays === 0;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3 mb-3 p-3 bg-white/5 rounded-lg">
@@ -761,15 +769,15 @@ function LeaveForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: () 
         />
       </div>
 
-      {needMedical && (
+      {uploadOptional ? (
         <div>
           <label className="block text-xs font-medium text-white/80 mb-1">
-            Surat Dokter * (wajib untuk sakit &gt;1 hari)
+            {uploadLabel} (opsional)
           </label>
           {form.medical_certificate_url ? (
             <div className="flex items-center gap-2 text-xs text-bpjs-green">
               <CheckCircle2 className="w-4 h-4" />
-              <span>Surat dokter sudah diupload</span>
+              <span>{uploadLabel} sudah diupload</span>
               <button type="button" onClick={() => setForm({ ...form, medical_certificate_url: '' })} className="text-red-400 hover:underline">
                 Hapus
               </button>
@@ -777,7 +785,33 @@ function LeaveForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: () 
           ) : (
             <label className="inline-flex items-center gap-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs px-3 py-1.5 rounded-lg cursor-pointer">
               {uploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileText className="w-3 h-3" />}
-              Upload Surat Dokter
+              Upload {uploadLabel}
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && handleUploadMedical(e.target.files[0])}
+              />
+            </label>
+          )}
+        </div>
+      ) : (
+        <div>
+          <label className="block text-xs font-medium text-white/80 mb-1">
+            {uploadLabel} * (wajib untuk sakit &gt;1 hari)
+          </label>
+          {form.medical_certificate_url ? (
+            <div className="flex items-center gap-2 text-xs text-bpjs-green">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>{uploadLabel} sudah diupload</span>
+              <button type="button" onClick={() => setForm({ ...form, medical_certificate_url: '' })} className="text-red-400 hover:underline">
+                Hapus
+              </button>
+            </div>
+          ) : (
+            <label className="inline-flex items-center gap-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs px-3 py-1.5 rounded-lg cursor-pointer">
+              {uploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileText className="w-3 h-3" />}
+              Upload {uploadLabel}
               <input
                 type="file"
                 accept="image/*,application/pdf"
