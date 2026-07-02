@@ -28,6 +28,18 @@ body {
   min-height: 100vh;
 }
 
+/* Form input default — ensures text is dark on light backgrounds (admin/bkk pages) */
+input, textarea, select {
+  color: #111827; /* gray-900 */
+}
+input::placeholder, textarea::placeholder {
+  color: #9CA3AF; /* gray-400 */
+}
+/* On dark backgrounds (login pages), inputs override with text-white in className */
+input[type="file"] {
+  color: inherit;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }

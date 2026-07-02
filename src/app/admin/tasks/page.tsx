@@ -317,7 +317,7 @@ function TaskFormModal({
               required
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
               placeholder="Verifikasi Klaim JHT di JMO"
             />
           </div>
@@ -328,7 +328,7 @@ function TaskFormModal({
               <select
                 value={form.department}
                 onChange={(e) => setForm({ ...form, department: e.target.value, assigned_intern_ids: [] })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
               >
                 <option value="Pelayanan">Pelayanan</option>
                 <option value="Pemasaran">Pemasaran</option>
@@ -343,7 +343,7 @@ function TaskFormModal({
                 required
                 value={form.target_count}
                 onChange={(e) => setForm({ ...form, target_count: parseInt(e.target.value) || 1 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
               />
             </div>
           </div>
@@ -437,7 +437,7 @@ function TaskFormModal({
               rows={4}
               value={form.base_description}
               onChange={(e) => setForm({ ...form, base_description: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
               placeholder="Lakukan verifikasi dokumen klaim JHT melalui aplikasi JMO. Pastikan dokumen lengkap dan data sesuai."
             />
           </div>
@@ -450,7 +450,7 @@ function TaskFormModal({
               type="datetime-local"
               value={form.due_date}
               onChange={(e) => setForm({ ...form, due_date: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
             />
           </div>
 

@@ -189,7 +189,7 @@ export default function BKKProfilePage() {
               required
               value={form.current_password}
               onChange={(e) => setForm({ ...form, current_password: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
               placeholder="••••••••"
             />
           </div>
@@ -200,7 +200,7 @@ export default function BKKProfilePage() {
               required
               value={form.new_password}
               onChange={(e) => setForm({ ...form, new_password: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
               placeholder="Minimal 8 karakter"
             />
           </div>
@@ -211,7 +211,7 @@ export default function BKKProfilePage() {
               required
               value={form.confirm_password}
               onChange={(e) => setForm({ ...form, confirm_password: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
               placeholder="Ulangi password baru"
             />
           </div>

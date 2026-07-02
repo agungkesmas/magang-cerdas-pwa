@@ -497,7 +497,7 @@ function BKKFormModal({
               required
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
               placeholder="Drs. Bambang Sutrisno"
             />
           </div>
@@ -509,7 +509,7 @@ function BKKFormModal({
               type="email"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
               placeholder="bambang@smkn1cirebon.sch.id"
             />
           </div>
@@ -519,7 +519,7 @@ function BKKFormModal({
             <input
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
               placeholder="0812-3456-7890"
             />
           </div>
@@ -568,7 +568,7 @@ function BKKFormModal({
               <input
                 value={form.custom_password}
                 onChange={(e) => setForm({ ...form, custom_password: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
                 placeholder="Kosongkan untuk auto-generate"
               />
               <p className="text-xs text-gray-500 mt-1">

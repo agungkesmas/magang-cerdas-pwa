@@ -164,7 +164,7 @@ export default function AdminSettingsPage() {
             <input
               value={office.office_name}
               onChange={(e) => setOffice({ ...office, office_name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
             />
           </div>
 
@@ -174,7 +174,7 @@ export default function AdminSettingsPage() {
               rows={2}
               value={office.office_address}
               onChange={(e) => setOffice({ ...office, office_address: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
             />
           </div>
 
@@ -186,7 +186,7 @@ export default function AdminSettingsPage() {
                 step="0.0000001"
                 value={office.office_lat}
                 onChange={(e) => setOffice({ ...office, office_lat: parseFloat(e.target.value) })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
               />
             </div>
             <div>
@@ -196,7 +196,7 @@ export default function AdminSettingsPage() {
                 step="0.0000001"
                 value={office.office_lng}
                 onChange={(e) => setOffice({ ...office, office_lng: parseFloat(e.target.value) })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
               />
             </div>
           </div>
@@ -209,7 +209,7 @@ export default function AdminSettingsPage() {
               max={500}
               value={office.geofence_radius_meters}
               onChange={(e) => setOffice({ ...office, geofence_radius_meters: parseInt(e.target.value) || 150 })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
             />
             <p className="text-xs text-gray-500 mt-1">Default: 150m (akurasi GPS indoor 30-100m)</p>
           </div>
@@ -548,7 +548,7 @@ function OfficialFormModal({
               required
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
               placeholder="Zainal Abidin A"
             />
           </div>
@@ -557,7 +557,7 @@ function OfficialFormModal({
             <input
               value={form.nip}
               onChange={(e) => setForm({ ...form, nip: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
             />
           </div>
           <div>
@@ -565,7 +565,7 @@ function OfficialFormModal({
             <input
               value={form.position}
               onChange={(e) => setForm({ ...form, position: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
             />
           </div>
           <label className="flex items-center gap-2">

@@ -453,7 +453,7 @@ function AddInternModal({
               required
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
               placeholder="Budi Santoso"
             />
             <p className="text-xs text-gray-500 mt-1">
@@ -466,7 +466,7 @@ function AddInternModal({
             <input
               value={form.school_origin}
               onChange={(e) => setForm({ ...form, school_origin: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
               placeholder="SMK Negeri 1 Cirebon"
             />
           </div>
@@ -478,7 +478,7 @@ function AddInternModal({
               list="majors-list"
               value={form.major}
               onChange={(e) => setForm({ ...form, major: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
               placeholder="Pilih atau ketik jurusan"
             />
             <datalist id="majors-list">
@@ -493,7 +493,7 @@ function AddInternModal({
             <select
               value={form.department}
               onChange={(e) => setForm({ ...form, department: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
             >
               <option value="Pelayanan">Pelayanan</option>
               <option value="Pemasaran">Pemasaran</option>
@@ -509,7 +509,7 @@ function AddInternModal({
                 required
                 value={form.start_date}
                 onChange={(e) => setForm({ ...form, start_date: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
               />
             </div>
             <div>
@@ -519,7 +519,7 @@ function AddInternModal({
                 required
                 value={form.end_date}
                 onChange={(e) => setForm({ ...form, end_date: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
               />
             </div>
           </div>
