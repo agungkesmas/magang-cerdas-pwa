@@ -10,6 +10,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'magang-cerdas-jwt-secret-fallback-
 const ADMIN_COOKIE = 'magang_admin_token';
 const INTERN_COOKIE = 'magang_intern_token';
 const BKK_COOKIE = 'magang_bkk_token';
+const PEMBINA_COOKIE = 'magang_pembina_token';
 
 export async function hashPassword(plain: string): Promise<string> {
   return bcrypt.hash(plain, 10);
@@ -80,6 +81,16 @@ export interface BKKTokenPayload {
   type: 'bkk';
 }
 
+export interface PembinaTokenPayload {
+  sub: string;
+  pembina_id: string; // UUID
+  pembina_code: string; // PB-XXXX
+  email: string;
+  name: string;
+  department: string;
+  type: 'pembina';
+}
+
 export function signAdminToken(payload: Omit<AdminTokenPayload, 'type'>): string {
   return jwt.sign({ ...payload, type: 'admin' }, JWT_SECRET, { expiresIn: '24h' });
 }
@@ -92,7 +103,11 @@ export function signBKKToken(payload: Omit<BKKTokenPayload, 'type'>): string {
   return jwt.sign({ ...payload, type: 'bkk' }, JWT_SECRET, { expiresIn: '7d' });
 }
 
-export function verifyToken<T = AdminTokenPayload | InternTokenPayload | BKKTokenPayload>(token: string): T | null {
+export function signPembinaToken(payload: Omit<PembinaTokenPayload, 'type'>): string {
+  return jwt.sign({ ...payload, type: 'pembina' }, JWT_SECRET, { expiresIn: '7d' });
+}
+
+export function verifyToken<T = AdminTokenPayload | InternTokenPayload | BKKTokenPayload | PembinaTokenPayload>(token: string): T | null {
   try {
     return jwt.verify(token, JWT_SECRET) as T;
   } catch {
@@ -151,6 +166,22 @@ export async function clearBKKCookie(): Promise<void> {
   store.delete(BKK_COOKIE);
 }
 
+export async function setPembinaCookie(token: string): Promise<void> {
+  const store = await cookies();
+  store.set(PEMBINA_COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7 // 7d
+  });
+}
+
+export async function clearPembinaCookie(): Promise<void> {
+  const store = await cookies();
+  store.delete(PEMBINA_COOKIE);
+}
+
 export async function getAdminToken(): Promise<AdminTokenPayload | null> {
   const store = await cookies();
   const token = store.get(ADMIN_COOKIE)?.value;
@@ -178,16 +209,29 @@ export async function getBKKToken(): Promise<BKKTokenPayload | null> {
   return payload;
 }
 
+export async function getPembinaToken(): Promise<PembinaTokenPayload | null> {
+  const store = await cookies();
+  const token = store.get(PEMBINA_COOKIE)?.value;
+  if (!token) return null;
+  const payload = verifyToken<PembinaTokenPayload>(token);
+  if (!payload || payload.type !== 'pembina') return null;
+  return payload;
+}
+
 // ============================================================
 // Client-side auth helpers (for browser)
 // ============================================================
 export const CLIENT_ADMIN_COOKIE = 'magang_admin_token';
 export const CLIENT_INTERN_COOKIE = 'magang_intern_token';
 export const CLIENT_BKK_COOKIE = 'magang_bkk_token';
+export const CLIENT_PEMBINA_COOKIE = 'magang_pembina_token';
 
-export function getClientToken(type: 'admin' | 'intern' | 'bkk'): string | null {
+export function getClientToken(type: 'admin' | 'intern' | 'bkk' | 'pembina'): string | null {
   if (typeof document === 'undefined') return null;
-  const name = type === 'admin' ? CLIENT_ADMIN_COOKIE : type === 'intern' ? CLIENT_INTERN_COOKIE : CLIENT_BKK_COOKIE;
+  const name = type === 'admin' ? CLIENT_ADMIN_COOKIE
+    : type === 'intern' ? CLIENT_INTERN_COOKIE
+    : type === 'bkk' ? CLIENT_BKK_COOKIE
+    : CLIENT_PEMBINA_COOKIE;
   const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
   return match ? match[2] : null;
 }

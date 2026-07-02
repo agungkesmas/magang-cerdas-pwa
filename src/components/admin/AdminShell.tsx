@@ -16,7 +16,9 @@ import {
   X,
   ShieldCheck,
   School,
-  Inbox
+  Inbox,
+  MessageCircle,
+  UserCog
 } from 'lucide-react';
 
 const NAV = [
@@ -25,6 +27,8 @@ const NAV = [
   { href: '/admin/activities', label: 'Aktivitas', icon: CheckSquare },
   { href: '/admin/attendance', label: 'Kehadiran', icon: MapPin },
   { href: '/admin/certificate', label: 'Sertifikat', icon: Award },
+  { href: '/admin/pembina', label: 'Pembina Magang', icon: UserCog },
+  { href: '/admin/groups', label: 'Grup Chat', icon: MessageCircle },
   { href: '/admin/schools', label: 'Institusi & BKK', icon: School }
 ];
 

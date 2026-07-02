@@ -35,6 +35,13 @@ export function middleware(req: NextRequest) {
     }
     return NextResponse.next();
   }
+  if (path === '/pembina/login') {
+    const pembinaToken = req.cookies.get('magang_pembina_token')?.value;
+    if (pembinaToken) {
+      return NextResponse.redirect(new URL('/pembina/home', req.url));
+    }
+    return NextResponse.next();
+  }
 
   // ============================================================
   // PROTECT: Routes that require authentication
@@ -66,9 +73,18 @@ export function middleware(req: NextRequest) {
     }
   }
 
+  if (path.startsWith('/pembina')) {
+    const token = req.cookies.get('magang_pembina_token')?.value;
+    if (!token) {
+      const loginUrl = new URL('/pembina/login', req.url);
+      loginUrl.searchParams.set('from', path);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/intern/:path*', '/bkk/:path*']
+  matcher: ['/admin/:path*', '/intern/:path*', '/bkk/:path*', '/pembina/:path*']
 };

@@ -1,0 +1,105 @@
+// ============================================================
+// /api/quests/create — Pembina deploy quest ke grup
+// Insert ke activities (is_quest=true) + chat_messages (quest_card)
+// ============================================================
+
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient } from '@/lib/supabase';
+import { getPembinaToken } from '@/lib/auth';
+
+export async function POST(req: NextRequest) {
+  try {
+    const pembina = await getPembinaToken();
+    if (!pembina) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { title, description, group_id, xp_reward, deadline, max_slots } = await req.json();
+    if (!title?.trim()) return NextResponse.json({ error: 'Judul wajib diisi' }, { status: 400 });
+    if (!description?.trim()) return NextResponse.json({ error: 'Deskripsi wajib diisi' }, { status: 400 });
+    if (!group_id) return NextResponse.json({ error: 'Grup tujuan wajib diisi' }, { status: 400 });
+
+    const supabase = createServerClient();
+
+    // Verify pembina adalah member grup
+    const { data: membership } = await supabase
+      .from('group_members')
+      .select('role')
+      .eq('group_id', group_id)
+      .eq('user_type', 'pembina')
+      .eq('user_id', pembina.pembina_id)
+      .maybeSingle();
+    if (!membership) {
+      return NextResponse.json({ error: 'Anda bukan member grup ini' }, { status: 403 });
+    }
+
+    // Parse deadline
+    let deadlineISO: string | null = null;
+    if (deadline) {
+      const d = new Date(deadline);
+      if (isNaN(d.getTime())) return NextResponse.json({ error: 'Format deadline tidak valid' }, { status: 400 });
+      deadlineISO = d.toISOString();
+    }
+
+    // Validate XP
+    const xp = parseInt(xp_reward, 10) || 20;
+    if (xp < 1 || xp > 100) return NextResponse.json({ error: 'XP harus antara 1-100' }, { status: 400 });
+
+    // Insert activity (is_quest=true)
+    const { data: activity, error: aErr } = await supabase
+      .from('activities')
+      .insert({
+        title: title.trim(),
+        description: description.trim(),
+        intern_id: null,
+        department: null,
+        due_date: deadlineISO,
+        is_active: true,
+        completed_by_intern_id: null,
+        completed_at: null,
+        completion_notes: null,
+        created_by: null,
+        created_by_intern: false,
+        is_archived: false,
+        is_recurring: false,
+        // Quest fields
+        is_quest: true,
+        group_id,
+        created_by_pembina_id: pembina.pembina_id,
+        xp_reward: xp,
+        max_slots: max_slots ? parseInt(max_slots, 10) : null,
+        current_slots_taken: 0
+      })
+      .select()
+      .single();
+    if (aErr) return NextResponse.json({ error: aErr.message }, { status: 500 });
+
+    // Insert chat_message (type=quest_card)
+    const { data: chatMsg, error: cErr } = await supabase
+      .from('chat_messages')
+      .insert({
+        group_id,
+        sender_type: 'pembina',
+        sender_id: pembina.pembina_id,
+        sender_name: pembina.name,
+        message_type: 'quest_card',
+        content: `🎯 Quest baru: ${title.trim()}`,
+        quest_id: activity.id
+      })
+      .select()
+      .single();
+    if (cErr) return NextResponse.json({ error: cErr.message }, { status: 500 });
+
+    // Insert system message
+    await supabase.from('chat_messages').insert({
+      group_id,
+      sender_type: 'system',
+      sender_id: pembina.pembina_id,
+      sender_name: 'Sistem',
+      message_type: 'system',
+      content: `✨ ${pembina.name} mendeploy quest baru: "${title.trim()}" (+${xp} XP)`
+    });
+
+    return NextResponse.json({ success: true, quest: activity, chat_message: chatMsg });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
