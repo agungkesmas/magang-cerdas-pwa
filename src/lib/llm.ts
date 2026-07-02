@@ -41,36 +41,50 @@ export function getActiveProviderFromEnv(): { provider: LLMProvider; apiKey: str
 
 // ============================================================
 // SYSTEM PROMPT for AI Adaptive Task Generation
+// Tone: "kakak pembimbing asik" — ramah, santai, pakai "kamu", emoji secukupnya
 // ============================================================
-export const TASK_SYSTEM_PROMPT = `You are an HRD Task Optimizer for BPJS Ketenagakerjaan.
-Given a BASE TASK (e.g., "Verifying JP claims in SMILE app") and an INTERN'S MAJOR (e.g., "SMK TKJ"), generate a tailored instruction that leverages the intern's specific skills while completing the base task.
-Keep it concise, actionable, and in professional Indonesian.
-Maximum 3 sentences. Be specific to the major's skills.
-If the major is unknown, infer general skills based on the major's name.`;
+export const TASK_SYSTEM_PROMPT = `Kamu adalah kakak pembimbing magang yang asik dan perhatian di BPJS Ketenagakerjaan Cabang Cirebon.
+
+Tugas: parafrase BASE TASK jadi instruksi personal sesuai JURUSAN magang.
+
+Aturan bahasa:
+- Pakai "kamu" bukan "Anda"
+- Santai tapi tetap sopan (kayak kakak ngomong ke adik kelas)
+- Kasih tips praktis yang relevan dengan jurusan mereka
+- Singkat (2-3 kalimat), ada emoji secukupnya (💪🚀✨🙏 dll)
+- Akhiri dengan semangat (misal: "Gas! 🚀" atau "Semangat ya! 💪")
+- JANGAN pakai bahasa formal/surat dinas
+- JANGAN pakai kata "harap", "mohon", "dimohon"
+
+Contoh tone yang diinginkan:
+"Hai! Minggu ini kamu bantu verifikasi dokumen JHT di sistem JMO. Karena kamu anak TKJ, perhatiin responsivitas sistem saat load data nasabah ya — catat kalau ada lag. Kalau nemu bug, langsung lapor ke kakak pembimbing. Gas! 🚀"
+
+Kalau jurusan tidak dikenal, inferensi skill umum dari nama jurusan tersebut.`;
 
 // ============================================================
 // Stub fallback (rule-based) — used when no API key is set
+// Tone: sama dengan AI — ramah, santai, "kakak pembimbing asik"
 // ============================================================
 const STUB_INSTRUCTIONS: Record<string, (task: string) => string> = {
-  RPL: (t) => `${t}. Karena Anda jurusan RPL, manfaatkan pemahaman logika algoritma untuk memvalidasi alur data nasabah secara sistematis. Catat anomali alur sistem sebagai temuan teknis.`,
-  TKJ: (t) => `${t}. Karena Anda jurusan TKJ, fokuslah pada responsivitas sistem dan koneksi jaringan saat memproses data. Laporkan jika ada lag time atau gangguan koneksi.`,
-  AKL: (t) => `${t}. Karena Anda jurusan AKL, terapkan ketelitian akuntansi untuk merekonsiliasi data finansial peserta. Periksa konsistensi angka antara sistem dan dokumen fisik.`,
-  OTKP: (t) => `${t}. Karena Anda jurusan OTKP, gunakan keterampilan administrasi untuk menyusun dokumentasi verifikasi yang rapi dan terstruktur. Pastikan arsip digital terorganisir.`,
-  MPLB: (t) => `${t}. Karena Anda jurusan MPLB, manfaatkan keterampilan manajemen kantor untuk mengkoordinasi alur dokumen verifikasi. Pastikan timeline pelayanan tercatat dengan baik.`,
-  BDP: (t) => `${t}. Karena Anda jurusan BDP, terapkan pendekatan pemasaran untuk membantu sosialisasi program kepada peserta. Catat respons peserta untuk evaluasi komunikasi.`,
-  DKV: (t) => `${t}. Karena Anda jurusan DKV, dokumentasikan proses verifikasi secara visual untuk materi edukasi internal. Buat infografis singkat jika memungkinkan.`,
+  RPL: (t) => `Hai! ${t} 🚀 Karena kamu anak RPL, manfaatin logika algoritma kamu buat validasi alur data nasabah ya. Catat anomaly sistem yang kamu temuin — bisa jadi bahan improvement! Gas! 💪`,
+  TKJ: (t) => `Hai! ${t} 🚀 Karena kamu anak TKJ, perhatiin responsivitas sistem & koneksi jaringan pas proses data ya. Kalau ada lag atau gangguan, langsung lapor ke kakak pembimbing. Semangat! 💪`,
+  AKL: (t) => `Hai! ${t} 🚀 Karena kamu anak AKL, pakai ketelitian akuntansi kamu buat rekonsiliasi data finansial peserta. Cek konsistensi angka antara sistem & dokumen fisik ya. Gas! 💪`,
+  OTKP: (t) => `Hai! ${t} 🚀 Karena kamu anak OTKP, pakai skill administrasi kamu buat nyusun dokumentasi verifikasi yang rapi & terstruktur. Pastikan arsip digital terorganisir ya. Semangat! 📋✨`,
+  MPLB: (t) => `Hai! ${t} 🚀 Karena kamu anak MPLB, manfaatin skill manajemen kantor buat koordinasi alur dokumen verifikasi. Pastikan timeline pelayanan tercatat dengan baik ya. Gas! 💪`,
+  BDP: (t) => `Hai! ${t} 🚀 Karena kamu anak BDP, terapin pendekatan pemasaran buat bantu sosialisasi program ke peserta. Catat respons peserta buat evaluasi komunikasi ya. Semangat! 🎯`,
+  DKV: (t) => `Hai! ${t} 🚀 Karena kamu anak DKV, dokumentasin proses verifikasi secara visual buat materi edukasi internal. Bikin infografis singkat kalau memungkinkan ya. Gas! 🎨✨`,
   'Computer Science': (t) =>
-    `${t}. Karena Anda mahasiswa Computer Science, analisis sistem secara teknis dan dokumentasikan potential improvements. Catat bug atau UX issue yang ditemukan.`,
+    `Hai! ${t} 🚀 Karena kamu CS student, analisis sistem secara teknis & dokumentasin potential improvements. Catat bug atau UX issue yang kamu temuin ya. Semangat! 💻💪`,
   Management: (t) =>
-    `${t}. Karena Anda mahasiswa Management, analisis efisiensi proses dan dokumentasikan opportunity untuk optimasi. Kaitkan dengan KPI operasional.`,
+    `Hai! ${t} 🚀 Karena kamu anak Management, analisis efisiensi proses & dokumentasin opportunity buat optimasi. Kaitin sama KPI operasional ya. Gas! 📊✨`,
   Economics: (t) =>
-    `${t}. Karena Anda mahasiswa Economics, fokus pada analisis cost-benefit dari proses verifikasi. Catat inefficiency yang berdampak finansial.`,
+    `Hai! ${t} 🚀 Karena kamu anak Economics, fokus ke analisis cost-benefit dari proses verifikasi. Catat inefficiency yang berdampak finansial ya. Semangat! 💰💪`,
   'Public Relations': (t) =>
-    `${t}. Karena Anda mahasiswa Public Relations, fokus pada komunikasi peserta dan dokumentasikan feedback. Bantu menyusun messaging yang lebih efektif.`,
+    `Hai! ${t} 🚀 Karena kamu anak PR, fokus ke komunikasi peserta & dokumentasin feedback. Bantu nyusun messaging yang lebih efektif ya. Gas! 📣✨`,
   Law: (t) =>
-    `${t}. Karena Anda mahasiswa Law, perhatikan aspek kepatuhan regulasi dalam setiap verifikasi. Catat potensi issue legal yang perlu eskalasi.`,
+    `Hai! ${t} 🚀 Karena kamu anak Law, perhatiin aspek kepatuhan regulasi di setiap verifikasi. Catat potensi issue legal yang perlu eskalasi ya. Semangat! ⚖️💪`,
   Psychology: (t) =>
-    `${t}. Karena Anda mahasiswa Psychology, observasi dinamika interaksi tim dan peserta. Dokumentasikan insight untuk improvement training internal.`
+    `Hai! ${t} 🚀 Karena kamu anak Psychology, observasi dinamika interaksi tim & peserta. Dokumentasin insight buat improvement training internal ya. Gas! 🧠✨`
 };
 
 export function getStubInstruction(task: string, major: string): string {
@@ -85,7 +99,7 @@ export function getStubInstruction(task: string, major: string): string {
     }
   }
   // Default
-  return `${task}. Manfaatkan pengetahuan dari jurusan ${m} Anda untuk menyelesaikan tugas ini secara optimal. Dokumentasikan pembelajaran dalam logbook harian.`;
+  return `Hai! ${task} 🚀 Manfaatin pengetahuan dari jurusan ${m} kamu buat ngerjain tugas ini ya. Catat pembelajaran di logbook harian, dan jangan ragu tanya kakak pembimbing kalau bingung. Semangat! 💪`;
 }
 
 // ============================================================

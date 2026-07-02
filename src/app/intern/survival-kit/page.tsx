@@ -9,6 +9,11 @@ import {
   PiggyBank,
   HandCoins,
   TrendingDown,
+  Rocket,
+  MessageCircle,
+  Clock,
+  RefreshCw,
+  TrendingUp,
   Lock,
   CheckCircle2,
   Loader2,
@@ -25,7 +30,12 @@ const ICONS: Record<string, any> = {
   heart: Heart,
   'piggy-bank': PiggyBank,
   'hand-coins': HandCoins,
-  'trending-down': TrendingDown
+  'trending-down': TrendingDown,
+  rocket: Rocket,
+  'message-circle': MessageCircle,
+  clock: Clock,
+  'refresh-cw': RefreshCw,
+  'trending-up': TrendingUp
 };
 
 interface Progress {

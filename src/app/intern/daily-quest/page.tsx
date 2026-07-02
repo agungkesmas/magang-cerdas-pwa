@@ -281,13 +281,13 @@ export default function InternDailyQuestPage() {
                   <button
                     onClick={() => generateAI(task)}
                     disabled={isGenerating}
-                    className="w-full flex items-center justify-center gap-2 bg-bpjs-yellow/10 hover:bg-bpjs-yellow/20 border border-bpjs-yellow/30 text-bpjs-yellow font-medium py-2 rounded-lg text-sm disabled:opacity-50"
+                    className="w-full flex items-center justify-center gap-2 bg-bpjs-yellow/5 hover:bg-bpjs-yellow/10 border border-bpjs-yellow/20 text-bpjs-yellow/80 font-medium py-1.5 rounded-lg text-xs disabled:opacity-50"
                   >
                     {isGenerating ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
                       <>
-                        <Cpu className="w-4 h-4" /> Generate Instruksi AI Personal
+                        <Cpu className="w-3.5 h-3.5" /> Belum ada instruksi AI — klik untuk generate
                       </>
                     )}
                   </button>

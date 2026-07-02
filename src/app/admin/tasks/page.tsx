@@ -14,7 +14,9 @@ import {
   Edit,
   Trash2,
   AlertTriangle,
-  Clock
+  Clock,
+  Sparkles,
+  Check
 } from 'lucide-react';
 
 interface Task {
@@ -46,6 +48,8 @@ export default function AdminTasksPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [generatingTaskId, setGeneratingTaskId] = useState<string | null>(null);
+  const [generatedPreview, setGeneratedPreview] = useState<any>(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -63,6 +67,27 @@ export default function AdminTasksPage() {
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
+
+  const handleGenerateAll = async (task: Task) => {
+    setGeneratingTaskId(task.id);
+    try {
+      const res = await fetch('/api/tasks/generate-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          task_id: task.id,
+          base_description: task.base_description
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setGeneratedPreview(data);
+    } catch (e: any) {
+      alert('Error generate: ' + e.message);
+    } finally {
+      setGeneratingTaskId(null);
+    }
+  };
 
   const handleDelete = async (task: Task) => {
     const confirmMsg = task.mode === 'team'
@@ -178,10 +203,23 @@ export default function AdminTasksPage() {
                   </div>
 
                   {/* Action buttons */}
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => {
-                        setEditingTask(task);
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleGenerateAll(task)}
+                        disabled={generatingTaskId === task.id}
+                        title="Generate instruksi AI untuk semua jurusan"
+                        className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-md disabled:opacity-50"
+                      >
+                        {generatingTaskId === task.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-4 h-4" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingTask(task);
                         setShowForm(true);
                       }}
                       title="Edit"
@@ -196,6 +234,7 @@ export default function AdminTasksPage() {
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -218,6 +257,66 @@ export default function AdminTasksPage() {
             fetchAll();
           }}
         />
+      )}
+
+      {/* Preview modal untuk hasil generate AI */}
+      {generatedPreview && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100 sticky top-0 bg-white">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-purple-600" />
+                <h3 className="text-lg font-bold text-gray-900">Preview Instruksi AI</h3>
+              </div>
+              <button
+                onClick={() => setGeneratedPreview(null)}
+                className="text-gray-400 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-sm text-purple-800">
+                ✅ {generatedPreview.message}<br />
+                <span className="text-xs">
+                  AI: {generatedPreview.llm_count} jurusan • Stub: {generatedPreview.stub_count} jurusan •
+                  Total intern: {generatedPreview.totalInterns}
+                </span>
+              </div>
+
+              {generatedPreview.instructions?.map((item: any, idx: number) => (
+                <div key={idx} className="border border-gray-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-gray-900">{item.major}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        item.source === 'llm'
+                          ? 'bg-bpjs-green/20 text-bpjs-green'
+                          : 'bg-orange-100 text-orange-700'
+                      }`}>
+                        {item.source === 'llm' ? 'AI' : 'Stub'}
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-500">{item.internCount} peserta</span>
+                  </div>
+                  <p className="text-sm text-gray-700 leading-relaxed">{item.instruction}</p>
+                </div>
+              ))}
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
+                💡 Instruksi sudah otomatis tersimpan ke setiap peserta magang sesuai jurusan.
+                Mereka akan langsung lihat instruksi ini saat buka Daily Quest (tanpa waiting AI generate).
+              </div>
+
+              <button
+                onClick={() => setGeneratedPreview(null)}
+                className="w-full bg-bpjs-blue hover:bg-bpjs-blue-dark text-white font-semibold py-2.5 rounded-lg flex items-center justify-center gap-2"
+              >
+                <Check className="w-4 h-4" /> Selesai
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
