@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, school_origin, major, major_id, department, start_date, end_date } = body;
+    const { name, school_origin, major, major_id, department, start_date, end_date, email, whatsapp } = body;
 
     // Validation
     if (!name || !department || !start_date || !end_date) {
@@ -78,6 +78,8 @@ export async function POST(req: NextRequest) {
         school_origin: school_origin?.trim() || null,
         major: majorName?.trim() || major.trim(),
         major_id: majorIdValue,
+        email: email?.trim() || null,
+        whatsapp: whatsapp?.trim() || null,
         department,
         start_date,
         end_date,

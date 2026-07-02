@@ -84,7 +84,7 @@ export async function PUT(req: NextRequest) {
     }
 
     // Default: update fields
-    const allowedFields = ['name', 'school_origin', 'major', 'major_id', 'department', 'start_date', 'end_date', 'logbook_enabled'];
+    const allowedFields = ['name', 'school_origin', 'major', 'major_id', 'department', 'start_date', 'end_date', 'logbook_enabled', 'email', 'whatsapp'];
     const cleanUpdates: Record<string, unknown> = {};
     for (const f of allowedFields) {
       if (updates[f] !== undefined) cleanUpdates[f] = updates[f];

@@ -32,12 +32,14 @@ export async function PUT(req: NextRequest) {
     const intern = await getInternToken();
     if (!intern) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { phone, photo_url } = await req.json();
+    const { phone, photo_url, email, whatsapp } = await req.json();
 
-    // HANYA phone + photo_url yang boleh diupdate (strict whitelist)
+    // HANYA phone, photo_url, email, whatsapp yang boleh diupdate (strict whitelist)
     const updates: Record<string, unknown> = {};
     if (phone !== undefined) updates.phone = phone?.trim() || null;
     if (photo_url !== undefined) updates.photo_url = photo_url || null;
+    if (email !== undefined) updates.email = email?.trim() || null;
+    if (whatsapp !== undefined) updates.whatsapp = whatsapp?.trim() || null;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'Tidak ada field valid untuk diupdate. Hanya foto profil dan nomor telepon yang bisa diubah.' }, { status: 400 });

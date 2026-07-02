@@ -30,6 +30,8 @@ interface ProfileData {
   total_exp: number;
   streak_count: number;
   phone: string | null;
+  email: string | null;
+  whatsapp: string | null;
   photo_url: string | null;
   is_active: boolean;
   logbook_enabled: boolean;
@@ -40,6 +42,8 @@ export default function InternProfilePage() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [phone, setPhone] = useState('');
+  const [emailEdit, setEmailEdit] = useState('');
+  const [whatsappEdit, setWhatsappEdit] = useState('');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -52,6 +56,8 @@ export default function InternProfilePage() {
         if (d.success) {
           setProfile(d.profile);
           setPhone(d.profile.phone || '');
+          setEmailEdit(d.profile.email || '');
+          setWhatsappEdit(d.profile.whatsapp || '');
         }
       })
       .finally(() => setLoading(false));
@@ -90,11 +96,11 @@ export default function InternProfilePage() {
       const res = await fetch('/api/intern/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone })
+        body: JSON.stringify({ phone, email: emailEdit, whatsapp: whatsappEdit })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setMsg({ type: 'success', text: 'Nomor telepon tersimpan!' });
+      setMsg({ type: 'success', text: 'Kontak tersimpan!' });
     } catch (e: any) {
       setMsg({ type: 'error', text: e.message });
     } finally {
@@ -202,30 +208,58 @@ export default function InternProfilePage() {
         </div>
       </div>
 
-      {/* Editable: Phone */}
+      {/* Editable: Contact */}
       <div className="glass-card p-5">
         <h3 className="text-sm font-semibold text-white/80 mb-3">Kontak (Bisa Diubah)</h3>
-        <div>
-          <label className="block text-sm font-medium text-white/80 mb-1">Nomor Telepon</label>
-          <div className="flex gap-2">
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-1">Email</label>
+            <div className="flex-1 relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+              <input
+                type="email"
+                value={emailEdit}
+                onChange={(e) => setEmailEdit(e.target.value)}
+                placeholder="budi@email.com"
+                className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-bpjs-yellow"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-1">WhatsApp</label>
             <div className="flex-1 relative">
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
               <input
                 type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                value={whatsappEdit}
+                onChange={(e) => setWhatsappEdit(e.target.value)}
                 placeholder="0812-3456-7890"
                 className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-bpjs-yellow"
               />
             </div>
-            <button
-              onClick={handleSavePhone}
-              disabled={saving}
-              className="px-4 py-2 bg-bpjs-yellow text-bpjs-blue-dark font-semibold text-sm rounded-lg disabled:opacity-50 flex items-center gap-1"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Simpan
-            </button>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-1">Nomor Telepon Lain</label>
+            <div className="flex gap-2">
+              <div className="flex-1 relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="0812-3456-7890"
+                  className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-bpjs-yellow"
+                />
+              </div>
+              <button
+                onClick={handleSavePhone}
+                disabled={saving}
+                className="px-4 py-2 bg-bpjs-yellow text-bpjs-blue-dark font-semibold text-sm rounded-lg disabled:opacity-50 flex items-center gap-1"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Simpan Semua
+              </button>
+            </div>
           </div>
         </div>
       </div>
