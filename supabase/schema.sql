@@ -42,28 +42,61 @@ CREATE TABLE Admins (
 
 -- ============================================================
 -- Table: Tasks (Base Tasks defined by Admin)
+-- Modes: 'individual' (per-departemen), 'assigned' (pilih intern), 'team' (shared progress)
 -- ============================================================
-CREATE TABLE Tasks (
+CREATE TABLE tasks (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   title VARCHAR(255) NOT NULL,
   department VARCHAR(50) NOT NULL,
   base_description TEXT NOT NULL,
   target_count INT DEFAULT 1,
   is_active BOOLEAN DEFAULT TRUE,
+  mode VARCHAR(20) DEFAULT 'individual' CHECK (mode IN ('individual', 'assigned', 'team')),
+  due_date TIMESTAMPTZ,
+  created_by UUID,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================================
--- Table: Task_Completions (Track intern's progress on tasks)
+-- Table: Task_Assignments (untuk mode 'assigned' & 'team')
 -- ============================================================
-CREATE TABLE Task_Completions (
+CREATE TABLE task_assignments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  intern_id UUID REFERENCES Interns(id) ON DELETE CASCADE,
-  task_id UUID REFERENCES Tasks(id) ON DELETE CASCADE,
+  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  intern_id UUID NOT NULL REFERENCES interns(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(task_id, intern_id)
+);
+
+ALTER TABLE task_assignments ENABLE ROW LEVEL SECURITY;
+
+-- ============================================================
+-- Table: Task_Team_Progress (shared progress untuk mode 'team')
+-- 1 task tim → 1 progress bar bersama
+-- UNIQUE(task_id, chunk_index) → 1 chunk hanya bisa di-complete 1x oleh siapapun di tim
+-- ============================================================
+CREATE TABLE task_team_progress (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  chunk_index INT NOT NULL,
+  completed_by_intern_id UUID NOT NULL REFERENCES interns(id) ON DELETE CASCADE,
+  completed_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(task_id, chunk_index)
+);
+
+ALTER TABLE task_team_progress ENABLE ROW LEVEL SECURITY;
+
+-- ============================================================
+-- Table: Task_Completions (Progress per-intern untuk mode 'individual' & 'assigned')
+-- ============================================================
+CREATE TABLE task_completions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  intern_id UUID REFERENCES interns(id) ON DELETE CASCADE,
+  task_id UUID REFERENCES tasks(id) ON DELETE CASCADE,
   chunk_index INT DEFAULT 0,
   completed_count INT DEFAULT 0,
   last_completed_at TIMESTAMPTZ,
-  ai_instruction TEXT, -- Cached AI-generated instruction for this intern's major
+  ai_instruction TEXT,
   UNIQUE(intern_id, task_id, chunk_index)
 );
 

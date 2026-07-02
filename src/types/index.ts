@@ -34,6 +34,8 @@ export interface Admin {
   created_at: string;
 }
 
+export type TaskMode = 'individual' | 'assigned' | 'team';
+
 export interface Task {
   id: string;
   title: string;
@@ -41,7 +43,13 @@ export interface Task {
   base_description: string;
   target_count: number;
   is_active: boolean;
+  mode: TaskMode;
+  due_date: string | null;
+  created_by: string | null;
   created_at: string;
+  // Computed fields (populated by API)
+  assigned_interns?: Intern[];
+  team_progress?: { completed_chunks: number; total_chunks: number };
 }
 
 export interface TaskCompletion {

@@ -8,7 +8,12 @@ import {
   Cpu,
   CheckCircle2,
   Sparkles,
-  AlertTriangle
+  AlertTriangle,
+  Users,
+  UserCog,
+  UsersRound,
+  Clock,
+  Crown
 } from 'lucide-react';
 
 interface Task {
@@ -18,6 +23,11 @@ interface Task {
   base_description: string;
   target_count: number;
   is_active: boolean;
+  mode: 'individual' | 'assigned' | 'team';
+  due_date: string | null;
+  created_at: string;
+  teammates?: { id: string; name: string; major: string }[];
+  team_progress_entries?: { chunk_index: number; completed_by: string; completed_by_intern_id: string }[];
 }
 
 interface Completion {
@@ -25,19 +35,21 @@ interface Completion {
   task_id: string;
   chunk_index: number;
   completed_count: number;
-  ai_instruction: string | null;
   last_completed_at: string | null;
+  ai_instruction: string | null;
 }
 
 export default function InternDailyQuestPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [completions, setCompletions] = useState<Completion[]>([]);
+  const [teamProgress, setTeamProgress] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState<Record<string, boolean>>({});
   const [completing, setCompleting] = useState<Record<string, boolean>>({});
   const [aiInstructions, setAiInstructions] = useState<Record<string, string>>({});
   const [aiSource, setAiSource] = useState<Record<string, 'llm' | 'stub'>>({});
   const [recentExp, setRecentExp] = useState<number | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -49,14 +61,18 @@ export default function InternDailyQuestPage() {
       const tData = await tRes.json();
       const cData = await cRes.json();
       if (tData.success) setTasks(tData.tasks);
-      if (cData.success) setCompletions(cData.completions);
-      // Pre-load AI instructions from existing completions
-      const cached: Record<string, string> = {};
-      const sourceMap: Record<string, 'llm' | 'stub'> = {};
-      cData.completions?.forEach((c: Completion) => {
-        if (c.ai_instruction) cached[c.task_id] = c.ai_instruction;
-      });
-      setAiInstructions(cached);
+      if (cData.success) {
+        setCompletions(cData.completions || []);
+        setTeamProgress(cData.team_progress || {});
+        // Pre-load AI instructions from existing completions (chunk_index=0)
+        const cached: Record<string, string> = {};
+        (cData.completions || []).forEach((c: Completion) => {
+          if (c.chunk_index === 0 && c.ai_instruction) {
+            cached[c.task_id] = c.ai_instruction;
+          }
+        });
+        setAiInstructions(cached);
+      }
     } finally {
       setLoading(false);
     }
@@ -69,7 +85,6 @@ export default function InternDailyQuestPage() {
   const generateAI = async (task: Task) => {
     setGenerating({ ...generating, [task.id]: true });
     try {
-      // Fetch intern's major from dashboard
       const dashRes = await fetch('/api/dashboard/intern');
       const dashData = await dashRes.json();
       const major = dashData.profile?.major || 'Umum';
@@ -90,7 +105,8 @@ export default function InternDailyQuestPage() {
         setAiSource({ ...aiSource, [task.id]: data.source });
       }
     } catch (e: any) {
-      alert('Error: ' + e.message);
+      setErrorMsg('Error generate AI: ' + e.message);
+      setTimeout(() => setErrorMsg(null), 3000);
     } finally {
       setGenerating({ ...generating, [task.id]: false });
     }
@@ -98,6 +114,7 @@ export default function InternDailyQuestPage() {
 
   const completeChunk = async (task: Task, chunkIdx: number) => {
     setCompleting({ ...completing, [`${task.id}-${chunkIdx}`]: true });
+    setErrorMsg(null);
     try {
       const res = await fetch('/api/task-completion/complete', {
         method: 'POST',
@@ -110,10 +127,12 @@ export default function InternDailyQuestPage() {
         setTimeout(() => setRecentExp(null), 3000);
         fetchData();
       } else {
-        alert(data.error);
+        setErrorMsg(data.error || 'Gagal complete chunk');
+        setTimeout(() => setErrorMsg(null), 4000);
       }
     } catch (e: any) {
-      alert('Error: ' + e.message);
+      setErrorMsg('Error: ' + e.message);
+      setTimeout(() => setErrorMsg(null), 4000);
     } finally {
       setCompleting({ ...completing, [`${task.id}-${chunkIdx}`]: false });
     }
@@ -143,6 +162,13 @@ export default function InternDailyQuestPage() {
         )}
       </div>
 
+      {errorMsg && (
+        <div className="glass-card p-3 bg-red-500/10 border-red-400/30 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <p className="text-red-300 text-sm">{errorMsg}</p>
+        </div>
+      )}
+
       {tasks.length === 0 ? (
         <div className="glass-card p-8 text-center">
           <Swords className="w-12 h-12 mx-auto text-white/30 mb-3" />
@@ -151,29 +177,87 @@ export default function InternDailyQuestPage() {
       ) : (
         <div className="space-y-4">
           {tasks.map((task) => {
-            const completion = completions.find((c) => c.task_id === task.id);
-            const completed = completion?.completed_count || 0;
-            const pct = task.target_count > 0 ? Math.min(100, (completed / task.target_count) * 100) : 0;
             const chunkSize = Math.max(1, Math.ceil(task.target_count / 10));
-            const totalChunks = Math.ceil(task.target_count / chunkSize);
-            const doneChunks = Math.floor(completed / chunkSize);
-            const isFullComplete = completed >= task.target_count;
+            const totalChunks = Math.max(1, Math.ceil(task.target_count / chunkSize));
             const aiText = aiInstructions[task.id];
             const source = aiSource[task.id];
             const isGenerating = generating[task.id];
+
+            // Calculate progress based on mode
+            let completed: number;
+            let doneChunks: number;
+            let chunkCompletedBy: Record<number, string> = {};
+
+            if (task.mode === 'team') {
+              const tp = task.team_progress_entries || teamProgress[task.id] || [];
+              doneChunks = tp.length;
+              completed = doneChunks * chunkSize;
+              completed = Math.min(completed, task.target_count);
+              tp.forEach((p: any) => {
+                chunkCompletedBy[p.chunk_index] = p.completed_by || 'Anggota Tim';
+              });
+            } else {
+              // individual / assigned: count own completions
+              const myCompletions = completions.filter((c) => c.task_id === task.id && c.completed_count > 0);
+              doneChunks = myCompletions.length;
+              completed = doneChunks * chunkSize;
+              completed = Math.min(completed, task.target_count);
+            }
+
+            const pct = task.target_count > 0 ? Math.min(100, (completed / task.target_count) * 100) : 0;
+            const isFullComplete = doneChunks >= totalChunks;
+            const isOverdue = task.due_date ? new Date(task.due_date).getTime() < Date.now() : false;
+
+            // Mode badge
+            const modeInfo = task.mode === 'team'
+              ? { label: 'Tim', color: 'bg-purple-500/20 text-purple-300', icon: UsersRound }
+              : task.mode === 'assigned'
+              ? { label: 'Assigned', color: 'bg-blue-500/20 text-blue-300', icon: UserCog }
+              : { label: 'Individu', color: 'bg-gray-500/20 text-gray-300', icon: Users };
+            const ModeIcon = modeInfo.icon;
 
             return (
               <div key={task.id} className="glass-card p-5">
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-white">{task.title}</h3>
-                    <p className="text-xs text-white/50 mt-0.5 line-clamp-2">{task.base_description}</p>
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <h3 className="font-bold text-white">{task.title}</h3>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1 ${modeInfo.color}`}>
+                        <ModeIcon className="w-3 h-3" /> {modeInfo.label}
+                      </span>
+                      <span className="text-xs px-2 py-0.5 bg-bpjs-blue/20 text-bpjs-blue-light rounded-full font-medium">
+                        {task.department}
+                      </span>
+                      {task.due_date && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1 ${
+                          isOverdue ? 'bg-red-500/20 text-red-300' : 'bg-amber-500/20 text-amber-300'
+                        }`}>
+                          <Clock className="w-3 h-3" />
+                          {isOverdue ? 'Lewat deadline' : `Due: ${new Date(task.due_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}`}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-white/50 line-clamp-2">{task.base_description}</p>
                   </div>
-                  <span className="text-xs px-2 py-0.5 bg-bpjs-blue/20 text-bpjs-blue-light rounded-full font-medium whitespace-nowrap">
-                    {task.department}
-                  </span>
                 </div>
+
+                {/* Team members info */}
+                {task.mode !== 'individual' && task.teammates && task.teammates.length > 0 && (
+                  <div className="mb-3 bg-white/5 rounded-lg p-2">
+                    <div className="text-xs text-white/60 mb-1 flex items-center gap-1">
+                      {task.mode === 'team' ? <UsersRound className="w-3 h-3" /> : <UserCog className="w-3 h-3" />}
+                      {task.mode === 'team' ? `Anggota Tim (${task.teammates.length})` : `Ditugaskan ke (${task.teammates.length})`}
+                    </div>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {task.teammates.map((t) => (
+                        <span key={t.id} className="text-xs px-2 py-0.5 bg-white/5 text-white/80 rounded-full">
+                          {t.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* AI Instruction */}
                 {aiText ? (
@@ -209,52 +293,81 @@ export default function InternDailyQuestPage() {
                   </button>
                 )}
 
-                {/* Chunk progress */}
+                {/* Progress */}
                 <div className="mt-3">
                   <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="text-white/60">Progress: {completed} / {task.target_count}</span>
-                    <span className="text-white/60">{doneChunks} / {totalChunks} micro-quests</span>
+                    <span className="text-white/60">
+                      Progress: {completed} / {task.target_count}
+                      {task.mode === 'team' && ' (tim)'}
+                    </span>
+                    <span className="text-white/60">{doneChunks} / {totalChunks} chunk</span>
                   </div>
                   <div className="h-2 bg-white/5 rounded-full overflow-hidden mb-3">
                     <div
-                      className="h-full bg-gradient-to-r from-bpjs-yellow to-amber-500 transition-all"
+                      className={`h-full transition-all ${
+                        task.mode === 'team'
+                          ? 'bg-gradient-to-r from-purple-500 to-purple-400'
+                          : 'bg-gradient-to-r from-bpjs-yellow to-amber-500'
+                      }`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>
 
                   {/* Micro-quests */}
-                  {!isFullComplete && (
+                  {!isFullComplete ? (
                     <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5">
                       {Array.from({ length: totalChunks }).map((_, idx) => {
                         const isDone = idx < doneChunks;
                         const isCurrent = idx === doneChunks;
                         const isFuture = idx > doneChunks;
                         const isLoading = completing[`${task.id}-${idx}`];
+                        const completedBy = chunkCompletedBy[idx];
                         return (
                           <button
                             key={idx}
-                            onClick={() => isCurrent && completeChunk(task, idx)}
-                            disabled={isDone || isFuture || isLoading || !aiText}
-                            className={`aspect-square rounded-lg flex items-center justify-center text-xs font-bold transition-all ${
+                            onClick={() => isCurrent && !isOverdue && completeChunk(task, idx)}
+                            disabled={isDone || isFuture || isLoading || !aiText || isOverdue}
+                            className={`aspect-square rounded-lg flex items-center justify-center text-xs font-bold transition-all relative ${
                               isDone
-                                ? 'bg-bpjs-green/20 text-bpjs-green'
-                                : isCurrent && aiText
-                                ? 'bg-bpjs-yellow text-bpjs-blue-dark hover:scale-105 pulse-glow'
+                                ? task.mode === 'team'
+                                  ? 'bg-purple-500/20 text-purple-300'
+                                  : 'bg-bpjs-green/20 text-bpjs-green'
+                                : isCurrent && aiText && !isOverdue
+                                ? task.mode === 'team'
+                                  ? 'bg-purple-500 text-white hover:scale-105'
+                                  : 'bg-bpjs-yellow text-bpjs-blue-dark hover:scale-105 pulse-glow'
                                 : 'bg-white/5 text-white/30 cursor-not-allowed'
                             }`}
-                            title={isCurrent ? 'Klik untuk complete (+10 EXP)' : isDone ? 'Sudah selesai' : 'Belum bisa diakses'}
+                            title={
+                              isDone
+                                ? task.mode === 'team' && completedBy
+                                  ? `Chunk ${idx + 1} dikerjakan oleh: ${completedBy}`
+                                  : `Chunk ${idx + 1} selesai`
+                                : isCurrent
+                                ? 'Klik untuk complete (+10 EXP)'
+                                : isOverdue
+                                ? 'Task sudah lewat deadline'
+                                : 'Belum bisa diakses'
+                            }
                           >
                             {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : isDone ? <CheckCircle2 className="w-3 h-3" /> : idx + 1}
                           </button>
                         );
                       })}
                     </div>
-                  )}
-
-                  {isFullComplete && (
-                    <div className="bg-bpjs-green/10 border border-bpjs-green/30 rounded-lg p-3 text-center">
-                      <CheckCircle2 className="w-6 h-6 text-bpjs-green mx-auto mb-1" />
-                      <p className="text-sm font-semibold text-bpjs-green">Tugas Selesai! +50 EXP bonus</p>
+                  ) : (
+                    <div className={`rounded-lg p-3 text-center ${
+                      task.mode === 'team' ? 'bg-purple-500/10 border border-purple-500/30' : 'bg-bpjs-green/10 border border-bpjs-green/30'
+                    }`}>
+                      <CheckCircle2 className={`w-6 h-6 mx-auto mb-1 ${task.mode === 'team' ? 'text-purple-400' : 'text-bpjs-green'}`} />
+                      <p className={`text-sm font-semibold ${task.mode === 'team' ? 'text-purple-400' : 'text-bpjs-green'}`}>
+                        {task.mode === 'team' ? 'Tugas Tim Selesai! 🎉' : 'Tugas Selesai! +50 EXP bonus'}
+                      </p>
+                      {task.mode === 'team' && task.team_progress_entries && task.team_progress_entries.length > 0 && (
+                        <p className="text-xs text-white/50 mt-1">
+                          Kontribusi: {task.team_progress_entries.filter((p) => p.completed_by_intern_id === 'me').length} chunk oleh Anda
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -266,10 +379,12 @@ export default function InternDailyQuestPage() {
 
       <div className="glass-card p-4 flex items-start gap-3">
         <AlertTriangle className="w-4 h-4 text-bpjs-yellow flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-white/60">
-          Klik "Generate Instruksi AI" untuk mendapat instruksi yang dipersonalisasi sesuai jurusan Anda.
-          AI akan menyesuaikan fokus tugas berdasarkan skill khas jurusan Anda.
-        </p>
+        <div className="text-xs text-white/60 space-y-1">
+          <p><strong className="text-white/80">3 Mode Tugas:</strong></p>
+          <p>• <strong className="text-gray-300">Individu</strong> — dikerjakan sendiri, EXP per individu</p>
+          <p>• <strong className="text-blue-300">Assigned</strong> — ditugaskan ke Anda khusus, EXP per individu</p>
+          <p>• <strong className="text-purple-300">Tim</strong> — kolaboratif, 1 progress bersama, siapa cepat dia dapat EXP</p>
+        </div>
       </div>
     </div>
   );
