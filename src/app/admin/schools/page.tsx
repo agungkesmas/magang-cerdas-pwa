@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import {
   School as SchoolIcon,
   Plus,
@@ -10,7 +11,9 @@ import {
   X,
   MapPin,
   Phone,
-  User
+  User,
+  GraduationCap,
+  ChevronRight
 } from 'lucide-react';
 
 interface School {
@@ -43,8 +46,8 @@ export default function AdminSchoolsPage() {
     fetchSchools();
   }, [fetchSchools]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Yakin hapus sekolah ini? BKK teacher yang ter-link akan kehilangan akses.')) return;
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Hapus sekolah "${name}"? Guru BKK yang ter-link akan kehilangan akses.`)) return;
     const res = await fetch(`/api/schools?id=${id}`, { method: 'DELETE' });
     const data = await res.json();
     if (!res.ok) {
@@ -59,10 +62,10 @@ export default function AdminSchoolsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-            Daftar Sekolah
+            Sekolah & Guru BKK
           </h1>
           <p className="text-gray-500 text-sm mt-1">
-            {schools.length} sekolah terdaftar
+            {schools.length} sekolah terdaftar • Klik sekolah untuk kelola guru BKK & lihat magang
           </p>
         </div>
         <button
@@ -89,51 +92,71 @@ export default function AdminSchoolsPage() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {schools.map((s) => (
-            <div key={s.id} className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-2">
-                <div className="w-10 h-10 rounded-lg bg-bpjs-green/10 flex items-center justify-center flex-shrink-0">
-                  <SchoolIcon className="w-5 h-5 text-bpjs-green" />
+            <div
+              key={s.id}
+              className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow group"
+            >
+              {/* Clickable area → ke detail page */}
+              <Link
+                href={`/admin/schools/${s.id}`}
+                className="block p-4 hover:bg-green-50/30 transition-colors"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-bpjs-green/10 flex items-center justify-center flex-shrink-0">
+                    <SchoolIcon className="w-5 h-5 text-bpjs-green" />
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-bpjs-green group-hover:translate-x-1 transition-all" />
                 </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => {
-                      setEditing(s);
-                      setShowForm(true);
-                    }}
-                    className="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md"
-                    title="Edit"
-                  >
-                    <Edit className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(s.id)}
-                    className="p-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-md"
-                    title="Hapus"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                <h3 className="font-bold text-gray-900 text-sm mb-2 line-clamp-2">{s.name}</h3>
+                <div className="space-y-1 text-xs text-gray-600">
+                  {s.address && (
+                    <div className="flex items-start gap-1">
+                      <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0 text-gray-400" />
+                      <span className="line-clamp-1">{s.address}</span>
+                    </div>
+                  )}
+                  {s.contact_person && (
+                    <div className="flex items-center gap-1">
+                      <User className="w-3 h-3 text-gray-400" />
+                      <span>{s.contact_person}</span>
+                    </div>
+                  )}
+                  {s.contact_phone && (
+                    <div className="flex items-center gap-1">
+                      <Phone className="w-3 h-3 text-gray-400" />
+                      <span>{s.contact_phone}</span>
+                    </div>
+                  )}
                 </div>
-              </div>
-              <h3 className="font-bold text-gray-900 text-sm mb-2">{s.name}</h3>
-              <div className="space-y-1 text-xs text-gray-600">
-                {s.address && (
-                  <div className="flex items-start gap-1">
-                    <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0 text-gray-400" />
-                    <span>{s.address}</span>
-                  </div>
-                )}
-                {s.contact_person && (
-                  <div className="flex items-center gap-1">
-                    <User className="w-3 h-3 text-gray-400" />
-                    <span>{s.contact_person}</span>
-                  </div>
-                )}
-                {s.contact_phone && (
-                  <div className="flex items-center gap-1">
-                    <Phone className="w-3 h-3 text-gray-400" />
-                    <span>{s.contact_phone}</span>
-                  </div>
-                )}
+                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 text-xs">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-bpjs-green/10 text-bpjs-green rounded-full font-medium">
+                    <GraduationCap className="w-3 h-3" />
+                    Kelola Guru BKK
+                  </span>
+                </div>
+              </Link>
+
+              {/* Action buttons (di luar Link agar tidak navigate) */}
+              <div className="px-4 pb-3 flex items-center gap-2 border-t border-gray-100 pt-2">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setEditing(s);
+                    setShowForm(true);
+                  }}
+                  className="inline-flex items-center gap-1 text-xs text-blue-700 hover:bg-blue-50 px-2 py-1 rounded"
+                >
+                  <Edit className="w-3 h-3" /> Edit
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleDelete(s.id, s.name);
+                  }}
+                  className="inline-flex items-center gap-1 text-xs text-red-700 hover:bg-red-50 px-2 py-1 rounded"
+                >
+                  <Trash2 className="w-3 h-3" /> Hapus
+                </button>
               </div>
             </div>
           ))}

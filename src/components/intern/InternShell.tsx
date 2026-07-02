@@ -17,7 +17,7 @@ import {
   Bell
 } from 'lucide-react';
 
-const NAV = [
+const NAV_ALL = [
   { href: '/intern/home', label: 'Home', icon: Home },
   { href: '/intern/attendance', label: 'Check-In', icon: MapPin },
   { href: '/intern/survival-kit', label: 'Survival Kit', icon: BookOpen },
@@ -30,12 +30,17 @@ export default function InternShell({
   intern,
   children
 }: {
-  intern: { name: string; username: string };
+  intern: { name: string; username: string; logbookEnabled?: boolean };
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Filter out Logbook menu if disabled
+  const NAV = intern.logbookEnabled === false
+    ? NAV_ALL.filter((item) => item.href !== '/intern/logbook')
+    : NAV_ALL;
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });

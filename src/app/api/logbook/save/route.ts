@@ -21,6 +21,19 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerClient();
 
+    // Cek apakah logbook diaktifkan untuk intern ini
+    const { data: internData } = await supabase
+      .from('interns')
+      .select('logbook_enabled')
+      .eq('id', intern.intern_id)
+      .single();
+    if (internData && internData.logbook_enabled === false) {
+      return NextResponse.json(
+        { error: 'Logbook dinonaktifkan untuk akun Anda. Gunakan buku logbook manual.' },
+        { status: 403 }
+      );
+    }
+
     // Upsert (one entry per intern per date)
     const { data: existing } = await supabase
       .from('logbook')

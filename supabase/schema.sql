@@ -20,6 +20,7 @@ CREATE TABLE Interns (
   raw_password VARCHAR(50) NOT NULL, -- For admin to share (plaintext, only visible to admin)
   -- Status
   is_active BOOLEAN DEFAULT TRUE,
+  logbook_enabled BOOLEAN DEFAULT TRUE, -- Admin bisa nonaktifkan jika magang pakai buku manual
   -- Survival kit progress (JSONB for flexible drip content state)
   survival_kit_progress JSONB DEFAULT '{}'::jsonb,
   -- Certificate vault unlock threshold

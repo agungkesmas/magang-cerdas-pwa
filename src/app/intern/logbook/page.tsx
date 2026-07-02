@@ -8,7 +8,9 @@ import {
   CheckCircle2,
   Zap,
   Flame,
-  Calendar
+  Calendar,
+  BookX,
+  Info
 } from 'lucide-react';
 
 export default function InternLogbookPage() {
@@ -16,6 +18,8 @@ export default function InternLogbookPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [recentExp, setRecentExp] = useState<number | null>(null);
+  const [logbookEnabled, setLogbookEnabled] = useState<boolean>(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const today = new Date().toISOString().split('T')[0];
   const [form, setForm] = useState({
     entry_date: today,
@@ -27,6 +31,13 @@ export default function InternLogbookPage() {
   const fetchEntries = async () => {
     setLoading(true);
     try {
+      // Fetch dashboard intern untuk dapat flag logbook_enabled
+      const dashRes = await fetch('/api/dashboard/intern');
+      const dashData = await dashRes.json();
+      if (dashData.success && dashData.profile) {
+        setLogbookEnabled(dashData.profile.logbook_enabled !== false);
+      }
+
       const res = await fetch('/api/logbook/list');
       const data = await res.json();
       if (data.success) {
@@ -54,6 +65,7 @@ export default function InternLogbookPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    setErrorMsg(null);
     try {
       const res = await fetch('/api/logbook/save', {
         method: 'POST',
@@ -61,7 +73,15 @@ export default function InternLogbookPage() {
         body: JSON.stringify(form)
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) {
+        if (res.status === 403) {
+          // Logbook dinonaktifkan
+          setLogbookEnabled(false);
+          setErrorMsg(data.error);
+          return;
+        }
+        throw new Error(data.error);
+      }
       if (data.exp_gained > 0) {
         setRecentExp(data.exp_gained);
         setTimeout(() => setRecentExp(null), 3000);
@@ -69,11 +89,74 @@ export default function InternLogbookPage() {
       fetchEntries();
       alert(data.updated ? 'Logbook diperbarui!' : 'Logbook tersimpan!');
     } catch (e: any) {
-      alert('Error: ' + e.message);
+      setErrorMsg(e.message);
     } finally {
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-bpjs-yellow" />
+      </div>
+    );
+  }
+
+  // Notice jika logbook dinonaktifkan admin
+  if (!logbookEnabled) {
+    return (
+      <div className="space-y-5 animate-fade-in">
+        <div>
+          <h1 className="text-2xl font-bold text-white" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+            Logbook Harian
+          </h1>
+          <p className="text-sm text-white/60 mt-1">Catat aktivitas & pembelajaran harian Anda</p>
+        </div>
+
+        <div className="glass-card p-8 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-500/20 rounded-2xl mb-4">
+            <BookX className="w-8 h-8 text-orange-400" />
+          </div>
+          <h3 className="text-lg font-bold text-white mb-2">Logbook Digital Dinonaktifkan</h3>
+          <p className="text-sm text-white/60 max-w-md mx-auto mb-4">
+            Admin telah menonaktifkan logbook digital untuk akun Anda. Kemungkinan Anda menggunakan
+            buku logbook manual. Silakan catat aktivitas harian Anda di buku manual.
+          </p>
+          <div className="bg-white/5 rounded-lg p-4 max-w-md mx-auto text-left">
+            <div className="flex items-start gap-2 text-sm text-white/70">
+              <Info className="w-4 h-4 text-bpjs-yellow flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-white/90 mb-1">Tips Pengisian Buku Manual:</p>
+                <ul className="text-xs text-white/60 space-y-1 list-disc list-inside">
+                  <li>Tanggal aktivitas</li>
+                  <li>Deskripsi kegiatan yang dilakukan</li>
+                  <li>Ringkasan pembelajaran</li>
+                  <li>Kesulitan yang dihadapi (jika ada)</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {entries.length > 0 && (
+          <div className="glass-card p-4">
+            <h3 className="text-sm font-semibold text-white/80 mb-3">Riwayat Logbook (sebelum dinonaktifkan)</h3>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {entries.slice(0, 10).map((entry) => (
+                <div key={entry.id} className="border-l-2 border-bpjs-yellow/30 pl-3 py-1">
+                  <div className="text-xs font-semibold text-bpjs-yellow">
+                    {new Date(entry.entry_date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                  </div>
+                  <p className="text-sm text-white/90 line-clamp-2">{entry.activity}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5 animate-fade-in">

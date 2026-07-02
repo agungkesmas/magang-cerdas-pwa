@@ -14,7 +14,6 @@ import {
   Menu,
   X,
   ShieldCheck,
-  GraduationCap,
   School
 } from 'lucide-react';
 
@@ -23,8 +22,7 @@ const NAV = [
   { href: '/admin/tasks', label: 'Tugas', icon: ListChecks },
   { href: '/admin/attendance', label: 'Kehadiran', icon: MapPin },
   { href: '/admin/certificate', label: 'Sertifikat', icon: Award },
-  { href: '/admin/bkk-teachers', label: 'Guru BKK', icon: GraduationCap },
-  { href: '/admin/schools', label: 'Sekolah', icon: School },
+  { href: '/admin/schools', label: 'Sekolah & BKK', icon: School },
   { href: '/admin/settings', label: 'Pengaturan', icon: Settings }
 ];
 

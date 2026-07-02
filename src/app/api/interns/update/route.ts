@@ -63,8 +63,28 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: true, is_active: !intern.is_active });
     }
 
+    if (action === 'toggle_logbook') {
+      const { data: intern } = await supabase
+        .from('interns')
+        .select('logbook_enabled')
+        .eq('id', id)
+        .single();
+      if (!intern) {
+        return NextResponse.json({ error: 'Intern not found' }, { status: 404 });
+      }
+      const newValue = intern.logbook_enabled === null ? false : !intern.logbook_enabled;
+      const { error } = await supabase
+        .from('interns')
+        .update({ logbook_enabled: newValue })
+        .eq('id', id);
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      return NextResponse.json({ success: true, logbook_enabled: newValue });
+    }
+
     // Default: update fields
-    const allowedFields = ['name', 'school_origin', 'major', 'department', 'start_date', 'end_date'];
+    const allowedFields = ['name', 'school_origin', 'major', 'department', 'start_date', 'end_date', 'logbook_enabled'];
     const cleanUpdates: Record<string, unknown> = {};
     for (const f of allowedFields) {
       if (updates[f] !== undefined) cleanUpdates[f] = updates[f];

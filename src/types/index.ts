@@ -20,6 +20,7 @@ export interface Intern {
   username: string;
   raw_password: string;
   is_active: boolean;
+  logbook_enabled: boolean;
   survival_kit_progress: Record<string, unknown>;
   certificate_unlocked: boolean;
   certificate_id: string | null;
