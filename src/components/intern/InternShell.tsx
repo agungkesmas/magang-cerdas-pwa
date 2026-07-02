@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import AIResepsionist from '@/components/shared/AIResepsionist';
 import {
   Home,
   MapPin,
@@ -64,7 +65,7 @@ export default function InternShell({
                 <Zap className="w-5 h-5 text-bpjs-blue-dark" strokeWidth={2.5} />
               </div>
               <span className="font-bold text-sm" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-                AGENT ACADEMY
+                MAGANG-CERDAS
               </span>
             </Link>
           </div>
@@ -187,6 +188,9 @@ export default function InternShell({
           }
         }
       `}</style>
+
+      {/* AI Resepsionis */}
+      <AIResepsionist dashboard="intern" welcomeName={intern.name?.split(' ')[0]} accentColor="purple" />
     </div>
   );
 }

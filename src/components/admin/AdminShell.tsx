@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import AIResepsionist from '@/components/shared/AIResepsionist';
 import {
   Users,
   CheckSquare,
@@ -14,11 +15,13 @@ import {
   Menu,
   X,
   ShieldCheck,
-  School
+  School,
+  Inbox
 } from 'lucide-react';
 
 const NAV = [
   { href: '/admin/interns', label: 'Peserta Magang', icon: Users },
+  { href: '/admin/requests', label: 'Permintaan Magang', icon: Inbox, badge: true },
   { href: '/admin/activities', label: 'Aktivitas', icon: CheckSquare },
   { href: '/admin/attendance', label: 'Kehadiran', icon: MapPin },
   { href: '/admin/certificate', label: 'Sertifikat', icon: Award },
@@ -35,6 +38,17 @@ export default function AdminShell({
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pendingReqCount, setPendingReqCount] = useState(0);
+
+  // Fetch pending requests count for badge
+  useEffect(() => {
+    fetch('/api/admin/requests?status=submitted')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setPendingReqCount((d.requests || []).length);
+      })
+      .catch(() => {});
+  }, [pathname]);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -67,6 +81,7 @@ export default function AdminShell({
           {NAV.map((item) => {
             const active = pathname.startsWith(item.href);
             const Icon = item.icon;
+            const showBadge = item.badge && pendingReqCount > 0 && !active;
             return (
               <Link
                 key={item.href}
@@ -79,7 +94,12 @@ export default function AdminShell({
                 }`}
               >
                 <Icon className="w-5 h-5" />
-                <span>{item.label}</span>
+                <span className="flex-1">{item.label}</span>
+                {showBadge && (
+                  <span className="ml-auto text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center">
+                    {pendingReqCount}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -139,6 +159,9 @@ export default function AdminShell({
 
         <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">{children}</main>
       </div>
+
+      {/* AI Resepsionis */}
+      <AIResepsionist dashboard="admin" welcomeName={admin.name?.split(' ')[0]} accentColor="blue" />
     </div>
   );
 }

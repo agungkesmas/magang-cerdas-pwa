@@ -263,8 +263,28 @@ function BatchUploadModal({ onClose, onSuccess }: { onClose: () => void; onSucce
   const [error, setError] = useState('');
   const [results, setResults] = useState<BatchResult[] | null>(null);
   const [showPrint, setShowPrint] = useState(false);
+  const [uploadMode, setUploadMode] = useState<'excel' | 'csv'>('excel');
+  const [parseWarnings, setParseWarnings] = useState<{ row: number; message: string }[]>([]);
 
-  const downloadTemplate = () => {
+  // Download Excel template from API
+  const downloadExcelTemplate = async () => {
+    try {
+      const res = await fetch('/api/interns/template');
+      if (!res.ok) throw new Error('Gagal download template');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `template-batch-peserta-magang-${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  // Legacy: CSV template (kept as fallback)
+  const downloadCsvTemplate = () => {
     const headers = ['Nama', 'Jurusan', 'Departemen', 'Institusi', 'TanggalMulai', 'TanggalSelesai', 'Email', 'WhatsApp'];
     const example = ['Budi Santoso', 'Rekayasa Perangkat Lunak', 'Pelayanan', 'SMK Negeri 1 Cirebon', '2026-07-01', '2026-12-31', 'budi@email.com', '081234567890'];
     const csv = [headers.join(','), example.join(',')].join('\n');
@@ -277,15 +297,54 @@ function BatchUploadModal({ onClose, onSuccess }: { onClose: () => void; onSucce
     URL.revokeObjectURL(url);
   };
 
-  const handleFileUpload = async (file: File) => {
+  // Handle Excel upload: parse via API then batch-create
+  const handleExcelUpload = async (file: File) => {
     setLoading(true);
     setError('');
     setResults(null);
+    setParseWarnings([]);
+    try {
+      // Step 1: Parse Excel via API
+      const formData = new FormData();
+      formData.append('file', file);
+      const parseRes = await fetch('/api/interns/parse-excel', {
+        method: 'POST',
+        body: formData
+      });
+      const parseData = await parseRes.json();
+      if (!parseRes.ok) throw new Error(parseData.error);
+      if (parseData.errors?.length > 0) setParseWarnings(parseData.errors);
+      if (!parseData.interns || parseData.interns.length === 0) {
+        throw new Error('Tidak ada baris valid setelah parsing');
+      }
+
+      // Step 2: Batch create
+      const res = await fetch('/api/interns/batch-create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ interns: parseData.interns })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setResults(data.results);
+      onSuccess(data.results);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Legacy CSV upload
+  const handleCsvUpload = async (file: File) => {
+    setLoading(true);
+    setError('');
+    setResults(null);
+    setParseWarnings([]);
     try {
       const text = await file.text();
       const lines = text.split('\n').filter((l) => l.trim() && !l.startsWith('Nama'));
       const interns: any[] = lines.map((line) => {
-        // Simple CSV parse (handle quoted fields)
         const cols = line.match(/("[^"]*"|[^,]+)/g)?.map((c) => c.replace(/^"|"$/g, '').trim()) || [];
         return {
           name: cols[0] || '',
@@ -312,6 +371,14 @@ function BatchUploadModal({ onClose, onSuccess }: { onClose: () => void; onSucce
       setError(e.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFileUpload = (file: File) => {
+    if (uploadMode === 'excel') {
+      handleExcelUpload(file);
+    } else {
+      handleCsvUpload(file);
     }
   };
 
@@ -347,37 +414,85 @@ function BatchUploadModal({ onClose, onSuccess }: { onClose: () => void; onSucce
         <div className="p-5 space-y-4">
           {!results && !loading && (
             <>
+              {/* Mode toggle */}
+              <div className="flex gap-2 p-1 bg-gray-100 rounded-lg w-fit">
+                <button
+                  onClick={() => setUploadMode('excel')}
+                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    uploadMode === 'excel' ? 'bg-bpjs-green text-white shadow-sm' : 'text-gray-600'
+                  }`}
+                >
+                  📊 Excel (.xlsx)
+                </button>
+                <button
+                  onClick={() => setUploadMode('csv')}
+                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    uploadMode === 'csv' ? 'bg-bpjs-green text-white shadow-sm' : 'text-gray-600'
+                  }`}
+                >
+                  📄 CSV
+                </button>
+              </div>
+
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
                 <p className="font-semibold mb-1">Cara Pakai:</p>
                 <ol className="list-decimal list-inside space-y-1 text-xs">
-                  <li>Download template CSV di bawah</li>
+                  <li>Download template {uploadMode === 'excel' ? 'Excel (.xlsx)' : 'CSV'} di bawah</li>
                   <li>Buka di Excel/Google Sheets, isi data peserta (1 baris = 1 peserta)</li>
-                  <li>Upload file CSV yang sudah diisi</li>
+                  <li>Hapus baris contoh (Budi, Siti, Andi) sebelum upload</li>
+                  <li>Upload file yang sudah diisi</li>
                   <li>Sistem auto-generate username + password untuk setiap peserta</li>
                   <li>Download hasil CSV atau print kartu kredensial</li>
                 </ol>
               </div>
 
-              <button
-                onClick={downloadTemplate}
-                className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 font-medium py-3 rounded-lg"
-              >
-                <Download className="w-5 h-5" /> Download Template CSV
-              </button>
+              {/* Download template button */}
+              {uploadMode === 'excel' ? (
+                <button
+                  onClick={downloadExcelTemplate}
+                  className="w-full flex items-center justify-center gap-2 bg-bpjs-green/10 hover:bg-bpjs-green/20 border border-bpjs-green/30 text-bpjs-green-dark font-semibold py-3 rounded-lg"
+                >
+                  <Download className="w-5 h-5" /> Download Template Excel (.xlsx)
+                </button>
+              ) : (
+                <button
+                  onClick={downloadCsvTemplate}
+                  className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 font-medium py-3 rounded-lg"
+                >
+                  <Download className="w-5 h-5" /> Download Template CSV
+                </button>
+              )}
 
+              {/* Upload area */}
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                 <Upload className="w-10 h-10 mx-auto text-gray-400 mb-2" />
-                <p className="text-sm text-gray-600 mb-2">Pilih file CSV yang sudah diisi</p>
+                <p className="text-sm text-gray-600 mb-2">
+                  Pilih file {uploadMode === 'excel' ? 'Excel (.xlsx, .xls)' : 'CSV'} yang sudah diisi
+                </p>
                 <label className="inline-flex items-center gap-2 bg-bpjs-green hover:bg-bpjs-green-dark text-white font-semibold px-4 py-2 rounded-lg cursor-pointer">
                   <Upload className="w-4 h-4" /> Pilih File
                   <input
                     type="file"
-                    accept=".csv,text/csv"
+                    accept={uploadMode === 'excel' ? '.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : '.csv,text/csv'}
                     className="hidden"
                     onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
                   />
                 </label>
+                <p className="text-[10px] text-gray-400 mt-2">Maksimal 100 peserta per upload</p>
               </div>
+
+              {/* Parse warnings */}
+              {parseWarnings.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <p className="text-sm font-semibold text-amber-900 mb-1">⚠️ {parseWarnings.length} baris dilewati:</p>
+                  <ul className="text-xs text-amber-800 space-y-0.5 max-h-32 overflow-y-auto">
+                    {parseWarnings.slice(0, 10).map((w, i) => (
+                      <li key={i}>Baris {w.row}: {w.message}</li>
+                    ))}
+                    {parseWarnings.length > 10 && <li>...dan {parseWarnings.length - 10} lainnya</li>}
+                  </ul>
+                </div>
+              )}
             </>
           )}
 

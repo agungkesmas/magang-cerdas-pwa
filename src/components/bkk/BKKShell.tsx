@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Users, BookHeart, LogOut, GraduationCap, Menu, X, UserCircle, Award } from 'lucide-react';
+import AIResepsionist from '@/components/shared/AIResepsionist';
+import { Home, Users, BookHeart, LogOut, GraduationCap, Menu, X, UserCircle, Award, Send } from 'lucide-react';
 
 const NAV = [
   { href: '/bkk/home', label: 'Beranda', icon: Home },
+  { href: '/bkk/requests', label: 'Permintaan Magang', icon: Send, badge: true },
   { href: '/bkk/interns', label: 'Peserta Magang', icon: Users },
   { href: '/bkk/certificates', label: 'Sertifikat', icon: Award },
   { href: '/bkk/logbook', label: 'Logbook', icon: BookHeart },
@@ -23,6 +25,20 @@ export default function BKKShell({
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeReqCount, setActiveReqCount] = useState(0);
+
+  // Fetch active requests count for badge
+  useEffect(() => {
+    fetch('/api/bkk/requests')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) {
+          const count = (d.requests || []).filter((r: any) => ['submitted', 'under_review', 'accepted'].includes(r.status)).length;
+          setActiveReqCount(count);
+        }
+      })
+      .catch(() => {});
+  }, [pathname]);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -55,19 +71,25 @@ export default function BKKShell({
           {NAV.map((item) => {
             const active = pathname.startsWith(item.href);
             const Icon = item.icon;
+            const showBadge = item.badge && activeReqCount > 0 && !active;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors relative ${
                   active
                     ? 'bg-bpjs-yellow text-bpjs-blue-dark font-semibold'
                     : 'text-white/80 hover:bg-white/10 hover:text-white'
                 }`}
               >
                 <Icon className="w-5 h-5" />
-                <span>{item.label}</span>
+                <span className="flex-1">{item.label}</span>
+                {showBadge && (
+                  <span className="ml-auto text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center">
+                    {activeReqCount}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -112,6 +134,9 @@ export default function BKKShell({
 
         <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">{children}</main>
       </div>
+
+      {/* AI Resepsionis */}
+      <AIResepsionist dashboard="bkk" welcomeName={teacher.name?.split(' ')[0]} accentColor="green" />
     </div>
   );
 }
