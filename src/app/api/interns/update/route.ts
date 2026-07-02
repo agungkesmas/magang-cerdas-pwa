@@ -84,10 +84,22 @@ export async function PUT(req: NextRequest) {
     }
 
     // Default: update fields
-    const allowedFields = ['name', 'school_origin', 'major', 'department', 'start_date', 'end_date', 'logbook_enabled'];
+    const allowedFields = ['name', 'school_origin', 'major', 'major_id', 'department', 'start_date', 'end_date', 'logbook_enabled'];
     const cleanUpdates: Record<string, unknown> = {};
     for (const f of allowedFields) {
       if (updates[f] !== undefined) cleanUpdates[f] = updates[f];
+    }
+    // Jika major_id diupdate, sync major name juga
+    if (cleanUpdates.major_id) {
+      const supabase = createServerClient();
+      const { data: majorData } = await supabase
+        .from('majors')
+        .select('name')
+        .eq('id', cleanUpdates.major_id)
+        .single();
+      if (majorData) {
+        cleanUpdates.major = majorData.name;
+      }
     }
     if (Object.keys(cleanUpdates).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });

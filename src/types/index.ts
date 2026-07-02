@@ -12,6 +12,7 @@ export interface Intern {
   name: string;
   school_origin: string | null;
   major: string;
+  major_id: string | null;
   department: Department;
   start_date: string;
   end_date: string;
@@ -126,6 +127,14 @@ export interface School {
   address: string | null;
   contact_person: string | null;
   contact_phone: string | null;
+  created_at: string;
+}
+
+export interface Major {
+  id: string;
+  school_id: string;
+  name: string;
+  code: string | null;
   created_at: string;
 }
 

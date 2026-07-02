@@ -26,6 +26,7 @@ interface Intern {
   name: string;
   school_origin: string | null;
   major: string;
+  major_id: string | null;
   department: string;
   start_date: string;
   end_date: string;
@@ -153,10 +154,10 @@ Selamat magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-            Manajemen Magang
+            Manajemen Peserta Magang
           </h1>
           <p className="text-gray-500 text-sm mt-1">
-            {interns.length} magang terdaftar • {interns.filter((i) => i.is_active).length} aktif
+            {interns.length} peserta terdaftar • {interns.filter((i) => i.is_active).length} aktif
           </p>
         </div>
         <button
@@ -167,7 +168,7 @@ Selamat magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
           className="inline-flex items-center gap-2 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white font-semibold px-4 py-2.5 rounded-lg shadow-md transition-colors"
         >
           <Plus className="w-4 h-4" />
-          Tambah Magang
+          Tambah Peserta
         </button>
       </div>
 
@@ -445,7 +446,9 @@ function AddInternModal({
   const [form, setForm] = useState({
     name: editing?.name || '',
     school_origin: editing?.school_origin || '',
+    school_id: '',
     major: editing?.major || '',
+    major_id: editing?.major_id || '',
     department: editing?.department || 'Pelayanan',
     start_date: editing?.start_date || new Date().toISOString().split('T')[0],
     end_date: editing?.end_date || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
@@ -454,6 +457,8 @@ function AddInternModal({
   const [error, setError] = useState('');
   const [schools, setSchools] = useState<{ id: string; name: string; address?: string | null }[]>([]);
   const [schoolsLoading, setSchoolsLoading] = useState(true);
+  const [majors, setMajors] = useState<{ id: string; name: string; code?: string | null }[]>([]);
+  const [majorsLoading, setMajorsLoading] = useState(false);
 
   // Fetch schools list on mount
   useEffect(() => {
@@ -464,28 +469,27 @@ function AddInternModal({
           setSchools(d.schools || []);
           // Auto-select first school if available AND not in edit mode AND no pre-selected
           if (!editing && d.schools?.length > 0 && !form.school_origin) {
-            setForm((f) => ({ ...f, school_origin: d.schools[0].name }));
+            setForm((f) => ({ ...f, school_origin: d.schools[0].name, school_id: d.schools[0].id }));
           }
         }
       })
       .finally(() => setSchoolsLoading(false));
   }, []);
 
-  const COMMON_MAJORS = [
-    'SMK RPL',
-    'SMK TKJ',
-    'SMK AKL',
-    'SMK OTKP',
-    'SMK MPLB',
-    'SMK BDP',
-    'SMK DKV',
-    'Computer Science',
-    'Management',
-    'Economics',
-    'Public Relations',
-    'Law',
-    'Psychology'
-  ];
+  // Fetch majors berdasarkan school yang dipilih
+  useEffect(() => {
+    if (!form.school_id) {
+      setMajors([]);
+      return;
+    }
+    setMajorsLoading(true);
+    fetch(`/api/majors?school_id=${form.school_id}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setMajors(d.majors || []);
+      })
+      .finally(() => setMajorsLoading(false));
+  }, [form.school_id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -502,13 +506,14 @@ function AddInternModal({
             name: form.name,
             school_origin: form.school_origin,
             major: form.major,
+            major_id: form.major_id || null,
             department: form.department,
             start_date: form.start_date,
             end_date: form.end_date
           })
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Gagal update magang');
+        if (!res.ok) throw new Error(data.error || 'Gagal update peserta magang');
         onSuccess(null);
       } else {
         // Create mode
@@ -518,7 +523,7 @@ function AddInternModal({
           body: JSON.stringify(form)
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Gagal membuat magang');
+        if (!res.ok) throw new Error(data.error || 'Gagal membuat peserta magang');
         onSuccess({
           name: data.intern.name,
           username: data.intern.username,
@@ -590,11 +595,20 @@ function AddInternModal({
                 <select
                   required
                   value={form.school_origin}
-                  onChange={(e) => setForm({ ...form, school_origin: e.target.value })}
+                  onChange={(e) => {
+                    const selectedSchool = schools.find((s) => s.name === e.target.value);
+                    setForm({
+                      ...form,
+                      school_origin: e.target.value,
+                      school_id: selectedSchool?.id || '',
+                      major_id: '', // reset major saat ganti school
+                      major: ''
+                    });
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40 bg-white"
                 >
                   <option value="" disabled>
-                    -- Pilih Sekolah --
+                    -- Pilih Institusi --
                   </option>
                   {schools.map((s) => (
                     <option key={s.id} value={s.name}>
@@ -624,20 +638,56 @@ function AddInternModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Jurusan *</label>
-            <input
-              required
-              list="majors-list"
-              value={form.major}
-              onChange={(e) => setForm({ ...form, major: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
-              placeholder="Pilih atau ketik jurusan"
-            />
-            <datalist id="majors-list">
-              {COMMON_MAJORS.map((m) => (
-                <option key={m} value={m} />
-              ))}
-            </datalist>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Jurusan *
+              <span className="text-xs text-gray-500 font-normal ml-2">
+                (Diambil dari master jurusan institusi)
+              </span>
+            </label>
+            {majorsLoading ? (
+              <div className="w-full px-3 py-2 border border-gray-200 rounded-lg text-gray-400 text-sm">
+                Memuat daftar jurusan...
+              </div>
+            ) : majors.length === 0 ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                Belum ada jurusan untuk institusi ini.{' '}
+                <a href="/admin/schools" className="text-bpjs-blue hover:underline font-medium">
+                  Tambah jurusan di halaman Institusi
+                </a>
+              </div>
+            ) : (
+              <select
+                required
+                value={form.major_id}
+                onChange={(e) => {
+                  const selectedMajor = majors.find((m) => m.id === e.target.value);
+                  setForm({
+                    ...form,
+                    major_id: e.target.value,
+                    major: selectedMajor?.name || ''
+                  });
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40 bg-white"
+              >
+                <option value="" disabled>
+                  -- Pilih Jurusan --
+                </option>
+                {majors.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}{m.code ? ` (${m.code})` : ''}
+                  </option>
+                ))}
+                {/* If editing and current major tidak match dengan list (data lama) */}
+                {editing && form.major && !majors.find((m) => m.name === form.major) && (
+                  <option value={form.major_id || '__legacy__'}>
+                    ⚠️ Lainnya (data lama): {form.major}
+                  </option>
+                )}
+              </select>
+            )}
+            <p className="text-xs text-gray-500 mt-1">
+              {majors.length} jurusan tersedia untuk institusi ini
+            </p>
           </div>
 
           <div>

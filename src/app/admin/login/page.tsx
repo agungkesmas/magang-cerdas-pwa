@@ -105,7 +105,7 @@ export default function AdminLoginPage() {
 
         <div className="mt-6 text-center">
           <a href="/intern/login" className="text-white/60 hover:text-bpjs-yellow text-sm">
-            Login Magang →
+            Login Peserta Magang →
           </a>
           <span className="mx-2 text-white/30">•</span>
           <a href="/bkk/login" className="text-white/60 hover:text-bpjs-yellow text-sm">

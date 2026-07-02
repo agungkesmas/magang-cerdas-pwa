@@ -19,12 +19,18 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, school_origin, major, department, start_date, end_date } = body;
+    const { name, school_origin, major, major_id, department, start_date, end_date } = body;
 
     // Validation
-    if (!name || !major || !department || !start_date || !end_date) {
+    if (!name || !department || !start_date || !end_date) {
       return NextResponse.json(
-        { error: 'Field wajib: name, major, department, start_date, end_date' },
+        { error: 'Field wajib: name, department, start_date, end_date' },
+        { status: 400 }
+      );
+    }
+    if (!major && !major_id) {
+      return NextResponse.json(
+        { error: 'Jurusan wajib diisi (major_id atau major)' },
         { status: 400 }
       );
     }
@@ -43,6 +49,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'end_date harus setelah start_date' }, { status: 400 });
     }
 
+    // Jika major_id diberikan, fetch major name dari tabel majors
+    let majorName = major;
+    let majorIdValue: string | null = null;
+    if (major_id) {
+      const supabase = createServerClient();
+      const { data: majorData, error: mErr } = await supabase
+        .from('majors')
+        .select('id, name')
+        .eq('id', major_id)
+        .single();
+      if (mErr || !majorData) {
+        return NextResponse.json({ error: 'Jurusan tidak ditemukan' }, { status: 400 });
+      }
+      majorName = majorData.name;
+      majorIdValue = majorData.id;
+    }
+
     // Generate credentials
     const { username, password } = generateInternCredentials(name);
     const passwordHash = await hashPassword(password);
@@ -53,16 +76,18 @@ export async function POST(req: NextRequest) {
       .insert({
         name: name.trim(),
         school_origin: school_origin?.trim() || null,
-        major: major.trim(),
+        major: majorName?.trim() || major.trim(),
+        major_id: majorIdValue,
         department,
         start_date,
         end_date,
         username,
         password_hash: passwordHash,
-        raw_password: password, // Stored plaintext for admin to view/share
+        raw_password: password,
         total_exp: 0,
         streak_count: 0,
         is_active: true,
+        logbook_enabled: true,
         survival_kit_progress: {},
         certificate_unlocked: false
       })

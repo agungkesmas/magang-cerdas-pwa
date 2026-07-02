@@ -46,7 +46,7 @@ export default function HomePage() {
               Admin Console
             </h2>
             <p className="text-white/60 text-sm mb-4">
-              Kelola magang, tugas, sertifikat, guru BKK, dan pengaturan sistem.
+              Kelola peserta magang, tugas, sertifikat, guru BKK, dan pengaturan sistem.
             </p>
             <div className="inline-flex items-center gap-1 text-bpjs-yellow text-sm font-semibold group-hover:gap-2 transition-all">
               Masuk sebagai Admin
@@ -66,10 +66,10 @@ export default function HomePage() {
               Agent Academy
             </h2>
             <p className="text-white/60 text-sm mb-4">
-              Dashboard magang: check-in, daily quest, logbook, survival kit, sertifikat.
+              Dashboard peserta magang: check-in, daily quest, logbook, survival kit, sertifikat.
             </p>
             <div className="inline-flex items-center gap-1 text-bpjs-yellow text-sm font-semibold group-hover:gap-2 transition-all">
-              Masuk sebagai Magang
+              Masuk sebagai Peserta Magang
               <ArrowRight className="w-4 h-4" />
             </div>
           </Link>
@@ -86,7 +86,7 @@ export default function HomePage() {
               BKK Dashboard
             </h2>
             <p className="text-white/60 text-sm mb-4">
-              Monitor siswa magang dari sekolah Anda: kehadiran, logbook, progress.
+              Monitor peserta magang dari institusi Anda: kehadiran, logbook, progress.
             </p>
             <div className="inline-flex items-center gap-1 text-bpjs-yellow text-sm font-semibold group-hover:gap-2 transition-all">
               Masuk sebagai Guru BKK

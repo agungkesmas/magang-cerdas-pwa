@@ -18,11 +18,11 @@ import {
 } from 'lucide-react';
 
 const NAV = [
-  { href: '/admin/interns', label: 'Magang', icon: Users },
+  { href: '/admin/interns', label: 'Peserta Magang', icon: Users },
   { href: '/admin/tasks', label: 'Tugas', icon: ListChecks },
   { href: '/admin/attendance', label: 'Kehadiran', icon: MapPin },
   { href: '/admin/certificate', label: 'Sertifikat', icon: Award },
-  { href: '/admin/schools', label: 'Sekolah & BKK', icon: School },
+  { href: '/admin/schools', label: 'Institusi & BKK', icon: School },
   { href: '/admin/settings', label: 'Pengaturan', icon: Settings }
 ];
 

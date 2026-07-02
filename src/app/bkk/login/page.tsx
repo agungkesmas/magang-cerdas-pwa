@@ -112,7 +112,7 @@ export default function BKKLoginPage() {
           </a>
           <span className="mx-2 text-white/30">•</span>
           <a href="/intern/login" className="text-white/60 hover:text-bpjs-yellow text-sm">
-            Login Magang →
+            Login Peserta Magang →
           </a>
         </div>
       </div>

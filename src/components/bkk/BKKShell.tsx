@@ -7,7 +7,7 @@ import { Home, Users, BookHeart, LogOut, GraduationCap, Menu, X, UserCircle } fr
 
 const NAV = [
   { href: '/bkk/home', label: 'Beranda', icon: Home },
-  { href: '/bkk/interns', label: 'Pemagang', icon: Users },
+  { href: '/bkk/interns', label: 'Peserta Magang', icon: Users },
   { href: '/bkk/logbook', label: 'Logbook', icon: BookHeart },
   { href: '/bkk/profile', label: 'Profil', icon: UserCircle }
 ];

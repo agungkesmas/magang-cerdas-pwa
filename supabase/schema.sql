@@ -9,6 +9,7 @@ CREATE TABLE Interns (
   name VARCHAR(255) NOT NULL,
   school_origin VARCHAR(255),
   major VARCHAR(255) NOT NULL,
+  major_id UUID REFERENCES majors(id) ON DELETE SET NULL,
   department VARCHAR(50) CHECK (department IN ('Pelayanan', 'Pemasaran', 'Keuangan')) NOT NULL,
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
@@ -102,11 +103,26 @@ CREATE TABLE task_completions (
 );
 
 -- ============================================================
+-- Table: Majors (Master Jurusan per Institusi)
+-- ============================================================
+CREATE TABLE majors (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  school_id UUID NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  code VARCHAR(50),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(school_id, name)
+);
+
+ALTER TABLE majors ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read majors" ON majors FOR SELECT USING (TRUE);
+
+-- ============================================================
 -- Table: Attendance (Check-in/out with geo + photo)
 -- ============================================================
-CREATE TABLE Attendance (
+CREATE TABLE attendance (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  intern_id UUID REFERENCES Interns(id) ON DELETE CASCADE,
+  intern_id UUID REFERENCES interns(id) ON DELETE CASCADE,
   timestamp TIMESTAMPTZ DEFAULT NOW(),
   type VARCHAR(10) CHECK (type IN ('Check-In', 'Check-Out')) NOT NULL,
   latitude DECIMAL(10,7),

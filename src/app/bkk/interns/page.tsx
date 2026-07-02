@@ -40,6 +40,7 @@ function InternList() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [schoolFilter, setSchoolFilter] = useState<string>('all');
 
   useEffect(() => {
     fetch('/api/dashboard/bkk')
@@ -59,6 +60,7 @@ function InternList() {
   if (!data) return null;
 
   const filtered = data.interns.filter((i: any) => {
+    if (schoolFilter !== 'all' && i.school_origin !== schoolFilter) return false;
     if (filter === 'active') return i.is_active;
     if (filter === 'completed') return i.certificate_unlocked;
     return true;
@@ -68,26 +70,53 @@ function InternList() {
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-          Daftar Pemagang
+          Daftar Peserta Magang
         </h1>
         <p className="text-gray-500 text-sm mt-1">
-          {data.interns.length} siswa dari {data.teacher.schools.length} sekolah yang Anda bimbing
+          {data.interns.length} peserta dari {data.teacher.schools.length} institusi yang Anda bimbing
         </p>
       </div>
 
-      {/* Filter */}
-      <div className="flex gap-2">
-        {(['all', 'active', 'completed'] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium ${
-              filter === f ? 'bg-bpjs-green text-white' : 'bg-white border border-gray-200 text-gray-700'
-            }`}
+      {/* Filter by sekolah + status */}
+      <div className="flex flex-wrap gap-2 items-center">
+        {/* Filter sekolah */}
+        {data.teacher.schools.length > 1 && (
+          <select
+            value={schoolFilter}
+            onChange={(e) => setSchoolFilter(e.target.value)}
+            className="px-3 py-1.5 border border-gray-200 rounded-md text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
           >
-            {f === 'all' ? `Semua (${data.interns.length})` : f === 'active' ? `Aktif (${data.interns.filter((i: any) => i.is_active).length})` : `Selesai (${data.interns.filter((i: any) => i.certificate_unlocked).length})`}
-          </button>
-        ))}
+            <option value="all">Semua Institusi ({data.interns.length})</option>
+            {data.teacher.schools.map((s: string) => {
+              const count = data.interns.filter((i: any) => i.school_origin === s).length;
+              return (
+                <option key={s} value={s}>
+                  {s} ({count})
+                </option>
+              );
+            })}
+          </select>
+        )}
+        {/* Filter status */}
+        {(['all', 'active', 'completed'] as const).map((f) => {
+          const count = data.interns.filter((i: any) => {
+            if (schoolFilter !== 'all' && i.school_origin !== schoolFilter) return false;
+            if (f === 'active') return i.is_active;
+            if (f === 'completed') return i.certificate_unlocked;
+            return true;
+          }).length;
+          return (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium ${
+                filter === f ? 'bg-bpjs-green text-white' : 'bg-white border border-gray-200 text-gray-700'
+              }`}
+            >
+              {f === 'all' ? `Semua (${count})` : f === 'active' ? `Aktif (${count})` : `Selesai (${count})`}
+            </button>
+          );
+        })}
       </div>
 
       {/* List */}

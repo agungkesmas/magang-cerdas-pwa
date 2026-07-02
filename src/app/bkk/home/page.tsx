@@ -81,7 +81,7 @@ export default function BKKHomePage() {
           </div>
         )}
         <p className="text-white/80 text-sm mt-3">
-          Pantau perkembangan siswa-siswi Anda selama magang di BPJS Ketenagakerjaan Cabang Cirebon.
+          Pantau perkembangan peserta magang Anda selama magang di BPJS Ketenagakerjaan Cabang Cirebon.
         </p>
       </div>
 
@@ -100,7 +100,7 @@ export default function BKKHomePage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard
           icon={Users}
-          label="Total Pemagang"
+          label="Total Peserta"
           value={stats.total_interns}
           color="bpjs-blue"
           sub={`${stats.active_interns} aktif`}
@@ -110,14 +110,14 @@ export default function BKKHomePage() {
           label="Rata-rata EXP"
           value={stats.avg_exp}
           color="bpjs-yellow"
-          sub="dari semua siswa"
+          sub="dari semua peserta"
         />
         <StatCard
           icon={Award}
           label="Sertifikat Terbit"
           value={stats.certified_count}
           color="bpjs-green"
-          sub="siswa sudah lulus"
+          sub="peserta sudah lulus"
         />
         <StatCard
           icon={Clock}
@@ -132,7 +132,7 @@ export default function BKKHomePage() {
       <div className="bg-white rounded-2xl border border-gray-200 p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-            Pemagang Aktif
+            Peserta Aktif
           </h2>
           <Link href="/bkk/interns" className="text-sm text-bpjs-green hover:underline font-medium">
             Lihat Semua →
@@ -196,7 +196,7 @@ export default function BKKHomePage() {
         <div className="text-sm text-blue-900">
           <p className="font-semibold">Tentang Dashboard BKK</p>
           <p className="text-blue-700 mt-1">
-            Anda hanya dapat melihat data siswa dari {teacher.schools.length} sekolah yang Anda bimbing
+            Anda hanya dapat melihat data peserta dari {teacher.schools.length} sekolah yang Anda bimbing
             {teacher.schools.length > 0 && (
               <>
                 : <strong>{teacher.schools.join(', ')}</strong>
