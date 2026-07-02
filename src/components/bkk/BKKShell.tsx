@@ -111,6 +111,9 @@ export default function BKKShell({
             <LogOut className="w-4 h-4" />
             <span className="text-sm font-medium">Keluar</span>
           </button>
+          <p className="text-[10px] text-white/40 text-center mt-3">
+            Powered by <span className="text-bpjs-yellow/70 font-medium">Tim Syukur Mikrodigital</span>
+          </p>
         </div>
       </aside>
 

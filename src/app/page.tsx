@@ -96,9 +96,15 @@ export default function HomePage() {
         </div>
 
         {/* Footer */}
-        <div className="mt-10 text-center">
+        <div className="mt-10 text-center space-y-1">
           <p className="text-white/40 text-xs">
-            © {new Date().getFullYear()} BPJS Ketenagakerjaan Cabang Cirebon • MAGANG-CERDAS PWA
+            © {new Date().getFullYear()} BPJS Ketenagakerjaan Cabang Cirebon
+          </p>
+          <p className="text-white/50 text-xs font-medium">
+            Dikembangkan &amp; Dipelihara oleh <span className="text-bpjs-yellow/80">Tim Syukur Mikrodigital</span>
+          </p>
+          <p className="text-white/30 text-[10px]">
+            Versi 1.0 • Sistem Manajemen Magang Berbasis AI
           </p>
         </div>
       </div>

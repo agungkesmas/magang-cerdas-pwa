@@ -133,6 +133,9 @@ export default function AdminShell({
               <span className="text-sm font-medium">Keluar</span>
             </button>
           </div>
+          <p className="text-[10px] text-white/40 text-center mt-3">
+            Powered by <span className="text-bpjs-yellow/70 font-medium">Tim Syukur Mikrodigital</span>
+          </p>
         </div>
       </aside>
 

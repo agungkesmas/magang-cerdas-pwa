@@ -178,6 +178,9 @@ export default function InternShell({
           >
             <LogOut className="w-4 h-4" /> Keluar
           </button>
+          <p className="text-[10px] text-white/40 text-center pt-3 mt-3 border-t border-agent-border">
+            Powered by <span className="text-bpjs-yellow/70 font-medium">Tim Syukur Mikrodigital</span>
+          </p>
         </div>
       </div>
 
