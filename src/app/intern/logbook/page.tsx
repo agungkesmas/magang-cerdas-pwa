@@ -243,7 +243,7 @@ export default function InternLogbookPage() {
         </div>
         <div className="ml-auto text-right">
           <div className="text-xs text-white/60">Streak saat ini</div>
-          <div className="text-lg font-bold text-orange-400">
+          <div className="text-2xl font-bold text-orange-400">
             🔥 {calculateStreak(entries)}
           </div>
         </div>

@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   Home,
   MapPin,
-  BookOpen,
+  CheckSquare,
   BookHeart,
   Trophy,
   LogOut,
@@ -19,7 +19,7 @@ import {
 const NAV_ALL = [
   { href: '/intern/home', label: 'Home', icon: Home },
   { href: '/intern/attendance', label: 'Check-In', icon: MapPin },
-  { href: '/intern/survival-kit', label: 'Survival Kit', icon: BookOpen },
+  { href: '/intern/activities', label: 'Aktivitas', icon: CheckSquare },
   { href: '/intern/logbook', label: 'Logbook', icon: BookHeart },
   { href: '/intern/certificate', label: 'Vault', icon: Trophy }
 ];
@@ -125,7 +125,10 @@ export default function InternShell({
 
       {/* Bottom nav (mobile-first PWA) */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-agent-card/95 backdrop-blur-md border-t border-agent-border safe-bottom">
-        <div className="grid grid-cols-6 gap-1 p-1">
+        <div
+          className="grid gap-1 p-1"
+          style={{ gridTemplateColumns: `repeat(${NAV.length}, 1fr)` }}
+        >
           {NAV.map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + '/');
             const Icon = item.icon;

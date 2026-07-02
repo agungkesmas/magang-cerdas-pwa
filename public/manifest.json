@@ -31,9 +31,9 @@
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Daily Quest",
-      "short_name": "Quest",
-      "url": "/intern/daily-quest",
+      "name": "Aktivitas Saya",
+      "short_name": "Aktivitas",
+      "url": "/intern/activities",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ]

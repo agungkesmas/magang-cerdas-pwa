@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Users,
+  CheckSquare,
   MapPin,
   Award,
   Settings,
@@ -18,10 +19,10 @@ import {
 
 const NAV = [
   { href: '/admin/interns', label: 'Peserta Magang', icon: Users },
+  { href: '/admin/activities', label: 'Aktivitas', icon: CheckSquare },
   { href: '/admin/attendance', label: 'Kehadiran', icon: MapPin },
   { href: '/admin/certificate', label: 'Sertifikat', icon: Award },
-  { href: '/admin/schools', label: 'Institusi & BKK', icon: School },
-  { href: '/admin/settings', label: 'Pengaturan', icon: Settings }
+  { href: '/admin/schools', label: 'Institusi & BKK', icon: School }
 ];
 
 export default function AdminShell({
@@ -92,13 +93,26 @@ export default function AdminShell({
             </div>
             <p className="text-xs text-white/60 truncate">{admin.email}</p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/20 hover:bg-red-500/30 text-red-200 rounded-lg transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="text-sm font-medium">Keluar</span>
-          </button>
+          <div className="flex gap-2">
+            <Link
+              href="/admin/settings"
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-colors ${
+                pathname.startsWith('/admin/settings')
+                  ? 'bg-white/10 text-white'
+                  : 'bg-white/5 hover:bg-white/10 text-white/70'
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+              <span className="text-sm font-medium">Pengaturan</span>
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/20 hover:bg-red-500/30 text-red-200 rounded-lg transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="text-sm font-medium">Keluar</span>
+            </button>
+          </div>
         </div>
       </aside>
 

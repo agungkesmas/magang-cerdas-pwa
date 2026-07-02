@@ -41,20 +41,6 @@ export async function GET() {
       .lte('timestamp', todayEnd.toISOString())
       .order('timestamp', { ascending: true });
 
-    // Tasks for this department
-    const { data: tasks } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('department', profile.department)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false });
-
-    // Task completions for this intern
-    const { data: completions } = await supabase
-      .from('task_completions')
-      .select('*')
-      .eq('intern_id', intern.intern_id);
-
     // Leaderboard (all active interns, top 10)
     const { data: leaderboard } = await supabase
       .from('interns')
@@ -100,8 +86,6 @@ export async function GET() {
         duration_days: internshipDuration(profile.start_date, profile.end_date)
       },
       today_attendance: todayAtt || [],
-      tasks: tasks || [],
-      completions: completions || [],
       leaderboard: leaderboard || [],
       official: official || null,
       certificate,

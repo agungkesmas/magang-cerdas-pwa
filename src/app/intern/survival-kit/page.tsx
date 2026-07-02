@@ -140,7 +140,7 @@ export default function InternSurvivalKitPage() {
                       : 'bg-white/5 text-white/30'
                   }`}
                 >
-                  {passed ? <CheckCircle2 className="w-6 h-6" /> : !unlocked ? <Lock className="w-5 h-5" /> : <Icon className="w-6 h-6" />}
+                  {passed ? <CheckCircle2 className="w-6 h-6" /> : !unlocked ? <Lock className="w-6 h-6" /> : <Icon className="w-6 h-6" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">

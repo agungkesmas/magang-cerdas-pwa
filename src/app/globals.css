@@ -65,6 +65,11 @@ input[type="file"] {
   box-shadow: 0 0 20px rgba(0, 102, 204, 0.3), 0 0 40px rgba(0, 102, 204, 0.1);
 }
 
+/* Pulse glow effect (untuk tombol CAPTURE, Check-In, dll) */
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
 .gradient-bpjs {
   background: linear-gradient(135deg, #003F7F 0%, #0066CC 100%);
 }

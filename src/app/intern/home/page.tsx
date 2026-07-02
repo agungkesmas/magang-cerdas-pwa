@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Zap,
   Flame,
@@ -9,8 +10,9 @@ import {
   TrendingUp,
   Trophy,
   Loader2,
-  Target,
-  Star
+  Star,
+  BookOpen,
+  ArrowRight
 } from 'lucide-react';
 
 interface DashboardData {
@@ -32,8 +34,6 @@ interface DashboardData {
     duration_days: number;
   };
   today_attendance: any[];
-  tasks: any[];
-  completions: any[];
   leaderboard: any[];
   nudges: any[];
 }
@@ -109,19 +109,19 @@ export default function InternHomePage() {
 
       {/* Dual Progress */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="glass-card p-4">
+        <div className="glass-card p-4 flex flex-col h-full">
           <div className="flex items-center gap-2 mb-2">
             <Clock className="w-4 h-4 text-bpjs-blue-light" />
             <span className="text-xs text-white/60 font-medium">Waktu Magang</span>
           </div>
           <div className="text-2xl font-bold text-white">{profile.time_progress}%</div>
           <div className="text-xs text-white/50 mt-0.5">{profile.days_remaining} hari tersisa</div>
-          <div className="mt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div className="mt-auto pt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
             <div className="h-full bg-bpjs-blue-light" style={{ width: `${profile.time_progress}%` }} />
           </div>
         </div>
 
-        <div className="glass-card p-4">
+        <div className="glass-card p-4 flex flex-col h-full">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-4 h-4 text-bpjs-green" />
             <span className="text-xs text-white/60 font-medium">Tier saat ini</span>
@@ -132,7 +132,7 @@ export default function InternHomePage() {
               ? 'Tier Excellence tercapai!'
               : `${1000 - profile.total_exp} EXP lagi ke Excellence`}
           </div>
-          <div className="mt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div className="mt-auto pt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
             <div
               className="h-full bg-bpjs-yellow"
               style={{ width: `${Math.min(100, (profile.total_exp / 1000) * 100)}%` }}
@@ -162,7 +162,7 @@ export default function InternHomePage() {
             <Zap className={`w-5 h-5 ${checkedIn ? 'text-bpjs-green' : 'text-white/40'}`} />
           </div>
           <div>
-            <div className="text-sm font-bold text-white">
+            <div className="text-lg font-bold text-white">
               {checkedIn ? (checkedOut ? 'Selesai!' : 'Sudah Check-In') : 'Belum Check-In'}
             </div>
             <div className="text-xs text-white/50">{checkedIn ? '+20 EXP hari ini' : 'Ayo check-in!'}</div>
@@ -170,36 +170,19 @@ export default function InternHomePage() {
         </div>
       </div>
 
-      {/* Tasks progress (mini) */}
-      {data.tasks.length > 0 && (
-        <div className="glass-card p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Target className="w-4 h-4 text-bpjs-yellow" />
-            <span className="text-sm font-semibold text-white">Progress Tugas</span>
-            <span className="text-xs text-white/40 ml-auto">{data.tasks.length} tugas</span>
+      {/* Survival Kit quick access */}
+      <Link href="/intern/survival-kit" className="glass-card p-4 block hover:bg-white/5 transition-colors">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-bpjs-blue/20 flex items-center justify-center flex-shrink-0">
+            <BookOpen className="w-5 h-5 text-bpjs-blue-light" />
           </div>
-          <div className="space-y-2 max-h-40 overflow-y-auto">
-            {data.tasks.slice(0, 3).map((task: any) => {
-              const completion = data.completions.find((c) => c.task_id === task.id);
-              const done = completion?.completed_count || 0;
-              const pct = task.target_count > 0 ? Math.min(100, (done / task.target_count) * 100) : 0;
-              return (
-                <div key={task.id}>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="text-white/80 truncate">{task.title}</span>
-                    <span className="text-white/50">
-                      {done}/{task.target_count}
-                    </span>
-                  </div>
-                  <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                    <div className="h-full bg-bpjs-yellow" style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white">Survival Kit Academy</p>
+            <p className="text-xs text-white/50">8 modul dunia kerja: First Day, Komunikasi, Mental Toughness, dll</p>
           </div>
+          <ArrowRight className="w-4 h-4 text-white/40" />
         </div>
-      )}
+      </Link>
 
       {/* Leaderboard mini */}
       {data.leaderboard.length > 0 && (
