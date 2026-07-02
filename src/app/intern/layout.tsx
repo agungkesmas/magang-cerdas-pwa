@@ -9,16 +9,24 @@ export default async function InternLayout({ children }: { children: React.React
   const intern = await getInternToken();
   if (!intern) return <>{children}</>;
 
-  // Fetch fresh logbook_enabled flag (in case admin just toggled it)
+  // Fetch logbook_enabled dari schools (bukan interns) — toggle sekarang per-institusi
   let logbookEnabled = true;
   try {
     const supabase = createServerClient();
-    const { data } = await supabase
+    const { data: internData } = await supabase
       .from('interns')
-      .select('logbook_enabled')
+      .select('school_origin')
       .eq('id', intern.intern_id)
       .single();
-    if (data) logbookEnabled = data.logbook_enabled !== false;
+
+    if (internData?.school_origin) {
+      const { data: schoolData } = await supabase
+        .from('schools')
+        .select('logbook_enabled')
+        .eq('name', internData.school_origin)
+        .maybeSingle();
+      if (schoolData) logbookEnabled = schoolData.logbook_enabled !== false;
+    }
   } catch {}
 
   return (

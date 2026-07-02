@@ -16,9 +16,7 @@ import {
   Clock,
   Award,
   Flame,
-  Edit,
-  BookHeart,
-  BookX
+  Edit
 } from 'lucide-react';
 
 interface Intern {
@@ -119,22 +117,6 @@ Selamat magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
     fetchInterns();
   };
 
-  const handleToggleLogbook = async (id: string, currentEnabled: boolean) => {
-    const action = currentEnabled ? 'nonaktifkan' : 'aktifkan';
-    if (!confirm(`Yakin ${action} logbook digital untuk magang ini?`)) return;
-    const res = await fetch('/api/interns/update', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, action: 'toggle_logbook' })
-    });
-    const data = await res.json();
-    if (data.success) {
-      fetchInterns();
-    } else {
-      alert('Error: ' + data.error);
-    }
-  };
-
   const handleDelete = async (id: string) => {
     if (!confirm('Yakin hapus magang ini? Tindakan tidak bisa dibatalkan.')) return;
     await fetch(`/api/interns/update?id=${id}`, { method: 'DELETE' });
@@ -221,11 +203,6 @@ Selamat magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
                       {intern.certificate_unlocked && (
                         <span className="text-xs px-2 py-0.5 bg-bpjs-yellow/20 text-bpjs-blue-dark rounded-full font-medium flex items-center gap-1">
                           <Award className="w-3 h-3" /> Sertifikat
-                        </span>
-                      )}
-                      {!intern.logbook_enabled && (
-                        <span className="text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full font-medium flex items-center gap-1" title="Logbook digital dinonaktifkan, pakai buku manual">
-                          <BookX className="w-3 h-3" /> Logbook Manual
                         </span>
                       )}
                     </div>
@@ -315,17 +292,6 @@ Selamat magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
                       className="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md"
                     >
                       <Edit className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleToggleLogbook(intern.id, intern.logbook_enabled)}
-                      title={intern.logbook_enabled ? 'Nonaktifkan logbook digital (pakai buku manual)' : 'Aktifkan logbook digital'}
-                      className={`p-1.5 rounded-md ${
-                        intern.logbook_enabled
-                          ? 'bg-purple-100 hover:bg-purple-200 text-purple-700'
-                          : 'bg-orange-100 hover:bg-orange-200 text-orange-700'
-                      }`}
-                    >
-                      {intern.logbook_enabled ? <BookHeart className="w-3.5 h-3.5" /> : <BookX className="w-3.5 h-3.5" />}
                     </button>
                     <button
                       onClick={() => handleToggleActive(intern.id)}

@@ -23,6 +23,7 @@ import {
   Mail,
   AlertCircle,
   BookX,
+  BookHeart,
   BookOpen
 } from 'lucide-react';
 
@@ -32,6 +33,7 @@ interface School {
   address: string | null;
   contact_person: string | null;
   contact_phone: string | null;
+  logbook_enabled?: boolean;
   created_at: string;
 }
 
@@ -64,6 +66,7 @@ export default function SchoolDetailPage() {
   const schoolId = params.id as string;
 
   const [school, setSchool] = useState<School | null>(null);
+  const [schoolLogbookEnabled, setSchoolLogbookEnabled] = useState<boolean>(true);
   const [teachers, setTeachers] = useState<BKKTeacher[]>([]);
   const [interns, setInterns] = useState<Intern[]>([]);
   const [majors, setMajors] = useState<{ id: string; name: string; code?: string | null }[]>([]);
@@ -98,6 +101,7 @@ export default function SchoolDetailPage() {
           return;
         }
         setSchool(found);
+        setSchoolLogbookEnabled(found.logbook_enabled !== false);
         schoolName = found.name;
       }
       if (internsData.success && schoolName) {
@@ -176,8 +180,26 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
     fetchAll();
   };
 
+  const handleToggleLogbook = async () => {
+    const action = schoolLogbookEnabled ? 'nonaktifkan' : 'aktifkan';
+    if (!confirm(`Yakin ${action} logbook digital untuk SEMUA peserta dari "${school?.name}"?`)) return;
+    const newValue = !schoolLogbookEnabled;
+    const res = await fetch('/api/schools', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: schoolId, logbook_enabled: newValue })
+    });
+    const data = await res.json();
+    if (data.success) {
+      setSchoolLogbookEnabled(newValue);
+      if (school) setSchool({ ...school, logbook_enabled: newValue });
+    } else {
+      alert('Error: ' + data.error);
+    }
+  };
+
   const handleDeleteSchool = async () => {
-    if (!confirm(`Hapus sekolah "${school?.name}"? Guru BKK yang ter-link akan kehilangan akses.`)) return;
+    if (!confirm(`Hapus institusi "${school?.name}"? Guru BKK yang ter-link akan kehilangan akses.`)) return;
     const res = await fetch(`/api/schools?id=${schoolId}`, { method: 'DELETE' });
     const data = await res.json();
     if (!res.ok) {
@@ -234,21 +256,42 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={handleToggleLogbook}
+              className={`p-2 rounded-lg ${
+                schoolLogbookEnabled
+                  ? 'bg-purple-500/30 hover:bg-purple-500/40 text-purple-100'
+                  : 'bg-orange-500/30 hover:bg-orange-500/40 text-orange-100'
+              }`}
+              title={schoolLogbookEnabled ? 'Nonaktifkan logbook digital untuk semua peserta institusi ini' : 'Aktifkan logbook digital'}
+            >
+              {schoolLogbookEnabled ? <BookHeart className="w-4 h-4" /> : <BookX className="w-4 h-4" />}
+            </button>
+            <button
               onClick={() => setShowSchoolEdit(true)}
               className="p-2 bg-white/10 hover:bg-white/20 rounded-lg"
-              title="Edit sekolah"
+              title="Edit institusi"
             >
               <Edit className="w-4 h-4" />
             </button>
             <button
               onClick={handleDeleteSchool}
               className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-200 rounded-lg"
-              title="Hapus sekolah"
+              title="Hapus institusi"
             >
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
         </div>
+
+        {/* Logbook status banner */}
+        {!schoolLogbookEnabled && (
+          <div className="mt-3 bg-orange-500/20 border border-orange-400/30 rounded-lg px-4 py-2 flex items-center gap-2">
+            <BookX className="w-4 h-4 text-orange-200" />
+            <span className="text-sm text-orange-100">
+              Logbook digital dinonaktifkan untuk institusi ini. Semua peserta akan menggunakan buku logbook manual.
+            </span>
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-4 gap-3 mt-4">

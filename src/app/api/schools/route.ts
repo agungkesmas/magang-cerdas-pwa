@@ -62,7 +62,7 @@ export async function PUT(req: NextRequest) {
     const admin = await getAdminToken();
     if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { id, name, address, contact_person, contact_phone } = await req.json();
+    const { id, name, address, contact_person, contact_phone, logbook_enabled } = await req.json();
     if (!id) return NextResponse.json({ error: 'ID wajib diisi' }, { status: 400 });
 
     const updates: Record<string, unknown> = {};
@@ -70,6 +70,7 @@ export async function PUT(req: NextRequest) {
     if (address !== undefined) updates.address = address?.trim() || null;
     if (contact_person !== undefined) updates.contact_person = contact_person?.trim() || null;
     if (contact_phone !== undefined) updates.contact_phone = contact_phone?.trim() || null;
+    if (logbook_enabled !== undefined) updates.logbook_enabled = !!logbook_enabled;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'Tidak ada field untuk diupdate' }, { status: 400 });

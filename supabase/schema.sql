@@ -278,6 +278,7 @@ CREATE TABLE schools (
   address TEXT,
   contact_person VARCHAR(255),
   contact_phone VARCHAR(50),
+  logbook_enabled BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

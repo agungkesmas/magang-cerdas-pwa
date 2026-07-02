@@ -127,6 +127,7 @@ export interface School {
   address: string | null;
   contact_person: string | null;
   contact_phone: string | null;
+  logbook_enabled: boolean;
   created_at: string;
 }
 

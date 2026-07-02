@@ -21,17 +21,26 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerClient();
 
-    // Cek apakah logbook diaktifkan untuk intern ini
+    // Cek apakah logbook diaktifkan untuk institusi peserta ini
+    // Logic: baca dari schools.logbook_enabled (bukan interns.logbook_enabled)
     const { data: internData } = await supabase
       .from('interns')
-      .select('logbook_enabled')
+      .select('school_origin')
       .eq('id', intern.intern_id)
       .single();
-    if (internData && internData.logbook_enabled === false) {
-      return NextResponse.json(
-        { error: 'Logbook dinonaktifkan untuk akun Anda. Gunakan buku logbook manual.' },
-        { status: 403 }
-      );
+
+    if (internData?.school_origin) {
+      const { data: schoolData } = await supabase
+        .from('schools')
+        .select('logbook_enabled')
+        .eq('name', internData.school_origin)
+        .maybeSingle();
+      if (schoolData && schoolData.logbook_enabled === false) {
+        return NextResponse.json(
+          { error: 'Logbook dinonaktifkan untuk institusi Anda. Gunakan buku logbook manual.' },
+          { status: 403 }
+        );
+      }
     }
 
     // Upsert (one entry per intern per date)
