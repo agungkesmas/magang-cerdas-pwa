@@ -13,7 +13,9 @@ import {
   Cpu,
   MapPin,
   Crown,
-  Edit
+  Edit,
+  Lock,
+  Download
 } from 'lucide-react';
 import { LLM_PROVIDERS, LLMProvider } from '@/types';
 
@@ -27,7 +29,7 @@ interface Official {
 }
 
 export default function AdminSettingsPage() {
-  const [tab, setTab] = useState<'office' | 'llm' | 'officials'>('office');
+  const [tab, setTab] = useState<'office' | 'llm' | 'security' | 'officials'>('office');
   const [loading, setLoading] = useState(true);
   const [office, setOffice] = useState({
     office_name: 'BPJS Ketenagakerjaan Cabang Cirebon',
@@ -140,6 +142,14 @@ export default function AdminSettingsPage() {
           }`}
         >
           <Cpu className="w-4 h-4" /> AI Provider
+        </button>
+        <button
+          onClick={() => setTab('security')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium ${
+            tab === 'security' ? 'bg-bpjs-blue text-white' : 'text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          <Lock className="w-4 h-4" /> Keamanan & Data
         </button>
         <button
           onClick={() => setTab('officials')}
@@ -327,6 +337,11 @@ export default function AdminSettingsPage() {
             </ol>
           </div>
         </div>
+      )}
+
+      {/* SECURITY & DATA TAB */}
+      {tab === 'security' && (
+        <SecurityTab />
       )}
 
       {/* OFFICIALS TAB */}
@@ -586,6 +601,173 @@ function OfficialFormModal({
             {editing ? 'Simpan Perubahan' : 'Simpan'}
           </button>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// SecurityTab — Ubah password admin + Export data
+// ============================================================
+function SecurityTab() {
+  const [pwdForm, setPwdForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
+  const [pwdLoading, setPwdLoading] = useState(false);
+  const [pwdMsg, setPwdMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [exportLoading, setExportLoading] = useState(false);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwdMsg(null);
+    if (pwdForm.new_password !== pwdForm.confirm_password) {
+      setPwdMsg({ type: 'error', text: 'Password baru dan konfirmasi tidak cocok' });
+      return;
+    }
+    if (pwdForm.new_password.length < 8) {
+      setPwdMsg({ type: 'error', text: 'Password baru minimal 8 karakter' });
+      return;
+    }
+    setPwdLoading(true);
+    try {
+      const res = await fetch('/api/admin/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_password: pwdForm.current_password, new_password: pwdForm.new_password })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setPwdMsg({ type: 'success', text: 'Password berhasil diubah!' });
+      setPwdForm({ current_password: '', new_password: '', confirm_password: '' });
+    } catch (err: any) {
+      setPwdMsg({ type: 'error', text: err.message });
+    } finally {
+      setPwdLoading(false);
+    }
+  };
+
+  const handleExportInterns = async () => {
+    setExportLoading(true);
+    try {
+      const res = await fetch('/api/interns/list');
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+
+      const interns = data.interns || [];
+      // CSV format
+      const headers = ['Nama', 'Username', 'Password', 'Jurusan', 'Departemen', 'Institusi', 'Mulai', 'Selesai', 'EXP', 'Streak', 'Aktif', 'Logbook'];
+      const rows = interns.map((i: any) => [
+        `"${i.name || ''}"`,
+        `"${i.username || ''}"`,
+        `"${i.raw_password || ''}"`,
+        `"${i.major || ''}"`,
+        `"${i.department || ''}"`,
+        `"${i.school_origin || ''}"`,
+        `"${i.start_date || ''}"`,
+        `"${i.end_date || ''}"`,
+        i.total_exp || 0,
+        i.streak_count || 0,
+        i.is_active ? 'Ya' : 'Tidak',
+        i.logbook_enabled !== false ? 'Digital' : 'Manual'
+      ].join(','));
+
+      const csv = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `data-peserta-magang-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      alert('Error export: ' + e.message);
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* Change Password */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Lock className="w-5 h-5 text-bpjs-blue" />
+          <h2 className="font-semibold text-gray-900">Ubah Password Admin</h2>
+        </div>
+        <form onSubmit={handleChangePassword} className="space-y-3 max-w-md">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password Saat Ini *</label>
+            <input
+              type="password"
+              required
+              value={pwdForm.current_password}
+              onChange={(e) => setPwdForm({ ...pwdForm, current_password: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password Baru * (min 8 karakter)</label>
+            <input
+              type="password"
+              required
+              value={pwdForm.new_password}
+              onChange={(e) => setPwdForm({ ...pwdForm, new_password: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Password Baru *</label>
+            <input
+              type="password"
+              required
+              value={pwdForm.confirm_password}
+              onChange={(e) => setPwdForm({ ...pwdForm, confirm_password: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+            />
+          </div>
+          {pwdMsg && (
+            <div className={`rounded-lg p-3 text-sm ${pwdMsg.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+              {pwdMsg.text}
+            </div>
+          )}
+          <button
+            type="submit"
+            disabled={pwdLoading}
+            className="bg-bpjs-blue hover:bg-bpjs-blue-dark text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50 flex items-center gap-2"
+          >
+            {pwdLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+            <Lock className="w-4 h-4" /> Ubah Password
+          </button>
+        </form>
+        <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+          ⚠️ Password default adalah <strong>admin123456</strong>. Segera ubah ke password yang kuat untuk keamanan.
+        </div>
+      </div>
+
+      {/* Export Data */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Download className="w-5 h-5 text-bpjs-blue" />
+          <h2 className="font-semibold text-gray-900">Export Data</h2>
+        </div>
+        <p className="text-sm text-gray-600 mb-4">Download data untuk backup atau rekapan manual.</p>
+        <div className="space-y-2">
+          <button
+            onClick={handleExportInterns}
+            disabled={exportLoading}
+            className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg disabled:opacity-50"
+          >
+            <div className="flex items-center gap-3">
+              <Download className="w-5 h-5 text-gray-600" />
+              <div className="text-left">
+                <p className="text-sm font-medium text-gray-900">Data Peserta Magang (CSV)</p>
+                <p className="text-xs text-gray-500">Nama, username, password, jurusan, departemen, EXP, dll</p>
+              </div>
+            </div>
+            {exportLoading && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+          </button>
+        </div>
+        <div className="mt-3 text-xs text-gray-400">
+          💡 File CSV bisa dibuka di Excel/Google Sheets untuk rekapan atau backup.
+        </div>
       </div>
     </div>
   );
