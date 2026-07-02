@@ -11,7 +11,12 @@ import {
   Navigation,
   RotateCcw,
   X,
-  CameraOff
+  CameraOff,
+  Calendar,
+  FileText,
+  Send,
+  Clock as ClockIcon,
+  XCircle
 } from 'lucide-react';
 
 export default function InternAttendancePage() {
@@ -33,16 +38,33 @@ export default function InternAttendancePage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
+  // Leave request state
+  const [showLeaveForm, setShowLeaveForm] = useState(false);
+  const [myLeaves, setMyLeaves] = useState<any[]>([]);
+  const [todayLeave, setTodayLeave] = useState<any | null>(null);
+
   const fetchToday = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/attendance/list?limit=10');
-      const data = await res.json();
-      if (data.success) {
+      const [attRes, leaveRes] = await Promise.all([
+        fetch('/api/attendance/list?limit=10'),
+        fetch('/api/leave/list')
+      ]);
+      const attData = await attRes.json();
+      const leaveData = await leaveRes.json();
+      if (attData.success) {
         const today = new Date().toISOString().split('T')[0];
         setTodayAtt(
-          (data.attendance || []).filter((a: any) => a.timestamp?.startsWith(today))
+          (attData.attendance || []).filter((a: any) => a.timestamp?.startsWith(today))
         );
+      }
+      if (leaveData.success) {
+        setMyLeaves(leaveData.leave_requests || []);
+        const today = new Date().toISOString().split('T')[0];
+        const todayL = (leaveData.leave_requests || []).find(
+          (lr: any) => lr.status === 'approved' && today >= lr.start_date && today <= lr.end_date
+        );
+        setTodayLeave(todayL || null);
       }
     } finally {
       setLoading(false);
@@ -508,6 +530,264 @@ export default function InternAttendancePage() {
           </div>
         )
       )}
+
+      {/* Today's leave status (if approved) */}
+      {todayLeave && (
+        <div className="glass-card p-4 bg-bpjs-green/10 border-bpjs-green/30">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-bpjs-green/20 flex items-center justify-center">
+              <CheckCircle2 className="w-5 h-5 text-bpjs-green" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-white">
+                Hari ini: {todayLeave.type === 'sakit' ? 'Sakit' : todayLeave.type === 'izin' ? 'Izin' : todayLeave.type === 'cuti' ? 'Cuti' : 'Dinas Luar'} (Approved)
+              </p>
+              <p className="text-xs text-white/60">
+                {todayLeave.start_date === todayLeave.end_date
+                  ? new Date(todayLeave.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long' })
+                  : `${new Date(todayLeave.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} - ${new Date(todayLeave.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}`
+                }
+                {' • '}Streak Anda tidak terputus.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Leave request section */}
+      <div className="glass-card p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4 text-bpjs-yellow" />
+            <h3 className="text-sm font-semibold text-white">Pengajuan Izin/Sakit</h3>
+          </div>
+          {!todayLeave && !showLeaveForm && (
+            <button
+              onClick={() => setShowLeaveForm(true)}
+              className="text-xs bg-bpjs-yellow/10 hover:bg-bpjs-yellow/20 border border-bpjs-yellow/30 text-bpjs-yellow font-medium px-3 py-1.5 rounded-lg"
+            >
+              + Ajukan Izin
+            </button>
+          )}
+        </div>
+
+        {/* Leave form */}
+        {showLeaveForm && (
+          <LeaveForm
+            onClose={() => setShowLeaveForm(false)}
+            onSuccess={() => {
+              setShowLeaveForm(false);
+              fetchToday();
+            }}
+          />
+        )}
+
+        {/* Leave history */}
+        {!showLeaveForm && myLeaves.length > 0 && (
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {myLeaves.slice(0, 5).map((lr) => (
+              <div key={lr.id} className="flex items-center justify-between text-xs p-2 rounded-lg bg-white/5">
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-0.5 rounded-full font-medium ${
+                    lr.type === 'sakit' ? 'bg-red-500/20 text-red-300' :
+                    lr.type === 'izin' ? 'bg-amber-500/20 text-amber-300' :
+                    lr.type === 'cuti' ? 'bg-blue-500/20 text-blue-300' :
+                    'bg-purple-500/20 text-purple-300'
+                  }`}>
+                    {lr.type === 'sakit' ? 'Sakit' : lr.type === 'izin' ? 'Izin' : lr.type === 'cuti' ? 'Cuti' : 'Dinas Luar'}
+                  </span>
+                  <span className="text-white/60">
+                    {lr.start_date === lr.end_date
+                      ? new Date(lr.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+                      : `${new Date(lr.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} - ${new Date(lr.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}`
+                    }
+                  </span>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full font-medium ${
+                  lr.status === 'approved' ? 'bg-bpjs-green/20 text-bpjs-green' :
+                  lr.status === 'rejected' ? 'bg-red-500/20 text-red-300' :
+                  'bg-amber-500/20 text-amber-300'
+                }`}>
+                  {lr.status === 'approved' ? '✓ Approved' : lr.status === 'rejected' ? '✗ Rejected' : '⏳ Pending'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!showLeaveForm && myLeaves.length === 0 && !todayLeave && (
+          <p className="text-xs text-white/40 text-center py-2">
+            Belum ada pengajuan izin. Klik "+ Ajukan Izin" jika sakit/ada keperluan.
+          </p>
+        )}
+      </div>
     </div>
+  );
+}
+
+// ============================================================
+// LeaveForm component — form pengajuan izin/sakit/cuti/dinas-luar
+// ============================================================
+function LeaveForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [form, setForm] = useState({
+    type: 'izin' as 'sakit' | 'izin' | 'cuti' | 'dinas-luar',
+    start_date: new Date().toISOString().split('T')[0],
+    end_date: new Date().toISOString().split('T')[0],
+    reason: '',
+    medical_certificate_url: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleUploadMedical = async (file: File) => {
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('medical', file);
+      const res = await fetch('/api/leave/upload-medical', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setForm({ ...form, medical_certificate_url: data.url });
+    } catch (e: any) {
+      setError('Upload gagal: ' + e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/leave/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const diffDays = Math.ceil((new Date(form.end_date).getTime() - new Date(form.start_date).getTime()) / (1000 * 60 * 60 * 24));
+  const needMedical = form.type === 'sakit' && diffDays > 0;
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3 mb-3 p-3 bg-white/5 rounded-lg">
+      <div>
+        <label className="block text-xs font-medium text-white/80 mb-1">Tipe *</label>
+        <div className="grid grid-cols-2 gap-1.5">
+          {([
+            { value: 'sakit', label: '🏥 Sakit', color: 'red' },
+            { value: 'izin', label: '📋 Izin', color: 'amber' },
+            { value: 'cuti', label: '🏖️ Cuti', color: 'blue' },
+            { value: 'dinas-luar', label: '🚗 Dinas Luar', color: 'purple' }
+          ] as const).map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setForm({ ...form, type: opt.value })}
+              className={`p-2 rounded-lg text-xs font-medium transition-all ${
+                form.type === opt.value
+                  ? 'bg-bpjs-yellow text-bpjs-blue-dark'
+                  : 'bg-white/5 text-white/70 hover:bg-white/10'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="block text-xs font-medium text-white/80 mb-1">Tanggal Mulai *</label>
+          <input
+            type="date"
+            required
+            value={form.start_date}
+            onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+            className="w-full px-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-bpjs-yellow"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-white/80 mb-1">Tanggal Selesai *</label>
+          <input
+            type="date"
+            required
+            value={form.end_date}
+            onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+            className="w-full px-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-bpjs-yellow"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-white/80 mb-1">Alasan *</label>
+        <textarea
+          required
+          rows={2}
+          value={form.reason}
+          onChange={(e) => setForm({ ...form, reason: e.target.value })}
+          className="w-full px-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-bpjs-yellow"
+          placeholder={form.type === 'sakit' ? 'Demam, flu, harus istirahat...' : form.type === 'dinas-luar' ? 'Didiajak dinas ke kantor cabang lain...' : 'Urus KTP, keluarga sakit...'}
+        />
+      </div>
+
+      {needMedical && (
+        <div>
+          <label className="block text-xs font-medium text-white/80 mb-1">
+            Surat Dokter * (wajib untuk sakit &gt;1 hari)
+          </label>
+          {form.medical_certificate_url ? (
+            <div className="flex items-center gap-2 text-xs text-bpjs-green">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Surat dokter sudah diupload</span>
+              <button type="button" onClick={() => setForm({ ...form, medical_certificate_url: '' })} className="text-red-400 hover:underline">
+                Hapus
+              </button>
+            </div>
+          ) : (
+            <label className="inline-flex items-center gap-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs px-3 py-1.5 rounded-lg cursor-pointer">
+              {uploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileText className="w-3 h-3" />}
+              Upload Surat Dokter
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && handleUploadMedical(e.target.files[0])}
+              />
+            </label>
+          )}
+        </div>
+      )}
+
+      {error && <p className="text-xs text-red-400">{error}</p>}
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 px-3 py-1.5 border border-white/10 text-white/70 text-xs font-medium rounded-lg hover:bg-white/5"
+        >
+          Batal
+        </button>
+        <button
+          type="submit"
+          disabled={loading}
+          className="flex-1 px-3 py-1.5 bg-bpjs-yellow text-bpjs-blue-dark text-xs font-bold rounded-lg disabled:opacity-50 flex items-center justify-center gap-1"
+        >
+          {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+          Ajukan
+        </button>
+      </div>
+    </form>
   );
 }

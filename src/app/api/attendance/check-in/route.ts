@@ -60,6 +60,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Anda sudah check-in hari ini' }, { status: 400 });
     }
 
+    // Cek apakah hari ini ada izin yang approved
+    const today = new Date().toISOString().split('T')[0];
+    const { data: approvedLeave } = await supabase
+      .from('leave_requests')
+      .select('id, type')
+      .eq('intern_id', intern.intern_id)
+      .eq('status', 'approved')
+      .lte('start_date', today)
+      .gte('end_date', today)
+      .maybeSingle();
+
+    if (approvedLeave) {
+      const typeLabel = approvedLeave.type === 'sakit' ? 'sakit' : approvedLeave.type === 'dinas-luar' ? 'dinas luar' : approvedLeave.type;
+      return NextResponse.json(
+        { error: `Anda sedang ${typeLabel} hari ini (izin disetujui). Tidak perlu check-in.` },
+        { status: 400 }
+      );
+    }
+
     // Insert attendance
     const { data: att, error } = await supabase
       .from('attendance')

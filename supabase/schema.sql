@@ -118,6 +118,28 @@ ALTER TABLE majors ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read majors" ON majors FOR SELECT USING (TRUE);
 
 -- ============================================================
+-- Table: Leave Requests (Sakit/Izin/Cuti/Dinas Luar)
+-- Simulasi kerja realistis: peserta ajukan izin → admin approve/reject
+-- ============================================================
+CREATE TABLE leave_requests (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  intern_id UUID NOT NULL REFERENCES interns(id) ON DELETE CASCADE,
+  type VARCHAR(20) NOT NULL CHECK (type IN ('sakit', 'izin', 'cuti', 'dinas-luar')),
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  reason TEXT NOT NULL,
+  medical_certificate_url TEXT,
+  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  reviewed_by UUID,
+  reviewed_at TIMESTAMPTZ,
+  review_notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT leave_dates_valid CHECK (end_date >= start_date)
+);
+
+ALTER TABLE leave_requests ENABLE ROW LEVEL SECURITY;
+
+-- ============================================================
 -- Table: Attendance (Check-in/out with geo + photo)
 -- ============================================================
 CREATE TABLE attendance (

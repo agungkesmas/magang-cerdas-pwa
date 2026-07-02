@@ -151,6 +151,24 @@ export interface BKKTeacher {
   created_at: string;
 }
 
+export type LeaveType = 'sakit' | 'izin' | 'cuti' | 'dinas-luar';
+export type LeaveStatus = 'pending' | 'approved' | 'rejected';
+
+export interface LeaveRequest {
+  id: string;
+  intern_id: string;
+  type: LeaveType;
+  start_date: string;
+  end_date: string;
+  reason: string;
+  medical_certificate_url: string | null;
+  status: LeaveStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  review_notes: string | null;
+  created_at: string;
+}
+
 export interface Nudge {
   id: string;
   intern_id: string;
