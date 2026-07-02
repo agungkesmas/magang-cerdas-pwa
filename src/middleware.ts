@@ -1,5 +1,5 @@
 // ============================================================
-// MIDDLEWARE — Auth redirect for protected routes
+// MIDDLEWARE — Auth redirect for protected routes + login page guard
 // (Edge runtime compatible — only checks cookie existence,
 //  full JWT verification happens in API routes/server components)
 // ============================================================
@@ -10,8 +10,36 @@ import type { NextRequest } from 'next/server';
 export function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
-  // Protect /admin/* EXCEPT /admin/login
-  if (path.startsWith('/admin') && !path.startsWith('/admin/login')) {
+  // ============================================================
+  // GUARD: If user already logged in, redirect FROM login page
+  // to their dashboard (prevents sidebar from showing on login page)
+  // ============================================================
+  if (path === '/admin/login') {
+    const adminToken = req.cookies.get('magang_admin_token')?.value;
+    if (adminToken) {
+      return NextResponse.redirect(new URL('/admin/interns', req.url));
+    }
+    return NextResponse.next(); // Allow access to login page (no shell)
+  }
+  if (path === '/intern/login') {
+    const internToken = req.cookies.get('magang_intern_token')?.value;
+    if (internToken) {
+      return NextResponse.redirect(new URL('/intern/home', req.url));
+    }
+    return NextResponse.next();
+  }
+  if (path === '/bkk/login') {
+    const bkkToken = req.cookies.get('magang_bkk_token')?.value;
+    if (bkkToken) {
+      return NextResponse.redirect(new URL('/bkk/home', req.url));
+    }
+    return NextResponse.next();
+  }
+
+  // ============================================================
+  // PROTECT: Routes that require authentication
+  // ============================================================
+  if (path.startsWith('/admin')) {
     const token = req.cookies.get('magang_admin_token')?.value;
     if (!token) {
       const loginUrl = new URL('/admin/login', req.url);
@@ -20,8 +48,7 @@ export function middleware(req: NextRequest) {
     }
   }
 
-  // Protect /intern/* EXCEPT /intern/login
-  if (path.startsWith('/intern') && !path.startsWith('/intern/login')) {
+  if (path.startsWith('/intern')) {
     const token = req.cookies.get('magang_intern_token')?.value;
     if (!token) {
       const loginUrl = new URL('/intern/login', req.url);
@@ -30,8 +57,7 @@ export function middleware(req: NextRequest) {
     }
   }
 
-  // Protect /bkk/* EXCEPT /bkk/login
-  if (path.startsWith('/bkk') && !path.startsWith('/bkk/login')) {
+  if (path.startsWith('/bkk')) {
     const token = req.cookies.get('magang_bkk_token')?.value;
     if (!token) {
       const loginUrl = new URL('/bkk/login', req.url);
