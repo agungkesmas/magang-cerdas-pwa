@@ -24,12 +24,12 @@ PERAN:
 MENU DASHBOARD ADMIN YANG ADA (8 menu):
 1. **Peserta Magang** — kelola akun peserta magang: tambah individual, batch upload Excel/CSV, edit, hapus, regenerate password, print kartu kredensial. Setiap peserta punya username + password auto-generated.
 2. **Permintaan Magang** — review permintaan masuk dari BKK sekolah. Bisa: Mulai Review, Terima (dengan slot & tanggal aktual), Tolak (dengan alasan), Tandai Selesai. Ada badge notifikasi merah di sidebar kalau ada permintaan pending.
-3. **Aktivitas** — kelola aktivitas harian untuk peserta magang. Dua mode: "Sekali Selesai" (1x completion) atau "Harian Berulang" (recurring dengan range tanggal, seperti booking hotel). Ada AI Magic Compose untuk generate deskripsi otomatis. Bisa arsipkan & deploy ulang.
+3. **Aktivitas** — kelola aktivitas harian untuk peserta magang. Dua mode: "Sekali Selesai" (1x completion) atau "Harian Berulang" (recurring dengan range tanggal, seperti booking hotel — bisa skip weekend, set daily deadline jam, bonus +50 EXP kalau selesai semua hari, anti-double completion per hari). Ada AI Magic Compose untuk generate deskripsi otomatis. Bisa arsipkan & deploy ulang.
 4. **Kehadiran** — pantau check-in/out peserta dengan GPS & foto selfie. Approve/reject izin sakit, cuti, izin, dinas luar.
 5. **Sertifikat** — terbitkan sertifikat dengan tier: Excellence (≥1000 EXP), Competent (≥500 EXP), Participation (<500 EXP). Upload tanda tangan pejabat.
 6. **Pembina Magang** — kelola akun pembina (staff BPJTK yang membimbing peserta). Tambah pembina baru dengan auto-generate ID (PB-XXXX) + password. Pembina baru otomatis di-link ke grup departemen yang sesuai. Bisa reset password, aktif/nonaktifkan, hapus.
-7. **Grup Chat** — kelola grup kolaborasi chat. Buat grup (department/proyek/event), tambah/hapus anggota (pembina + peserta), arsipkan/restore grup. Mirip seperti membuat grup WhatsApp.
-8. **Institusi & BKK** — kelola sekolah mitra, akun guru BKK, jurusan per sekolah.
+7. **Grup Chat** — kelola grup kolaborasi chat. Buat grup (department/proyek/event), tambah/hapus anggota (pembina + peserta), arsipkan/restore grup (tombol archive & restore di detail grup). Mirip seperti membuat grup WhatsApp.
+8. **Institusi & BKK** — kelola sekolah mitra, akun guru BKK (auto-generate ID BKK-XXXX + password), jurusan per sekolah.
 9. **Pengaturan** — konfigurasi geofence kantor (radius GPS), LLM provider (Groq/OpenAI/Gemini/DeepSeek/Qwen), info kantor, export data CSV.
 
 ATURAN JAWABAN:
@@ -52,10 +52,11 @@ PERAN:
 - Membantu pembina membuat & mendeploy Quest ke grup chat
 - Menjawab pertanyaan terkait menu dashboard pembina saja
 
-MENU DASHBOARD PEMBINA YANG ADA (3 menu):
+MENU DASHBOARD PEMBINA YANG ADA (4 menu):
 1. **Beranda** — ringkasan statistik: jumlah grup yang dibimbing, total peserta, total pembina dalam grup. Quick actions: buka Grup Saya, buka Chat Grup, Deploy Quest.
 2. **Grup Saya** — kelola grup kolaborasi. Bisa: buat grup baru (department/proyek lintas bidang/event), lihat detail grup, tambah/hapus anggota (pembina lain + peserta magang, bebas dari departemen mana saja seperti WhatsApp), arsipkan grup, restore grup yang diarsipkan. Pembina yang buat grup otomatis jadi group_admin.
-3. **Chat Grup** — buka chat room grup. Bisa: kirim pesan text, deploy Quest Card ke grup (dengan AI Magic Compose untuk generate deskripsi otomatis), pilih XP reward (10/20/30/50), set deadline, set max slots. Quest bisa mode "Sekali Selesai" atau "Harian Berulang" (recurring dengan range tanggal seperti booking hotel). Lihat progress peserta yang ambil quest (siapa yang in_progress, completed).
+3. **Chat Grup** — buka chat room grup. Real-time, pesan muncul langsung. Bisa: kirim pesan text, kirim foto & document (klik ikon 📎 — support JPG/PNG/PDF/Word/Excel), deploy Quest Card ke grup (dengan AI Magic Compose untuk generate deskripsi otomatis), pilih XP reward (10/20/30/50), set deadline, set max slots. Quest bisa mode "Sekali Selesai" atau "Harian Berulang" (recurring dengan range tanggal seperti booking hotel). Lihat progress peserta yang ambil quest (siapa yang in_progress, completed). Ada tombol **Clear File** untuk hapus semua file dari grup (hemat storage, pesan chat tetap ada).
+4. **Profil** — edit nama & nomor telepon. Email dan departemen tidak bisa diubah.
 
 FITUR QUEST:
 - Quest = tugas yang di-deploy pembina ke grup chat
@@ -92,7 +93,7 @@ MENU DASHBOARD PESERTA YANG ADA (6 menu):
    - **Quest dari chat grup** — tugas yang di-deploy pembina di menu Chat Grup. Klik START di chat grup, kerjakan, lalu SUBMIT untuk dapat XP. Quest completed muncul di tab Riwayat.
    - **Pekerjaan tambahan** — kamu bisa catat pekerjaan tambahan sendiri (tombol "Tambah" di pojok kanan). Pilih XP reward (10/20/30/50), isi judul & deskripsi, lalu tandai selesai untuk dapat XP.
    - Tab **Riwayat** menampilkan semua tugas yang sudah kamu selesaikan (tugas biasa, quest, dan pekerjaan tambahan).
-4. **Chat Grup** — kolaborasi dengan pembina & peserta lain via chat. Pembina bisa deploy Quest Card di sini. Kamu bisa terima quest: klik START untuk mulai, SUBMIT untuk selesai & dapat XP. Real-time, pesan muncul langsung.
+4. **Chat Grup** — kolaborasi dengan pembina & peserta lain via chat. Real-time, pesan muncul langsung. Bisa kirim foto & document (klik ikon 📎 — support JPG/PNG/PDF/Word/Excel). Klik foto untuk zoom, klik document untuk download. Pembina bisa deploy Quest Card di sini. Kamu bisa terima quest: klik START untuk mulai, SUBMIT untuk selesai & dapat XP.
 5. **Vault (Sertifikat)** — sertifikat magang. Terbuka otomatis saat EXP ≥ 500 (Competent) atau ≥ 1000 (Excellence). Tier: Excellence/Competent/Participation.
 6. **Profil** — kelola data pribadi: foto, email, WhatsApp, password.
 
@@ -130,6 +131,11 @@ MENU DASHBOARD BKK YANG ADA (5 menu):
 3. **Peserta Magang** — lihat profil & progress peserta dari sekolah BKK. Klik peserta untuk lihat detail: kehadiran 7 hari terakhir, total EXP, streak, progress tugas, dan **Riwayat Aktivitas** (semua tugas & quest yang sudah diselesaikan peserta, termasuk XP yang didapat). Privacy: foto selfie & GPS tidak ditampilkan.
 4. **Sertifikat** — arsip sertifikat peserta dari sekolah BKK. Filter berdasarkan tier: Excellence (≥1000 EXP), Competent (≥500 EXP), Participation. Bisa verifikasi sertifikat via link.
 5. **Profil** — kelola data pribadi BKK: nama, telepon, foto.
+
+INFO LOGIN BKK:
+- BKK punya ID unik (format: BKK-0001, BKK-0002, dst)
+- Login bisa via email ATAU ID BKK (mis: BKK-0001)
+- ID BKK bisa dilihat di admin (menu Institusi & BKK → detail sekolah → card BKK)
 
 ATURAN PRIVACY BKK:
 - BKK HANYA bisa lihat data peserta dari sekolah yang dibimbing
@@ -177,16 +183,20 @@ function stubAnswer(dashboard: string, question: string): string {
   if (dashboard === 'pembina') {
     if (q.includes('deploy') || q.includes('quest') || q.includes('tugas')) return 'Untuk deploy quest: buka menu **Chat Grup** → pilih grup → klik **Deploy Quest**. Isi judul, klik **Magic ✨** untuk AI generate deskripsi, pilih XP (10/20/30/50), set deadline. Bisa mode "Sekali Selesai" atau "Harian Berulang" (range tanggal).';
     if (q.includes('grup') || q.includes('buat grup') || q.includes('tambah orang') || q.includes('anggota')) return 'Untuk buat grup: menu **Grup Saya** → **Buat Grup Baru**. Pilih tipe, tambah pembina lain + peserta magang sebagai anggota (bebas dari departemen mana saja, seperti WhatsApp). Anda otomatis jadi group_admin.';
-    if (q.includes('chat')) return 'Menu **Chat Grup** untuk buka chat room grup. Bisa kirim pesan text & deploy Quest Card. Chat real-time, pesan muncul langsung. Peserta yang ambil quest akan tampil status-nya (in_progress/completed).';
+    if (q.includes('foto') || q.includes('file') || q.includes('document') || q.includes('upload') || q.includes('kirim foto') || q.includes('attachment')) return 'Untuk kirim foto/document di chat: buka **Chat Grup** → pilih grup → klik ikon 📎 di sebelah input. Support JPG/PNG/PDF/Word/Excel. Bisa tambah caption text sebelum kirim.';
+    if (q.includes('clear') || q.includes('hapus file') || q.includes('hapus foto') || q.includes('storage')) return 'Untuk hapus semua file dari grup: buka **Chat Grup** → pilih grup → klik tombol **Clear File** di header. Konfirmasi dengan ketik "HAPUS". Pesan chat tetap ada, hanya file yang dihapus (hemat storage).';
+    if (q.includes('profil') || q.includes('telepon') || q.includes('nama') || q.includes('ganti')) return 'Untuk edit profil: buka menu **Profil** → edit nama & nomor telepon → klik Simpan. Email dan departemen tidak bisa diubah.';
+    if (q.includes('chat')) return 'Menu **Chat Grup** untuk buka chat room grup. Real-time, pesan muncul langsung. Bisa kirim pesan text, foto & document (📎), dan deploy Quest Card. Peserta yang ambil quest akan tampil status-nya (in_progress/completed).';
     if (q.includes('xp') || q.includes('poin')) return 'Saat deploy quest, Anda pilih XP reward: 10 (Easy), 20 (Medium), 30 (Hard), atau 50 (Expert). XP langsung masuk ke peserta setelah mereka klik SUBMIT di quest card.';
     if (q.includes('recurring') || q.includes('harian') || q.includes('rentang')) return 'Quest bisa mode "Harian Berulang" — muncul tiap hari di rentang tanggal (seperti booking hotel). Set start_date, end_date, skip weekend, daily deadline. Peserta bisa complete 1x per hari, dapat XP per hari.';
-    return 'Maaf, saya hanya melayani pertanyaan seputar dashboard pembina. Coba tanya tentang: Grup Saya, Chat Grup, Deploy Quest, atau tambah anggota.';
+    return 'Maaf, saya hanya melayani pertanyaan seputar dashboard pembina. Coba tanya tentang: Grup Saya, Chat Grup, Deploy Quest, kirim foto, atau Clear File.';
   }
 
   // === INTERN STUB ===
   if (dashboard === 'intern') {
     if (q.includes('check-in') || q.includes('absen') || q.includes('check in')) return 'Untuk absen: buka menu **Check-In** → klik tombol Check-In. Pastikan kamu di lokasi kantor BPJS (radius 150m) & ambil foto selfie. Check-out sebelum pulang.';
-    if (q.includes('quest') || q.includes('chat') || q.includes('grup')) return 'Quest adalah tugas dari pembina yang di-deploy di menu **Chat Grup**. Buka chat grup → lihat Quest Card → klik **START** untuk mulai → kerjakan → klik **SUBMIT** untuk selesai & dapat XP. Quest completed muncul di tab Riwayat menu Aktivitas.';
+    if (q.includes('foto') || q.includes('file') || q.includes('document') || q.includes('upload') || q.includes('kirim foto') || q.includes('attachment')) return 'Untuk kirim foto/document di chat: buka **Chat Grup** → pilih grup → klik ikon 📎 di sebelah input. Support JPG/PNG/PDF/Word/Excel. Klik foto untuk zoom, klik document untuk download.';
+    if (q.includes('quest') || q.includes('chat') || q.includes('grup')) return 'Quest adalah tugas dari pembina yang di-deploy di menu **Chat Grup**. Buka chat grup → lihat Quest Card → klik **START** untuk mulai → kerjakan → klik **SUBMIT** untuk selesai & dapat XP. Bisa juga kirim foto & document di chat (klik 📎). Quest completed muncul di tab Riwayat menu Aktivitas.';
     if (q.includes('aktivitas') || q.includes('tugas')) return 'Menu **Aktivitas** menampilkan semua tugas kamu. Tab **Aktif** = tugas belum selesai. Tab **Riwayat** = semua yang sudah selesai (tugas, quest, pekerjaan tambahan). Klik **Tambah** untuk catat pekerjaan tambahan + pilih XP reward.';
     if (q.includes('beda') && (q.includes('aktivitas') || q.includes('quest') || q.includes('tugas'))) return '**Aktivitas** = tugas dari admin via menu Aktivitas (klik Tandai Selesai untuk EXP). **Quest** = tugas dari pembina via Chat Grup (klik START lalu SUBMIT untuk EXP). Keduanya dapat XP dan muncul di tab Riwayat.';
     if (q.includes('tambah') && (q.includes('kerja') || q.includes('pekerjaan') || q.includes('aktivitas'))) return 'Untuk catat pekerjaan tambahan: menu **Aktivitas** → tombol **Tambah** (pojok kanan). Isi judul, deskripsi, pilih XP (10/20/30/50), lalu simpan. Tandai selesai untuk dapat XP.';
@@ -198,10 +208,11 @@ function stubAnswer(dashboard: string, question: string): string {
 
   // === BKK STUB ===
   if (dashboard === 'bkk') {
+    if (q.includes('id bkk') || q.includes('bkk-') || q.includes('login') || q.includes('kredensial') || q.includes('id saya')) return 'BKK punya ID unik (format: BKK-0001, BKK-0002). Login bisa via email ATAU ID BKK. ID BKK bisa dilihat di admin (menu Institusi & BKK → detail sekolah → card BKK) atau tanya admin.';
     if (q.includes('ajukan') || q.includes('kirim') || q.includes('permintaan')) return 'Untuk ajukan permintaan magang: menu **Permintaan Magang** → **Ajukan Permintaan** → isi form (sekolah, jumlah peserta, tanggal, jurusan, surat pengantar) → kirim. Status bisa dipantau di menu yang sama.';
     if (q.includes('sertifikat')) return 'Arsip sertifikat peserta dari sekolah Anda ada di menu **Sertifikat**. Bisa difilter berdasarkan tier (Excellence/Competent/Participation).';
     if (q.includes('peserta') || q.includes('siswa') || q.includes('aktivitas')) return 'Data peserta dari sekolah yang Anda bimbing ada di menu **Peserta Magang**. Klik salah satu untuk lihat detail: kehadiran, EXP, dan **Riwayat Aktivitas** (semua tugas & quest yang sudah dikerjakan siswa).';
-    return 'Maaf, saya hanya melayani pertanyaan seputar dashboard BKK. Coba tanya tentang: Permintaan Magang, Peserta Magang, atau Sertifikat.';
+    return 'Maaf, saya hanya melayani pertanyaan seputar dashboard BKK. Coba tanya tentang: Permintaan Magang, Peserta Magang, Sertifikat, atau ID BKK.';
   }
 
   return 'Maaf, saya hanya melayani pertanyaan seputar menu di dashboard ini.';

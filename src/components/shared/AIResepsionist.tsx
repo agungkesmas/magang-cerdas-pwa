@@ -62,24 +62,24 @@ const SUGGESTED_QUESTIONS: Record<string, string[]> = {
     'Bagaimana cara tambah peserta magang?',
     'Cara tambah pembina magang?',
     'Bagaimana buat grup chat?',
-    'Cara terima permintaan magang dari BKK?'
+    'Cara terbitkan sertifikat?'
   ],
   pembina: [
     'Bagaimana cara deploy quest?',
-    'Cara buat grup baru?',
-    'Cara tambah anggota grup?',
-    'Apa itu quest recurring?'
+    'Cara kirim foto di chat?',
+    'Cara hapus file di grup?',
+    'Cara tambah anggota grup?'
   ],
   bkk: [
     'Bagaimana cara ajukan permintaan magang?',
-    'Di mana lihat data peserta saya?',
-    'Cara lihat riwayat aktivitas peserta?',
+    'Apa itu ID BKK saya?',
+    'Di mana lihat riwayat aktivitas peserta?',
     'Cara lihat arsip sertifikat?'
   ],
   intern: [
     'Bagaimana cara check-in?',
     'Chat grup buat apa?',
-    'Cara kerjakan quest dari chat?',
+    'Cara kirim foto di chat?',
     'Cara dapat EXP cepat?'
   ]
 };
