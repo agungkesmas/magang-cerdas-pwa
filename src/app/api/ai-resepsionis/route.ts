@@ -97,7 +97,7 @@ MENU DASHBOARD PESERTA YANG ADA (6 menu):
 6. **Profil** — kelola data pribadi: foto, email, WhatsApp, password.
 
 ATURAN MAGANG:
-- EXP didapat dari: check-in (+10), tugas/aktivitas (+10-50 tergantung XP reward), quest dari chat (+10-50), streak bonus
+- EXP didapat dari: check-in (+20), tugas/aktivitas (+10-50 tergantung XP reward), quest dari chat (+10-50), streak bonus
 - Streak = check-in beruntun hari berturut-turut (kalau putus, reset ke 0)
 - Sertifikat terbuka otomatis di menu Vault saat EXP cukup
 - Izin sakit >1 hari wajib upload surat dokter
@@ -107,6 +107,7 @@ ATURAN JAWABAN:
 - Maksimal 3-4 kalimat per jawaban
 - Sebut nama menu spesifik
 - Dorong peserta untuk rajin check-in & kerjakan tugas/quest
+- Kalau ditanya "beda aktivitas dan quest": "Aktivitas = tugas dari admin via menu Aktivitas (tandai selesai untuk EXP). Quest = tugas dari pembina via Chat Grup (klik START lalu SUBMIT untuk EXP). Keduanya dapat XP."
 - JANGAN jawab pertanyaan di luar konteks dashboard peserta
 - JANGAN berikan data pribadi peserta lain
 - JANGAN janjikan fitur yang tidak ada
@@ -187,9 +188,10 @@ function stubAnswer(dashboard: string, question: string): string {
     if (q.includes('check-in') || q.includes('absen') || q.includes('check in')) return 'Untuk absen: buka menu **Check-In** → klik tombol Check-In. Pastikan kamu di lokasi kantor BPJS (radius 150m) & ambil foto selfie. Check-out sebelum pulang.';
     if (q.includes('quest') || q.includes('chat') || q.includes('grup')) return 'Quest adalah tugas dari pembina yang di-deploy di menu **Chat Grup**. Buka chat grup → lihat Quest Card → klik **START** untuk mulai → kerjakan → klik **SUBMIT** untuk selesai & dapat XP. Quest completed muncul di tab Riwayat menu Aktivitas.';
     if (q.includes('aktivitas') || q.includes('tugas')) return 'Menu **Aktivitas** menampilkan semua tugas kamu. Tab **Aktif** = tugas belum selesai. Tab **Riwayat** = semua yang sudah selesai (tugas, quest, pekerjaan tambahan). Klik **Tambah** untuk catat pekerjaan tambahan + pilih XP reward.';
+    if (q.includes('beda') && (q.includes('aktivitas') || q.includes('quest') || q.includes('tugas'))) return '**Aktivitas** = tugas dari admin via menu Aktivitas (klik Tandai Selesai untuk EXP). **Quest** = tugas dari pembina via Chat Grup (klik START lalu SUBMIT untuk EXP). Keduanya dapat XP dan muncul di tab Riwayat.';
     if (q.includes('tambah') && (q.includes('kerja') || q.includes('pekerjaan') || q.includes('aktivitas'))) return 'Untuk catat pekerjaan tambahan: menu **Aktivitas** → tombol **Tambah** (pojok kanan). Isi judul, deskripsi, pilih XP (10/20/30/50), lalu simpan. Tandai selesai untuk dapat XP.';
     if (q.includes('sertifikat') || q.includes('vault')) return 'Sertifikat ada di menu **Vault**. Terbuka otomatis saat EXP ≥ 500 (Competent) atau ≥ 1000 (Excellence). Tier: Excellence/Competent/Participation.';
-    if (q.includes('exp') || q.includes('poin')) return 'EXP didapat dari: check-in (+10), tugas/aktivitas (+10-50), quest dari chat (+10-50), streak bonus. Streak = check-in beruntun hari berturut. Kalau putus, reset ke 0.';
+    if (q.includes('exp') || q.includes('poin')) return 'EXP didapat dari: check-in (+20), check-out (+10), tugas/aktivitas (+10-50), quest dari chat (+10-50), streak bonus. Streak = check-in beruntun hari berturut. Kalau putus, reset ke 0.';
     if (q.includes('izin') || q.includes('sakit') || q.includes('cuti')) return 'Untuk ajukan izin/sakit/cuti/dinas luar: menu **Check-In** → section Pengajuan Izin. Sakit >1 hari wajib upload surat dokter.';
     return 'Maaf, saya hanya melayani pertanyaan seputar menu di dashboard ini. Coba tanya tentang: Check-In, Aktivitas, Chat Grup, Quest, atau Sertifikat.';
   }
