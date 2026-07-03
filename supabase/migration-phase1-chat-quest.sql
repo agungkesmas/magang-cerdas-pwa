@@ -176,24 +176,28 @@ AND NOT EXISTS (SELECT 1 FROM groups WHERE name = g.name)
 ON CONFLICT DO NOTHING;
 
 -- Link pembina default ke grup masing-masing
-INSERT INTO group_members (group_id, user_type, user_id, role, added_by_type, added_by_name)
-SELECT grp.id, 'pembina', p.id, 'group_admin', 'admin', 'Super Admin'
+INSERT INTO group_members (group_id, user_type, user_id, role, added_by_type, added_by_id)
+SELECT grp.id, 'pembina', p.id, 'group_admin', 'admin', a.id
 FROM groups grp
 JOIN pembina_magang p ON
   (grp.department = 'Pelayanan' AND p.email = 'pembina@magang-cerdas.local')
   OR (grp.department = 'Keuangan' AND p.email = 'pembina.keuangan@magang-cerdas.local')
   OR (grp.department = 'Pemasaran' AND p.email = 'pembina.pemasaran@magang-cerdas.local')
+CROSS JOIN admins a
+WHERE a.email = 'admin@magang-cerdas.local'
 ON CONFLICT (group_id, user_type, user_id) DO NOTHING;
 
 -- Link peserta magang existing ke grup sesuai department
-INSERT INTO group_members (group_id, user_type, user_id, role, added_by_type, added_by_name)
-SELECT grp.id, 'peserta', i.id, 'member', 'admin', 'Super Admin'
+INSERT INTO group_members (group_id, user_type, user_id, role, added_by_type, added_by_id)
+SELECT grp.id, 'peserta', i.id, 'member', 'admin', a.id
 FROM interns i
 JOIN groups grp ON
   (i.department = 'Pelayanan' AND grp.department = 'Pelayanan' AND grp.name = 'Grup Magang Pelayanan Q3 2026')
   OR (i.department = 'Keuangan' AND grp.department = 'Keuangan' AND grp.name = 'Grup Magang Keuangan Q3 2026')
   OR (i.department = 'Pemasaran' AND grp.department = 'Pemasaran' AND grp.name = 'Grup Magang Pemasaran Q3 2026')
+CROSS JOIN admins a
 WHERE i.is_active = TRUE
+AND a.email = 'admin@magang-cerdas.local'
 ON CONFLICT (group_id, user_type, user_id) DO NOTHING;
 
 -- ============================================================
