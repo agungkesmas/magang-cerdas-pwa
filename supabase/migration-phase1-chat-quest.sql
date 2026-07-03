@@ -15,6 +15,13 @@ ALTER TABLE activities ADD COLUMN IF NOT EXISTS xp_reward INT DEFAULT 20;
 ALTER TABLE activities ADD COLUMN IF NOT EXISTS max_slots INT;
 ALTER TABLE activities ADD COLUMN IF NOT EXISTS current_slots_taken INT DEFAULT 0;
 
+-- Update constraint activities_target_check: izinkan group_id sebagai target (untuk Quest)
+-- Sebelumnya: intern_id ATAU department wajib
+-- Sesudah: intern_id ATAU department ATAU group_id (untuk Quest yang di-deploy ke grup)
+ALTER TABLE activities DROP CONSTRAINT IF EXISTS activities_target_check;
+ALTER TABLE activities ADD CONSTRAINT activities_target_check
+  CHECK (intern_id IS NOT NULL OR department IS NOT NULL OR group_id IS NOT NULL);
+
 CREATE INDEX IF NOT EXISTS idx_activities_is_quest ON activities(is_quest) WHERE is_quest = TRUE;
 CREATE INDEX IF NOT EXISTS idx_activities_group_id ON activities(group_id);
 CREATE INDEX IF NOT EXISTS idx_activities_created_by_pembina ON activities(created_by_pembina_id);
