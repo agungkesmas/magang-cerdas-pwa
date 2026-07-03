@@ -15,13 +15,15 @@ import {
   Menu,
   X,
   Bell,
-  UserCircle
+  UserCircle,
+  MessageCircle
 } from 'lucide-react';
 
 const NAV_ALL = [
   { href: '/intern/home', label: 'Home', icon: Home },
   { href: '/intern/attendance', label: 'Check-In', icon: MapPin },
   { href: '/intern/activities', label: 'Aktivitas', icon: CheckSquare },
+  { href: '/intern/chat', label: 'Chat Grup', icon: MessageCircle },
   { href: '/intern/logbook', label: 'Logbook', icon: BookHeart },
   { href: '/intern/certificate', label: 'Vault', icon: Trophy },
   { href: '/intern/profile', label: 'Profil', icon: UserCircle }

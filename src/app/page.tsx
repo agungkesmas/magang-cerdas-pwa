@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Building2, Zap, GraduationCap, ArrowRight } from 'lucide-react';
+import { Building2, Zap, GraduationCap, ArrowRight, UserCog } from 'lucide-react';
 
 export default function HomePage() {
   return (
@@ -90,6 +90,26 @@ export default function HomePage() {
             </p>
             <div className="inline-flex items-center gap-1 text-bpjs-yellow text-sm font-semibold group-hover:gap-2 transition-all">
               Masuk sebagai Guru BKK
+              <ArrowRight className="w-4 h-4" />
+            </div>
+          </Link>
+
+          {/* Pembina Card */}
+          <Link
+            href="/pembina/login"
+            className="group glass-card p-6 hover:scale-[1.02] transition-all duration-300 hover:border-bpjs-yellow/40 hover:shadow-2xl sm:col-span-3 lg:col-span-1"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <UserCog className="w-8 h-8 text-white" strokeWidth={2.5} />
+            </div>
+            <h2 className="text-xl font-bold text-white mb-1" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+              Pembina Magang
+            </h2>
+            <p className="text-white/60 text-sm mb-4">
+              Deploy quest ke grup chat, monitor progress peserta, berikan XP.
+            </p>
+            <div className="inline-flex items-center gap-1 text-bpjs-yellow text-sm font-semibold group-hover:gap-2 transition-all">
+              Masuk sebagai Pembina
               <ArrowRight className="w-4 h-4" />
             </div>
           </Link>
