@@ -14,6 +14,7 @@ import {
   Clock,
   Zap
 } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
 import QuestCard from './QuestCard';
 
 interface ChatMessage {
@@ -36,6 +37,22 @@ interface ChatRoomProps {
   backHref: string;
 }
 
+// ============================================================
+// Realtime Supabase client (browser-side, anon key)
+// ============================================================
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+let realtimeClient: any = null;
+function getRealtimeClient() {
+  if (!realtimeClient && supabaseUrl && supabaseAnonKey) {
+    realtimeClient = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      realtime: { params: { eventsPerSecond: 5 } }
+    });
+  }
+  return realtimeClient;
+}
+
 export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps) {
   const router = useRouter();
   const [group, setGroup] = useState<any>(null);
@@ -48,37 +65,79 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
   const [showDeployForm, setShowDeployForm] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const fetchMessages = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/chat/messages?group_id=${groupId}&limit=100`);
+      const data = await res.json();
+      if (data.success) setMessages(data.messages || []);
+    } catch (e) {}
+  }, [groupId]);
+
   const fetchData = useCallback(async () => {
     try {
-      const [groupRes, msgRes] = await Promise.all([
+      const [groupRes] = await Promise.all([
         fetch(`/api/groups/${groupId}`).then((r) => r.json()),
-        fetch(`/api/chat/messages?group_id=${groupId}&limit=100`).then((r) => r.json())
+        fetchMessages()
       ]);
       if (groupRes.success) {
         setGroup(groupRes.group);
         setMembers(groupRes.members || []);
       }
-      if (msgRes.success) setMessages(msgRes.messages || []);
     } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, [groupId]);
+  }, [groupId, fetchMessages]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Polling setiap 3 detik
+  // ============================================================
+  // REALTIME: Subscribe ke chat_messages table changes
+  // Trigger fetchMessages ulang kalau ada INSERT baru di grup ini
+  // ============================================================
   useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/chat/messages?group_id=${groupId}&limit=100`);
-        const data = await res.json();
-        if (data.success) setMessages(data.messages || []);
-      } catch (e) {}
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [groupId]);
+    const client = getRealtimeClient();
+    if (!client) {
+      // Fallback ke polling kalau Supabase URL/anon key tidak ada
+      const interval = setInterval(fetchMessages, 3000);
+      return () => clearInterval(interval);
+    }
+
+    const channel = client
+      .channel(`chat_group_${groupId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `group_id=eq.${groupId}`
+        },
+        () => {
+          // Refetch messages saat ada pesan baru
+          fetchMessages();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'quest_logs',
+          filter: `group_id=eq.${groupId}`
+        },
+        () => {
+          // Refetch saat quest_log berubah (start/submit)
+          fetchMessages();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      client.removeChannel(channel);
+    };
+  }, [groupId, fetchMessages]);
 
   // Auto-scroll ke bawah saat ada pesan baru
   useEffect(() => {
