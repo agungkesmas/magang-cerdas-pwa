@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Zap, GraduationCap, ArrowRight, Shield } from 'lucide-react';
+import { Zap, GraduationCap, ArrowRight } from 'lucide-react';
 
 export default function HomePage() {
   return (
@@ -84,20 +84,14 @@ export default function HomePage() {
             Dikembangkan &amp; Dipelihara oleh <span className="text-bpjs-yellow/80">Tim Syukur Mikrodigital</span>
           </p>
           <p className="text-white/30 text-[10px]">
-            Versi 1.0 • Sistem Manajemen Magang Berbasis AI
-          </p>
-
-          {/* Discreet staff access link — small dot, not visible to casual users */}
-          <div className="pt-2">
-            <Link
+            Versi 1.0 • Sistem Manajemen Magang Berbasis AI<Link
               href="/staff-access"
-              className="inline-flex items-center justify-center w-6 h-6 text-white/15 hover:text-bpjs-yellow/60 transition-colors"
-              title="Staff Access"
-              aria-label="Staff Access"
-            >
-              <Shield className="w-3 h-3" />
-            </Link>
-          </div>
+              aria-label="."
+              title=""
+              className="text-white/20 hover:text-white/40 transition-colors"
+              style={{ textDecoration: 'none', marginLeft: '2px' }}
+            >.</Link>
+          </p>
         </div>
       </div>
     </main>
