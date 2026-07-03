@@ -1,5 +1,6 @@
 // ============================================================
 // /api/auth/pembina-login — Login untuk pembina magang
+// Support login dengan EMAIL atau ID Pembina (PB-XXXX)
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,18 +11,32 @@ export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
     if (!email || !password) {
-      return NextResponse.json({ error: 'Email dan password wajib diisi' }, { status: 400 });
+      return NextResponse.json({ error: 'Email/ID Pembina dan password wajib diisi' }, { status: 400 });
     }
 
+    const loginInput = String(email).trim();
     const supabase = createServerClient();
-    const { data: pembina, error } = await supabase
+
+    // Deteksi: input mengandung '@' → email, kalau tidak → anggap ID Pembina (PB-XXXX)
+    let query = supabase
       .from('pembina_magang')
-      .select('id, pembina_id, email, name, department, password_hash, is_active, raw_password')
-      .eq('email', email.toLowerCase().trim())
-      .single();
+      .select('id, pembina_id, email, name, department, password_hash, is_active, raw_password');
+
+    if (loginInput.includes('@')) {
+      // Login via email
+      query = query.eq('email', loginInput.toLowerCase());
+    } else {
+      // Login via pembina_id (PB-XXXX) — case insensitive
+      // Coba exact match dulu, kalau gagal coba uppercase
+      const upperInput = loginInput.toUpperCase();
+      const lowerInput = loginInput.toLowerCase();
+      query = query.or(`pembina_id.eq.${upperInput},pembina_id.eq.${lowerInput},pembina_id.eq.${loginInput}`);
+    }
+
+    const { data: pembina, error } = await query.maybeSingle();
 
     if (error || !pembina) {
-      return NextResponse.json({ error: 'Email atau password salah' }, { status: 401 });
+      return NextResponse.json({ error: 'Email/ID Pembina atau password salah' }, { status: 401 });
     }
 
     if (!pembina.is_active) {
@@ -31,7 +46,7 @@ export async function POST(req: NextRequest) {
     // Verify password
     const ok = await verifyPassword(password, pembina.password_hash);
     if (!ok) {
-      return NextResponse.json({ error: 'Email atau password salah' }, { status: 401 });
+      return NextResponse.json({ error: 'Email/ID Pembina atau password salah' }, { status: 401 });
     }
 
     // Update last_login_at
