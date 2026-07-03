@@ -280,10 +280,11 @@ CREATE INDEX idx_certificates_verification ON Certificates(verification_id);
 -- ============================================================
 -- SEED: Default admin + default active official
 -- ============================================================
--- Default admin (email: admin@magang-cerdas.local, password: admin123456)
+-- Default admin (email: admin@magang-cerdas.local, password: Magang@Cerdas2026!BPJS#Crb)
 -- Hash generated with bcryptjs (10 rounds) — matches lib/auth.ts implementation
+-- ⚠️ UBAH PASSWORD INI SEGERA setelah login pertama via Pengaturan → Keamanan & Data
 INSERT INTO Admins (email, password_hash, name, role) VALUES
-  ('admin@magang-cerdas.local', '$2a$10$b/Ctb1MRQdhFkgCgW4lz4.AZGBQCLgespi9UBelcLASiYENCEB4BO', 'Super Admin', 'admin')
+  ('admin@magang-cerdas.local', '$2a$10$tJI3owXulGLA5vJYIWWoC.ukRE5ntNRImCGO/qQ2WgWC1JJlpCR7C', 'Super Admin', 'admin')
 ON CONFLICT (email) DO NOTHING;
 
 -- Default active official: Zainal Abidin A

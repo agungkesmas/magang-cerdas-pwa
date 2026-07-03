@@ -1,14 +1,38 @@
 // ============================================================
 // /api/auth/bkk-login — BKK Teacher login via email ATAU BKK-XXXX
 // Returns: token + teacher info + schools array
+// WITH rate-limit (5 attempts per 15min, lock 30min after)
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { verifyPassword, signBKKToken, setBKKCookie } from '@/lib/auth';
+import { checkRateLimit, recordFailure, clearRateLimit, getClientIP } from '@/lib/rate-limit';
+
+const ROUTE_ID = 'bkk-login';
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIP(req);
+
+    // Rate-limit check
+    const rl = checkRateLimit(ROUTE_ID, ip);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        {
+          error: `Terlalu banyak percobaan login gagal. Coba lagi dalam ${rl.retryAfterSeconds || 1800} detik.`,
+          retryAfter: rl.retryAfterSeconds
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rl.retryAfterSeconds || 1800),
+            'X-RateLimit-Remaining': '0'
+          }
+        }
+      );
+    }
+
     const { email, password } = await req.json();
     if (!email || !password) {
       return NextResponse.json({ error: 'Email/ID BKK dan password wajib diisi' }, { status: 400 });
@@ -35,14 +59,26 @@ export async function POST(req: NextRequest) {
 
     const { data: teacher, error } = await query.maybeSingle();
 
+    const INVALID = 'Email/ID BKK atau password salah';
+
     if (error || !teacher) {
-      return NextResponse.json({ error: 'Email/ID BKK atau password salah' }, { status: 401 });
+      recordFailure(ROUTE_ID, ip);
+      return NextResponse.json({ error: INVALID }, { status: 401 });
     }
 
     const valid = await verifyPassword(password, teacher.password_hash);
     if (!valid) {
-      return NextResponse.json({ error: 'Email/ID BKK atau password salah' }, { status: 401 });
+      recordFailure(ROUTE_ID, ip);
+      const remaining = checkRateLimit(ROUTE_ID, ip).remainingAttempts;
+      const hint = remaining <= 2 ? ` (Sisa percobaan: ${remaining})` : '';
+      return NextResponse.json(
+        { error: `${INVALID}${hint}` },
+        { status: 401, headers: { 'X-RateLimit-Remaining': String(remaining) } }
+      );
     }
+
+    // Success — clear rate-limit
+    clearRateLimit(ROUTE_ID, ip);
 
     // Get linked schools
     const { data: junctions } = await supabase

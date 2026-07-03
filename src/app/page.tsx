@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Building2, Zap, GraduationCap, ArrowRight, UserCog } from 'lucide-react';
+import { Zap, GraduationCap, ArrowRight, Shield } from 'lucide-react';
 
 export default function HomePage() {
   return (
@@ -11,7 +11,7 @@ export default function HomePage() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-bpjs-green/10 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="relative z-10 w-full max-w-5xl">
+      <div className="relative z-10 w-full max-w-4xl">
         {/* Header */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-bpjs-yellow to-amber-500 rounded-2xl mb-4 shadow-2xl glow-yellow">
@@ -32,29 +32,9 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* 3 Login Cards */}
-        <div className="grid sm:grid-cols-3 gap-4 sm:gap-6">
-          {/* Admin Card */}
-          <Link
-            href="/admin/login"
-            className="group glass-card p-6 hover:scale-[1.02] transition-all duration-300 hover:border-bpjs-yellow/40 hover:shadow-2xl"
-          >
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-bpjs-blue to-bpjs-blue-light flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <Building2 className="w-8 h-8 text-white" strokeWidth={2.5} />
-            </div>
-            <h2 className="text-xl font-bold text-white mb-1" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-              Admin Console
-            </h2>
-            <p className="text-white/60 text-sm mb-4">
-              Kelola peserta magang, tugas, sertifikat, guru BKK, dan pengaturan sistem.
-            </p>
-            <div className="inline-flex items-center gap-1 text-bpjs-yellow text-sm font-semibold group-hover:gap-2 transition-all">
-              Masuk sebagai Admin
-              <ArrowRight className="w-4 h-4" />
-            </div>
-          </Link>
-
-          {/* Intern Card */}
+        {/* 2 Login Cards — Peserta & BKK (public-facing) */}
+        <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
+          {/* Intern Card (PRIMARY) */}
           <Link
             href="/intern/login"
             className="group glass-card p-6 hover:scale-[1.02] transition-all duration-300 hover:border-bpjs-yellow/40 hover:shadow-2xl"
@@ -93,26 +73,6 @@ export default function HomePage() {
               <ArrowRight className="w-4 h-4" />
             </div>
           </Link>
-
-          {/* Pembina Card */}
-          <Link
-            href="/pembina/login"
-            className="group glass-card p-6 hover:scale-[1.02] transition-all duration-300 hover:border-bpjs-yellow/40 hover:shadow-2xl sm:col-span-3 lg:col-span-1"
-          >
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <UserCog className="w-8 h-8 text-white" strokeWidth={2.5} />
-            </div>
-            <h2 className="text-xl font-bold text-white mb-1" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-              Pembina Magang
-            </h2>
-            <p className="text-white/60 text-sm mb-4">
-              Deploy quest ke grup chat, monitor progress peserta, berikan XP.
-            </p>
-            <div className="inline-flex items-center gap-1 text-bpjs-yellow text-sm font-semibold group-hover:gap-2 transition-all">
-              Masuk sebagai Pembina
-              <ArrowRight className="w-4 h-4" />
-            </div>
-          </Link>
         </div>
 
         {/* Footer */}
@@ -126,6 +86,18 @@ export default function HomePage() {
           <p className="text-white/30 text-[10px]">
             Versi 1.0 • Sistem Manajemen Magang Berbasis AI
           </p>
+
+          {/* Discreet staff access link — small dot, not visible to casual users */}
+          <div className="pt-2">
+            <Link
+              href="/staff-access"
+              className="inline-flex items-center justify-center w-6 h-6 text-white/15 hover:text-bpjs-yellow/60 transition-colors"
+              title="Staff Access"
+              aria-label="Staff Access"
+            >
+              <Shield className="w-3 h-3" />
+            </Link>
+          </div>
         </div>
       </div>
     </main>

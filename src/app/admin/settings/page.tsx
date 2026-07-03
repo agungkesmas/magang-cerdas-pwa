@@ -743,7 +743,7 @@ function SecurityTab() {
           </button>
         </form>
         <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
-          ⚠️ Password default adalah <strong>admin123456</strong>. Segera ubah ke password yang kuat untuk keamanan.
+          ⚠️ Password default adalah <strong>Magang@Cerdas2026!BPJS#Crb</strong>. Segera ubah ke password yang kuat untuk keamanan.
         </div>
       </div>
 

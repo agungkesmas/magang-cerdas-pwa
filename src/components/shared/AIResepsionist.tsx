@@ -60,27 +60,27 @@ const DASHBOARD_LABEL = {
 const SUGGESTED_QUESTIONS: Record<string, string[]> = {
   admin: [
     'Bagaimana cara tambah peserta magang?',
-    'Cara tambah pembina magang?',
-    'Bagaimana buat grup chat?',
-    'Cara terbitkan sertifikat?'
+    'Cara backup & clean file storage?',
+    'Cara terbitkan sertifikat?',
+    'Bagaimana konfigurasi AI Provider?'
   ],
   pembina: [
     'Bagaimana cara deploy quest?',
     'Cara kirim foto di chat?',
-    'Cara hapus file di grup?',
-    'Cara tambah anggota grup?'
+    'Cara hapus file di grup (Clear File)?',
+    'Bisa edit quest setelah deploy?'
   ],
   bkk: [
     'Bagaimana cara ajukan permintaan magang?',
     'Apa itu ID BKK saya?',
     'Di mana lihat riwayat aktivitas peserta?',
-    'Cara lihat arsip sertifikat?'
+    'Apa saja aturan privacy BKK?'
   ],
   intern: [
     'Bagaimana cara check-in?',
-    'Chat grup buat apa?',
-    'Cara kirim foto di chat?',
-    'Cara dapat EXP cepat?'
+    'Bedanya Aktivitas dan Quest apa?',
+    'Cara dapat EXP cepat?',
+    'Kapan sertifikat terbuka?'
   ]
 };
 
