@@ -15,8 +15,14 @@ import {
   Crown,
   Edit,
   Lock,
-  Download
+  Download,
+  HardDrive,
+  Trash2,
+  AlertTriangle,
+  CheckCircle2,
+  Package
 } from 'lucide-react';
+import JSZip from 'jszip';
 import { LLM_PROVIDERS, LLMProvider } from '@/types';
 
 interface Official {
@@ -767,6 +773,249 @@ function SecurityTab() {
         <div className="mt-3 text-xs text-gray-400">
           💡 File CSV bisa dibuka di Excel/Google Sheets untuk rekapan atau backup.
         </div>
+      </div>
+
+      {/* Storage Management */}
+      <StorageManagement />
+    </div>
+  );
+}
+
+// ============================================================
+// StorageManagement — Backup & Clean Supabase Storage
+// 100% manual, tidak ada auto
+// ============================================================
+function StorageManagement() {
+  const [loading, setLoading] = useState<Record<string, boolean>>({});
+  const [progress, setProgress] = useState<Record<string, number>>({});
+  const [status, setStatus] = useState<Record<string, string>>({});
+  const [error, setError] = useState<Record<string, string>>({});
+  const [confirmText, setConfirmText] = useState<Record<string, string>>({});
+  const [showCleanConfirm, setShowCleanConfirm] = useState<Record<string, boolean>>({});
+
+  const buckets = [
+    { id: 'attendance-photos', label: 'Foto Kehadiran', icon: '📸', desc: 'Foto selfie check-in/out, foto profil, surat dokter', defaultDays: 30 },
+    { id: 'chat-attachments', label: 'File Chat', icon: '💬', desc: 'Foto & document di chat grup', defaultDays: 90 }
+  ];
+
+  // Backup files: download as ZIP (client-side)
+  const handleBackup = async (bucketId: string, olderThanDays: number) => {
+    const key = `${bucketId}-backup`;
+    setLoading((p) => ({ ...p, [key]: true }));
+    setProgress((p) => ({ ...p, [key]: 0 }));
+    setStatus((p) => ({ ...p, [key]: 'Mengambil daftar file...' }));
+    setError((p) => ({ ...p, [key]: '' }));
+
+    try {
+      // 1. Fetch file list from API
+      const res = await fetch(`/api/storage/list?bucket=${bucketId}&older_than_days=${olderThanDays}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      const files = data.files || [];
+      if (files.length === 0) {
+        setStatus((p) => ({ ...p, [key]: 'Tidak ada file untuk di-backup' }));
+        return;
+      }
+
+      setStatus((p) => ({ ...p, [key]: `Mengunduh ${files.length} file...` }));
+
+      // 2. Download files and build ZIP (client-side)
+      const zip = new JSZip();
+      let downloaded = 0;
+
+      for (const file of files) {
+        try {
+          const fileRes = await fetch(file.url);
+          if (!fileRes.ok) throw new Error(`Failed to fetch ${file.name}`);
+          const blob = await fileRes.blob();
+          zip.file(file.name, blob);
+          downloaded++;
+          setProgress((p) => ({ ...p, [key]: Math.round((downloaded / files.length) * 100) }));
+        } catch (e) {
+          // Skip file if fails
+        }
+      }
+
+      // 3. Generate ZIP and download
+      setStatus((p) => ({ ...p, [key]: 'Membuat file ZIP...' }));
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `backup-${bucketId}-${new Date().toISOString().split('T')[0]}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      setStatus((p) => ({ ...p, [key]: `✅ ${downloaded} file di-backup ke komputer Anda (${data.total_size_mb} MB)` }));
+    } catch (e: any) {
+      setError((p) => ({ ...p, [key]: e.message }));
+    } finally {
+      setLoading((p) => ({ ...p, [key]: false }));
+    }
+  };
+
+  // Clean files: delete from storage + update DB
+  const handleClean = async (bucketId: string, olderThanDays: number) => {
+    const key = `${bucketId}-clean`;
+    const confirmKey = `${bucketId}-confirm`;
+    if (confirmText[confirmKey] !== 'HAPUS') return;
+
+    setLoading((p) => ({ ...p, [key]: true }));
+    setStatus((p) => ({ ...p, [key]: 'Menghapus file...' }));
+    setError((p) => ({ ...p, [key]: '' }));
+
+    try {
+      const res = await fetch('/api/storage/clean', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bucket: bucketId, older_than_days: olderThanDays })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setStatus((p) => ({ ...p, [key]: `✅ ${data.deleted_count} file dihapus. ${data.freed_size_mb} MB dibebaskan.` }));
+      setShowCleanConfirm((p) => ({ ...p, [bucketId]: false }));
+      setConfirmText((p) => ({ ...p, [confirmKey]: '' }));
+    } catch (e: any) {
+      setError((p) => ({ ...p, [key]: e.message }));
+    } finally {
+      setLoading((p) => ({ ...p, [key]: false }));
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 p-6 mt-6">
+      <h2 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+        <HardDrive className="w-5 h-5 text-bpjs-blue" /> Storage Management
+      </h2>
+      <p className="text-sm text-gray-500 mb-4">
+        Backup & bersihkan file dari Supabase Storage. Data (kehadiran, chat) tetap tersimpan, hanya file yang dihapus.
+      </p>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-xs text-blue-800">
+        ⚠️ <strong>Urutan yang disarankan:</strong> Backup dulu (download ZIP), pastikan ZIP tersimpan di komputer, baru Clean.
+        File yang sudah dihapus <strong>TIDAK bisa dikembalikan</strong>.
+      </div>
+
+      <div className="space-y-4">
+        {buckets.map((bucket) => {
+          const backupKey = `${bucket.id}-backup`;
+          const cleanKey = `${bucket.id}-clean`;
+          const confirmKey = `${bucket.id}-confirm`;
+          return (
+            <div key={bucket.id} className="border border-gray-200 rounded-xl p-4">
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <span className="text-lg">{bucket.icon}</span> {bucket.label}
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">{bucket.desc}</p>
+                  <p className="text-[10px] text-gray-400 mt-1 font-mono">bucket: {bucket.id}</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-gray-500">Clean: &gt; {bucket.defaultDays} hari</div>
+                </div>
+              </div>
+
+              {/* Status messages */}
+              {status[backupKey] && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-2 text-xs text-green-700 mb-2 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" /> {status[backupKey]}
+                </div>
+              )}
+              {status[cleanKey] && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-2 text-xs text-green-700 mb-2 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" /> {status[cleanKey]}
+                </div>
+              )}
+              {error[backupKey] && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-xs text-red-700 mb-2">{error[backupKey]}</div>
+              )}
+              {error[cleanKey] && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-xs text-red-700 mb-2">{error[cleanKey]}</div>
+              )}
+
+              {/* Progress bar */}
+              {loading[backupKey] && (
+                <div className="mb-3">
+                  <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                    <span>Progress backup...</span>
+                    <span>{progress[backupKey] || 0}%</span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-bpjs-blue transition-all" style={{ width: `${progress[backupKey] || 0}%` }} />
+                  </div>
+                </div>
+              )}
+
+              {/* Backup button */}
+              <button
+                onClick={() => handleBackup(bucket.id, bucket.defaultDays)}
+                disabled={loading[backupKey] || loading[cleanKey]}
+                className="w-full flex items-center justify-center gap-2 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white font-semibold py-2.5 rounded-lg text-sm disabled:opacity-50 mb-2"
+              >
+                {loading[backupKey] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Package className="w-4 h-4" />}
+                {loading[backupKey] ? 'Memproses...' : `💾 Backup File > ${bucket.defaultDays} hari (ZIP)`}
+              </button>
+
+              {/* Clean section */}
+              {!showCleanConfirm[bucket.id] ? (
+                <button
+                  onClick={() => setShowCleanConfirm((p) => ({ ...p, [bucket.id]: true }))}
+                  disabled={loading[backupKey] || loading[cleanKey]}
+                  className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 rounded-lg text-sm disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4" /> Clean File &gt; {bucket.defaultDays} hari
+                </button>
+              ) : (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-red-800">
+                      <strong>Peringatan!</strong> File akan dihapus permanen dari server.
+                      Pastikan sudah backup (download ZIP) sebelum lanjut.
+                      Data kehadiran/chat tetap tersimpan, hanya file yang dihapus.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-red-700 mb-1">
+                      Ketik <strong>HAPUS</strong> untuk konfirmasi:
+                    </label>
+                    <input
+                      type="text"
+                      value={confirmText[confirmKey] || ''}
+                      onChange={(e) => setConfirmText((p) => ({ ...p, [confirmKey]: e.target.value }))}
+                      placeholder="HAPUS"
+                      className="w-full px-3 py-1.5 border border-red-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500/40"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { setShowCleanConfirm((p) => ({ ...p, [bucket.id]: false })); setConfirmText((p) => ({ ...p, [confirmKey]: '' })); }}
+                      className="flex-1 px-3 py-1.5 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-medium"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      onClick={() => handleClean(bucket.id, bucket.defaultDays)}
+                      disabled={confirmText[confirmKey] !== 'HAPUS' || loading[cleanKey]}
+                      className="flex-1 inline-flex items-center justify-center gap-1 bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1.5 rounded-lg text-xs disabled:opacity-40"
+                    >
+                      {loading[cleanKey] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                      Hapus Permanen
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 text-[10px] text-gray-400 text-center">
+        💡 Backup = file ZIP tersimpan di komputer Anda. Clean = hapus dari server (data tetap di database).
+        Semua manual, tidak ada auto-clean.
       </div>
     </div>
   );
