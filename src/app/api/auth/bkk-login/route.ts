@@ -1,5 +1,5 @@
 // ============================================================
-// /api/auth/bkk-login — BKK Teacher email+password login
+// /api/auth/bkk-login — BKK Teacher login via email ATAU BKK-XXXX
 // Returns: token + teacher info + schools array
 // ============================================================
 
@@ -11,24 +11,37 @@ export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
     if (!email || !password) {
-      return NextResponse.json({ error: 'Email dan password wajib diisi' }, { status: 400 });
+      return NextResponse.json({ error: 'Email/ID BKK dan password wajib diisi' }, { status: 400 });
     }
 
+    const loginInput = String(email).trim();
     const supabase = createServerClient();
-    const { data: teacher, error } = await supabase
+
+    // Deteksi: input mengandung '@' → email, kalau tidak → anggap ID BKK (BKK-XXXX)
+    let query = supabase
       .from('bkk_teachers')
       .select('*')
-      .eq('email', email.toLowerCase().trim())
-      .eq('is_active', true)
-      .single();
+      .eq('is_active', true);
+
+    if (loginInput.includes('@')) {
+      // Login via email
+      query = query.eq('email', loginInput.toLowerCase());
+    } else {
+      // Login via bkk_id (BKK-XXXX) — case insensitive
+      const upperInput = loginInput.toUpperCase();
+      const lowerInput = loginInput.toLowerCase();
+      query = query.or(`bkk_id.eq.${upperInput},bkk_id.eq.${lowerInput},bkk_id.eq.${loginInput}`);
+    }
+
+    const { data: teacher, error } = await query.maybeSingle();
 
     if (error || !teacher) {
-      return NextResponse.json({ error: 'Email atau password salah' }, { status: 401 });
+      return NextResponse.json({ error: 'Email/ID BKK atau password salah' }, { status: 401 });
     }
 
     const valid = await verifyPassword(password, teacher.password_hash);
     if (!valid) {
-      return NextResponse.json({ error: 'Email atau password salah' }, { status: 401 });
+      return NextResponse.json({ error: 'Email/ID BKK atau password salah' }, { status: 401 });
     }
 
     // Get linked schools
@@ -57,6 +70,7 @@ export async function POST(req: NextRequest) {
       success: true,
       teacher: {
         id: teacher.id,
+        bkk_id: teacher.bkk_id,
         email: teacher.email,
         name: teacher.name,
         schools

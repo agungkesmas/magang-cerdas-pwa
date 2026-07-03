@@ -17,7 +17,7 @@ export async function GET() {
     // Get all BKK teachers
     const { data: teachers, error: tErr } = await supabase
       .from('bkk_teachers')
-      .select('id, email, name, phone, is_active, last_login_at, raw_password, created_at')
+      .select('id, bkk_id, email, name, phone, is_active, last_login_at, raw_password, created_at')
       .order('created_at', { ascending: false });
     if (tErr) return NextResponse.json({ error: tErr.message }, { status: 500 });
 

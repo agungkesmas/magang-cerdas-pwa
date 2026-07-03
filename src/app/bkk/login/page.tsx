@@ -54,16 +54,16 @@ export default function BKKLoginPage() {
 
         <form onSubmit={handleSubmit} className="glass-card p-6 space-y-4 backdrop-blur-xl bg-white/10">
           <div>
-            <label className="block text-white/80 text-sm font-medium mb-2">Email BKK</label>
+            <label className="block text-white/80 text-sm font-medium mb-2">Email atau ID BKK</label>
             <div className="relative">
               <School className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
               <input
-                type="email"
+                type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoFocus
-                placeholder="bkk@sekolah.sch.id"
+                placeholder="bkk@sekolah.sch.id atau BKK-0001"
                 className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-bpjs-yellow"
               />
             </div>

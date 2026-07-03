@@ -37,6 +37,7 @@ interface School {
 
 interface BKKTeacher {
   id: string;
+  bkk_id?: string;
   email: string;
   name: string;
   phone: string | null;
@@ -134,6 +135,7 @@ export default function SchoolDetailPage() {
     const shareText = `Hai ${t.name}!
 
 Kredensial login Dashboard BKK MAGANG-CERDAS Anda:
+ID BKK: ${t.bkk_id || '-'}
 Email: ${t.email}
 Password: ${t.raw_password}
 
@@ -420,11 +422,22 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
                   </div>
 
                   {/* Credentials + actions */}
-                  <div className="flex flex-col gap-2 min-w-0 lg:w-64">
+                  <div className="flex flex-col gap-2 min-w-0 lg:w-72">
                     <div className="bg-gray-50 rounded-lg p-2 border border-gray-100">
                       <div className="text-xs text-gray-500 mb-1">Kredensial Login</div>
+                      {t.bkk_id && (
+                        <div className="flex items-center gap-1 text-xs font-mono">
+                          <span className="font-semibold text-gray-900 truncate">{t.bkk_id}</span>
+                          <button onClick={() => handleCopy(t.bkk_id!, `bkkid-${t.id}`)} className="text-gray-400 hover:text-bpjs-green">
+                            {copied === `bkkid-${t.id}` ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
+                          </button>
+                        </div>
+                      )}
                       <div className="flex items-center gap-1 text-xs font-mono">
                         <span className="text-gray-700 truncate">{t.email}</span>
+                        <button onClick={() => handleCopy(t.email, `email-${t.id}`)} className="text-gray-400 hover:text-bpjs-green">
+                          {copied === `email-${t.id}` ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
+                        </button>
                       </div>
                       <div className="flex items-center gap-1 font-mono text-sm">
                         <span className="text-gray-700">
@@ -435,6 +448,12 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
                           className="text-gray-400 hover:text-bpjs-green"
                         >
                           {showPasswords[t.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                        </button>
+                        <button
+                          onClick={() => handleCopy(t.raw_password, `pwd-${t.id}`)}
+                          className="text-gray-400 hover:text-bpjs-green"
+                        >
+                          {copied === `pwd-${t.id}` ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
                         </button>
                       </div>
                     </div>

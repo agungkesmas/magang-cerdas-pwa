@@ -27,7 +27,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     // Get all BKK teachers linked to this school via junction table
     const { data: junctions, error: jErr } = await supabase
       .from('bkk_teacher_schools')
-      .select('bkk_teacher_id, bkk_teachers(id, email, name, phone, is_active, raw_password, last_login_at, created_at)')
+      .select('bkk_teacher_id, bkk_teachers(id, bkk_id, email, name, phone, is_active, raw_password, last_login_at, created_at)')
       .eq('school_id', params.id);
     if (jErr) return NextResponse.json({ error: jErr.message }, { status: 500 });
 

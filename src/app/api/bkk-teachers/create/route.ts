@@ -1,6 +1,6 @@
 // ============================================================
 // /api/bkk-teachers/create — Admin creates new BKK teacher
-// Auto-generates password (similar to intern credential generator)
+// Auto-generates BKK-XXXX ID + password (similar to pembina)
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -17,6 +17,23 @@ function generateBKKPassword(): string {
     tail += alphanum[Math.floor(Math.random() * alphanum.length)];
   }
   return `Bkk${year}${symbol}${tail}`;
+}
+
+// Generate next bkk_id (BKK-0001, BKK-0002, ...)
+async function generateBKKId(supabase: any): Promise<string> {
+  const { data } = await supabase
+    .from('bkk_teachers')
+    .select('bkk_id')
+    .not('bkk_id', 'is', null)
+    .order('bkk_id', { ascending: false })
+    .limit(1);
+
+  if (!data || data.length === 0) return 'BKK-0001';
+  const last = data[0].bkk_id;
+  const match = last.match(/^BKK-(\d+)$/);
+  if (!match) return 'BKK-0001';
+  const next = parseInt(match[1], 10) + 1;
+  return `BKK-${String(next).padStart(4, '0')}`;
 }
 
 export async function POST(req: NextRequest) {
@@ -60,14 +77,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Satu atau lebih sekolah tidak valid' }, { status: 400 });
     }
 
-    // Generate password
+    // Generate password + BKK ID
     const password = custom_password?.trim() || generateBKKPassword();
     const passwordHash = await hashPassword(password);
+    const bkkId = await generateBKKId(supabase);
 
     // Insert BKK teacher
     const { data: teacher, error: tErr } = await supabase
       .from('bkk_teachers')
       .insert({
+        bkk_id: bkkId,
         email: email.toLowerCase().trim(),
         password_hash: passwordHash,
         raw_password: password,
@@ -102,6 +121,7 @@ export async function POST(req: NextRequest) {
     const shareText = `Hai ${teacher.name}!
 
 Kredensial login Dashboard BKK MAGANG-CERDAS Anda:
+ID BKK: ${bkkId}
 Email: ${teacher.email}
 Password: ${password}
 
@@ -115,6 +135,7 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
       success: true,
       teacher: {
         id: teacher.id,
+        bkk_id: bkkId,
         name: teacher.name,
         email: teacher.email,
         phone: teacher.phone,
@@ -122,6 +143,7 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
         schools: validSchools
       },
       credentials: {
+        bkk_id: bkkId,
         email: teacher.email,
         password,
         shareText
