@@ -55,7 +55,7 @@ interface Intern {
   department: string;
   total_exp: number;
   is_active: boolean;
-  logbook_enabled: boolean;
+  logbook_enabled?: boolean; // deprecated
   school_origin?: string | null;
 }
 
@@ -65,7 +65,6 @@ export default function SchoolDetailPage() {
   const schoolId = params.id as string;
 
   const [school, setSchool] = useState<School | null>(null);
-  const [schoolLogbookEnabled, setSchoolLogbookEnabled] = useState<boolean>(true);
   const [teachers, setTeachers] = useState<BKKTeacher[]>([]);
   const [interns, setInterns] = useState<Intern[]>([]);
   const [majors, setMajors] = useState<{ id: string; name: string; code?: string | null }[]>([]);
@@ -100,7 +99,6 @@ export default function SchoolDetailPage() {
           return;
         }
         setSchool(found);
-        setSchoolLogbookEnabled(found.logbook_enabled !== false);
         schoolName = found.name;
       }
       if (internsData.success && schoolName) {
@@ -178,24 +176,6 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
     if (!confirm('Yakin hapus guru BKK ini? Tindakan tidak bisa dibatalkan.')) return;
     await fetch(`/api/bkk-teachers/update?id=${id}`, { method: 'DELETE' });
     fetchAll();
-  };
-
-  const handleToggleLogbook = async () => {
-    const action = schoolLogbookEnabled ? 'nonaktifkan' : 'aktifkan';
-    if (!confirm(`Yakin ${action} logbook digital untuk SEMUA peserta dari "${school?.name}"?`)) return;
-    const newValue = !schoolLogbookEnabled;
-    const res = await fetch('/api/schools', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: schoolId, logbook_enabled: newValue })
-    });
-    const data = await res.json();
-    if (data.success) {
-      setSchoolLogbookEnabled(newValue);
-      if (school) setSchool({ ...school, logbook_enabled: newValue });
-    } else {
-      alert('Error: ' + data.error);
-    }
   };
 
   const handleDeleteSchool = async () => {

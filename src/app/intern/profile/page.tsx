@@ -34,7 +34,7 @@ interface ProfileData {
   whatsapp: string | null;
   photo_url: string | null;
   is_active: boolean;
-  logbook_enabled: boolean;
+  logbook_enabled?: boolean; // deprecated
   created_at: string;
 }
 

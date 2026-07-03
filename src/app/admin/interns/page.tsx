@@ -36,7 +36,7 @@ interface Intern {
   username: string;
   raw_password: string;
   is_active: boolean;
-  logbook_enabled: boolean;
+  logbook_enabled?: boolean; // deprecated
   certificate_unlocked: boolean;
   created_at: string;
   time_progress: number;
