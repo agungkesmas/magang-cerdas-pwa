@@ -4,14 +4,13 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import AIResepsionist from '@/components/shared/AIResepsionist';
-import { Home, Users, BookHeart, LogOut, GraduationCap, Menu, X, UserCircle, Award, Send } from 'lucide-react';
+import { Home, Users, LogOut, GraduationCap, Menu, X, UserCircle, Award, Send } from 'lucide-react';
 
 const NAV = [
   { href: '/bkk/home', label: 'Beranda', icon: Home },
   { href: '/bkk/requests', label: 'Permintaan Magang', icon: Send, badge: true },
   { href: '/bkk/interns', label: 'Peserta Magang', icon: Users },
   { href: '/bkk/certificates', label: 'Sertifikat', icon: Award },
-  { href: '/bkk/logbook', label: 'Logbook', icon: BookHeart },
   { href: '/bkk/profile', label: 'Profil', icon: UserCircle }
 ];
 

@@ -8,7 +8,6 @@ import {
   Home,
   MapPin,
   CheckSquare,
-  BookHeart,
   Trophy,
   LogOut,
   Zap,
@@ -24,7 +23,6 @@ const NAV_ALL = [
   { href: '/intern/attendance', label: 'Check-In', icon: MapPin },
   { href: '/intern/activities', label: 'Aktivitas', icon: CheckSquare },
   { href: '/intern/chat', label: 'Chat Grup', icon: MessageCircle },
-  { href: '/intern/logbook', label: 'Logbook', icon: BookHeart },
   { href: '/intern/certificate', label: 'Vault', icon: Trophy },
   { href: '/intern/profile', label: 'Profil', icon: UserCircle }
 ];
@@ -33,17 +31,14 @@ export default function InternShell({
   intern,
   children
 }: {
-  intern: { name: string; username: string; logbookEnabled?: boolean };
+  intern: { name: string; username: string };
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Filter out Logbook menu if disabled
-  const NAV = intern.logbookEnabled === false
-    ? NAV_ALL.filter((item) => item.href !== '/intern/logbook')
-    : NAV_ALL;
+  const NAV = NAV_ALL;
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });

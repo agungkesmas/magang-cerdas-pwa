@@ -55,9 +55,9 @@ PERAN:
 MENU DASHBOARD BKK YANG ADA:
 1. Beranda — ringkasan statistik peserta dari sekolah yang dibimbing, quick actions, status permintaan magang
 2. Permintaan Magang — kirim & pantau permohonan penempatan peserta ke BPJTK (status: Terkirim → Direview → Diterima/Ditolak → Selesai)
-3. Peserta Magang — lihat profil & progress peserta dari sekolah BKK (kehadiran, EXP, logbook, sertifikat)
+3. Peserta Magang — lihat profil & progress peserta dari sekolah BKK (kehadiran, EXP, aktivitas, sertifikat)
 4. Sertifikat — arsip sertifikat peserta dari sekolah BKK (filter tier: Excellence/Competent/Participation)
-5. Logbook — baca catatan harian peserta (jika logbook diaktifkan sekolah)
+
 6. Profil — kelola data pribadi BKK (nama, telepon, foto)
 
 ATURAN PRIVACY BKK:
@@ -85,19 +85,19 @@ Jika user bertanya di luar konteks, jawab singkat: "Maaf, saya hanya melayani pe
 
 PERAN:
 - Menyambut peserta magang & membantu menjelaskan fitur dashboard
-- Membantu peserta memahami alur magang harian (check-in, tugas, logbook, sertifikat)
+- Membantu peserta memahami alur magang harian (check-in, tugas, aktivitas, sertifikat)
 - Menjawab pertanyaan terkait menu dashboard peserta saja
 
 MENU DASHBOARD PESERTA YANG ADA:
 1. Home — ringkasan progress magang (EXP, level, streak, hari tersisa), tugas hari ini, survival kit
 2. Check-In — absensi harian dengan GPS & foto selfie, ajukan izin sakit/cuti/dinas luar
 3. Aktivitas — tugas harian per departemen dengan AI Magic Compose (instruksi personal sesuai jurusan)
-4. Logbook — catatan harian kegiatan & pembelajaran (jika diaktifkan sekolah)
+
 5. Vault (Sertifikat) — sertifikat magang yang terbuka setelah capai ≥500 EXP, tier Excellence/Competent/Participation
 6. Profil — kelola data pribadi (foto, email, WhatsApp, password)
 
 ATURAN MAGANG:
-- EXP didapat dari check-in (+10), tugas (+50), logbook (+20), dll
+- EXP didapat dari check-in (+10), tugas (+20-50), aktivitas tambahan (+10-50), dll
 - Streak = check-in beruntun hari berturut-turut
 - Sertifikat terbuka otomatis saat EXP ≥ 500 (Competent) atau ≥ 1000 (Excellence)
 - Survival Kit: 8 modul drip-content (1 modul per minggu)
@@ -114,11 +114,11 @@ ATURAN JAWABAN:
 
 CONTOH JAWABAN:
 - "Halo! Untuk absen harian, buka menu **Check-In** lalu klik tombol Check-In. Pastikan kamu di lokasi kantor BPJS (radius 150 meter) dan ambil foto selfie ya."
-- "EXP kamu naik dengan: check-in harian (+10 EXP), kerjakan tugas di menu Aktivitas (+50 EXP), isi logbook (+20 EXP). Streak check-in beruntun juga bonus!"
+- "EXP kamu naik dengan: check-in harian (+10 EXP), kerjakan tugas di menu Aktivitas (+50 EXP), kerjakan aktivitas (+10-50 EXP). Streak check-in beruntun juga bonus!"
 - "Sertifikat akan terbuka otomatis di menu **Vault** saat EXP kamu mencapai 500 (Competent) atau 1000 (Excellence)."
 - "Maaf, saya hanya bisa membantu pertanyaan seputar dashboard peserta magang. Untuk hal lain, silakan tanya kakak pembimbingmu."
 
-Jika user bertanya di luar konteks, jawab singkat: "Maaf, saya hanya melayani pertanyaan seputar dashboard peserta magang MAGANG-CERDAS. Ada yang bisa saya bantu terkait check-in, tugas, logbook, atau sertifikat?"`
+Jika user bertanya di luar konteks, jawab singkat: "Maaf, saya hanya melayani pertanyaan seputar dashboard peserta magang MAGANG-CERDAS. Ada yang bisa saya bantu terkait check-in, tugas, aktivitas, atau sertifikat?"`
 };
 
 // ============================================================
@@ -143,18 +143,18 @@ function stubAnswer(dashboard: string, question: string): string {
   if (dashboard === 'bkk') {
     if (q.includes('ajukan') || q.includes('kirim') || q.includes('permintaan')) return 'Untuk ajukan permintaan magang: menu **Permintaan Magang** → **Ajukan Permintaan** → isi form (sekolah, jumlah peserta, tanggal, jurusan, surat pengantar) → kirim. Status bisa dipantau di menu yang sama.';
     if (q.includes('sertifikat')) return 'Arsip sertifikat peserta dari sekolah Anda ada di menu **Sertifikat**. Bisa difilter berdasarkan tier (Excellence/Competent/Participation).';
-    if (q.includes('peserta') || q.includes('siswa')) return 'Data peserta dari sekolah yang Anda bimbing ada di menu **Peserta Magang**. Klik salah satu untuk lihat detail kehadiran, EXP, logbook, dan sertifikat.';
-    if (q.includes('logbook')) return 'Catatan logbook peserta bisa dibaca di menu **Logbook** (jika diaktifkan oleh sekolah). Anda bisa lihat aktivitas harian & pembelajaran siswa.';
+    if (q.includes('peserta') || q.includes('siswa')) return 'Data peserta dari sekolah yang Anda bimbing ada di menu **Peserta Magang**. Klik salah satu untuk lihat detail kehadiran, EXP, aktivitas, dan sertifikat.';
+    if (q.includes('logbook')) return 'Catatan aktivitas peserta bisa dilihat di menu **Peserta Magang** → detail → tab Riwayat Aktivitas. Anda bisa lihat semua tugas yang sudah dikerjakan siswa.';
   }
   if (dashboard === 'intern') {
     if (q.includes('check-in') || q.includes('absen') || q.includes('check in')) return 'Untuk absen: buka menu **Check-In** → klik tombol Check-In. Pastikan kamu di lokasi kantor BPJS (radius 150m) & ambil foto selfie. Check-out sebelum pulang.';
     if (q.includes('tugas') || q.includes('aktivitas')) return 'Tugas harian ada di menu **Aktivitas**. Klik tugas untuk lihat instruksi (AI Magic Compose personal sesuai jurusan). Kerjakan & tandai selesai untuk dapat EXP.';
-    if (q.includes('logbook')) return 'Logbook harian diisi di menu **Logbook**. Tulis aktivitas, pembelajaran, & kendala hari ini. +20 EXP per entri.';
+    if (q.includes('logbook')) return 'Aktivitas tambahan bisa dicatat di menu **Aktivitas** → tombol Tambah. Pilih XP reward, isi judul Logbook harian diisi di menu **Logbook**. Tulis aktivitas, pembelajaran, & kendala hari ini. +20 EXP per entri. deskripsi, lalu tandai selesai untuk dapat XP.';
     if (q.includes('sertifikat') || q.includes('vault')) return 'Sertifikat ada di menu **Vault**. Terbuka otomatis saat EXP ≥ 500 (Competent) atau ≥ 1000 (Excellence).';
-    if (q.includes('exp') || q.includes('poin')) return 'EXP didapat dari: check-in (+10), tugas (+50), logbook (+20), streak bonus. Streak = check-in beruntun hari berturut.';
+    if (q.includes('exp') || q.includes('poin')) return 'EXP didapat dari: check-in (+10), tugas (+20-50), aktivitas tambahan (+10-50), streak bonus. Streak = check-in beruntun hari berturut.';
     if (q.includes('izin') || q.includes('sakit') || q.includes('cuti')) return 'Untuk ajukan izin/sakit/cuti/dinas luar: menu **Check-In** → section Pengajuan Izin. Sakit >1 hari wajib upload surat dokter.';
   }
-  return 'Maaf, saya hanya melayani pertanyaan seputar menu di dashboard ini. Coba tanya tentang: Peserta Magang, Permintaan Magang, Check-In, Aktivitas, Logbook, atau Sertifikat.';
+  return 'Maaf, saya hanya melayani pertanyaan seputar menu di dashboard ini. Coba tanya tentang: Peserta Magang, Permintaan Magang, Check-In, Aktivitas, atau Sertifikat.';
 }
 
 export async function POST(req: NextRequest) {

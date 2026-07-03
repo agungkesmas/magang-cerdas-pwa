@@ -150,13 +150,6 @@ export default function BKKHomePage() {
           desc={`${stats.certified_count} terbit`}
           color="bg-bpjs-yellow text-bpjs-blue-dark"
         />
-        <QuickAction
-          href="/bkk/logbook"
-          icon={BookHeart}
-          label="Logbook"
-          desc="Review catatan siswa"
-          color="bg-purple-600 text-white"
-        />
       </div>
 
       {/* Permintaan Magang summary card */}

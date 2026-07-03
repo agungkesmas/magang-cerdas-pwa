@@ -437,7 +437,7 @@ export default function InternActivitiesPage() {
       {activeTab === 'history' && (
         <div className="space-y-3">
           <div className="glass-card p-3 bg-blue-500/10 border-blue-400/30 text-xs text-blue-200">
-            💡 Riwayat aktivitas bisa dipakai sebagai acuan untuk mengisi logbook manual di akhir minggu.
+            💡 Riwayat semua aktivitas yang sudah kamu selesaikan — termasuk tugas, quest, dan pekerjaan tambahan.
           </div>
           {history.length === 0 ? (
             <div className="glass-card p-8 text-center">
