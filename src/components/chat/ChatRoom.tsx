@@ -17,7 +17,9 @@ import {
   Image as ImageIcon,
   FileText,
   Download,
-  XCircle
+  XCircle,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import QuestCard from './QuestCard';
@@ -74,6 +76,9 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
   const [attachmentPreview, setAttachmentPreview] = useState<{ url: string; filename: string; type: string; file: File } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
+  const [showClearFiles, setShowClearFiles] = useState(false);
+  const [clearConfirmText, setClearConfirmText] = useState('');
+  const [clearing, setClearing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -221,6 +226,28 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
     }
   };
 
+  const handleClearFiles = async () => {
+    if (clearConfirmText !== 'HAPUS') return;
+    setClearing(true);
+    setError('');
+    try {
+      const res = await fetch('/api/chat/clear-attachments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ group_id: groupId })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setShowClearFiles(false);
+      setClearConfirmText('');
+      await fetchMessages();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setClearing(false);
+    }
+  };
+
   const handleStartQuest = async (questId: string) => {
     setError('');
     try {
@@ -287,12 +314,21 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
             </p>
           </div>
           {userRole === 'pembina' && (
-            <button
-              onClick={() => setShowDeployForm(true)}
-              className="inline-flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold px-3 py-2 rounded-lg"
-            >
-              <Plus className="w-4 h-4" /> Deploy Quest
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowDeployForm(true)}
+                className="inline-flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold px-3 py-2 rounded-lg"
+              >
+                <Plus className="w-4 h-4" /> Deploy Quest
+              </button>
+              <button
+                onClick={() => setShowClearFiles(true)}
+                className="inline-flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium px-3 py-2 rounded-lg"
+                title="Hapus semua file dari grup (hemat storage)"
+              >
+                <Trash2 className="w-4 h-4" /> Clear File
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -403,7 +439,7 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
                       </a>
                     )}
 
-                    {/* Text message (with optional caption for attachments) */}
+                    {/* Text message, or [File dihapus] if content is null */}
                     {(msg.message_type === 'text' || (!msg.attachment_url && msg.content)) && (
                       <div className={`px-3 py-2 rounded-2xl text-sm whitespace-pre-line ${
                         isOwn
@@ -412,7 +448,7 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
                           ? 'bg-purple-50 text-gray-800 rounded-tl-sm'
                           : 'bg-gray-100 text-gray-800 rounded-tl-sm'
                       }`}>
-                        {msg.content}
+                        {msg.content || <span className="italic opacity-50">📎 [File dihapus]</span>}
                       </div>
                     )}
                   </div>
@@ -497,6 +533,55 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
           </button>
         </form>
       </div>
+
+      {/* Clear Files confirmation modal */}
+      {showClearFiles && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+            <div className="p-5 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" /> Hapus Semua File
+              </h3>
+            </div>
+            <div className="p-5 space-y-3">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 space-y-1">
+                <p>• Semua <strong>foto dan document</strong> akan dihapus permanen dari storage</p>
+                <p>• <strong>Pesan chat tetap ada</strong> (text tidak hilang)</p>
+                <p>• Tindakan ini <strong>TIDAK BISA dibatalkan</strong></p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Ketik <strong className="text-red-600">HAPUS</strong> untuk konfirmasi:
+                </label>
+                <input
+                  type="text"
+                  value={clearConfirmText}
+                  onChange={(e) => setClearConfirmText(e.target.value)}
+                  placeholder="HAPUS"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500/40"
+                />
+              </div>
+              {error && <p className="text-xs text-red-500">{error}</p>}
+            </div>
+            <div className="p-5 border-t border-gray-100 flex justify-end gap-2">
+              <button
+                onClick={() => { setShowClearFiles(false); setClearConfirmText(''); setError(''); }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleClearFiles}
+                disabled={clearConfirmText !== 'HAPUS' || clearing}
+                className="inline-flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-lg text-sm disabled:opacity-40"
+              >
+                {clearing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                Hapus File
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Image zoom modal */}
       {zoomImage && (
