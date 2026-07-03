@@ -55,7 +55,7 @@ END $$;
 -- ============================================================
 -- Step 4: VERIFIKASI (cek hasil)
 -- ============================================================
-SELECT '=== VERIFIKASI REALTIME SETUP ===' as info;
+SELECT 'VERIFIKASI REALTIME SETUP' as info;
 
 -- Cek RLS enabled?
 SELECT

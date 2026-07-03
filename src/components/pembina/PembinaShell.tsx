@@ -11,14 +11,16 @@ import {
   UserCog,
   Menu,
   X,
-  Sparkles
+  Sparkles,
+  UserCircle
 } from 'lucide-react';
 import AIResepsionist from '@/components/shared/AIResepsionist';
 
 const NAV = [
   { href: '/pembina/home', label: 'Beranda', icon: Home },
   { href: '/pembina/groups', label: 'Grup Saya', icon: Users },
-  { href: '/pembina/chat', label: 'Chat Grup', icon: MessageCircle }
+  { href: '/pembina/chat', label: 'Chat Grup', icon: MessageCircle },
+  { href: '/pembina/profile', label: 'Profil', icon: UserCircle }
 ];
 
 export default function PembinaShell({

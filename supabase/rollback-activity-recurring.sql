@@ -29,7 +29,7 @@ DROP INDEX IF EXISTS idx_activity_daily_completions_intern;
 DROP INDEX IF EXISTS idx_activity_daily_completions_date;
 
 -- Step 5: Verifikasi
-SELECT '=== ROLLBACK ACTIVITY RECURRING SELESAI ===' as info
+SELECT 'ROLLBACK ACTIVITY RECURRING SELESAI' as info
 UNION ALL SELECT 'activity_daily_completions dropped: ' || (CASE WHEN NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'activity_daily_completions') THEN 'YES' ELSE 'NO' END)
 UNION ALL SELECT 'activities.start_date dropped: ' || (CASE WHEN NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'activities' AND column_name = 'start_date') THEN 'YES' ELSE 'NO' END)
 UNION ALL SELECT 'activities.is_recurring dropped: ' || (CASE WHEN NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'activities' AND column_name = 'is_recurring') THEN 'YES' ELSE 'NO' END);

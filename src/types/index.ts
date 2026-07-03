@@ -21,7 +21,7 @@ export interface Intern {
   username: string;
   raw_password: string;
   is_active: boolean;
-  logbook_enabled: boolean;
+  logbook_enabled?: boolean; // deprecated — tidak dipakai lagi
   survival_kit_progress: Record<string, unknown>;
   certificate_unlocked: boolean;
   certificate_id: string | null;
@@ -117,7 +117,7 @@ export interface School {
   address: string | null;
   contact_person: string | null;
   contact_phone: string | null;
-  logbook_enabled: boolean;
+  logbook_enabled?: boolean; // deprecated — tidak dipakai lagi
   created_at: string;
 }
 

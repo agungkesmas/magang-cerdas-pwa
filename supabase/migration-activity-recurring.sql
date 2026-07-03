@@ -47,7 +47,7 @@ CREATE INDEX IF NOT EXISTS idx_activity_daily_completions_date ON activity_daily
 CREATE INDEX IF NOT EXISTS idx_activities_range ON activities(start_date, end_date) WHERE is_recurring = TRUE;
 
 -- Step 4: Verifikasi
-SELECT '=== MIGRATION ACTIVITY RECURRING SELESAI ===' as info
+SELECT 'MIGRATION ACTIVITY RECURRING SELESAI' as info
 UNION ALL SELECT 'activities.start_date: ' || COUNT(*)::text FROM information_schema.columns WHERE table_name = 'activities' AND column_name = 'start_date'
 UNION ALL SELECT 'activities.end_date: ' || COUNT(*)::text FROM information_schema.columns WHERE table_name = 'activities' AND column_name = 'end_date'
 UNION ALL SELECT 'activities.is_recurring: ' || COUNT(*)::text FROM information_schema.columns WHERE table_name = 'activities' AND column_name = 'is_recurring'

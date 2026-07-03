@@ -49,7 +49,7 @@ export async function GET() {
     // For each intern, fetch attendance summary (count only, NO photos, NO GPS)
     const internIds = (interns || []).map((i) => i.id);
     let attendanceSummary: Record<string, { check_in_count: number; check_out_count: number; last_attendance: string | null }> = {};
-    let logbookCounts: Record<string, number> = {};
+    let activityCounts: Record<string, number> = {};
 
     if (internIds.length > 0) {
       const { data: att } = await supabase
@@ -66,11 +66,24 @@ export async function GET() {
         return acc;
       }, {} as Record<string, { check_in_count: number; check_out_count: number; last_attendance: string | null }>);
 
-      const { data: log } = await supabase.from('logbook').select('intern_id').in('intern_id', internIds);
-      logbookCounts = (log || []).reduce((acc, row) => {
+      // Count completed activities (activity_completions + quest_logs) instead of logbook
+      const { data: actCompletions } = await supabase
+        .from('activity_completions')
+        .select('intern_id')
+        .in('intern_id', internIds);
+      activityCounts = (actCompletions || []).reduce((acc, row) => {
         acc[row.intern_id] = (acc[row.intern_id] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
+
+      const { data: questCompletions } = await supabase
+        .from('quest_logs')
+        .select('intern_id')
+        .eq('status', 'completed')
+        .in('intern_id', internIds);
+      (questCompletions || []).forEach((row: any) => {
+        activityCounts[row.intern_id] = (activityCounts[row.intern_id] || 0) + 1;
+      });
     }
 
     // Enrich interns with progress + summary
@@ -80,7 +93,7 @@ export async function GET() {
       days_remaining: daysRemaining(i.end_date),
       duration_days: internshipDuration(i.start_date, i.end_date),
       attendance: attendanceSummary[i.id] || { check_in_count: 0, check_out_count: 0, last_attendance: null },
-      logbook_count: logbookCounts[i.id] || 0,
+      logbook_count: activityCounts[i.id] || 0, // keep field name for backward compat, but now counts activities
       tier: (i.total_exp || 0) >= 1000 ? 'Excellence' : (i.total_exp || 0) >= 500 ? 'Competent' : 'Participation'
     }));
 

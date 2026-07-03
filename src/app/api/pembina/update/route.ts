@@ -1,32 +1,54 @@
 // ============================================================
-// /api/pembina/update — Admin: edit pembina (name, department, phone, is_active)
+// /api/pembina/update — Edit pembina
+// Admin: bisa edit semua field (name, email, department, phone, is_active)
+// Pembina: bisa edit profil sendiri (name, phone saja — bukan department/email)
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
-import { getAdminToken } from '@/lib/auth';
+import { getAdminToken, getPembinaToken } from '@/lib/auth';
 
 const VALID_DEPARTMENTS = ['Pelayanan', 'Pemasaran', 'Keuangan', 'Lintas Bidang'];
 
 export async function PUT(req: NextRequest) {
   try {
     const admin = await getAdminToken();
-    if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const pembina = await getPembinaToken();
+    if (!admin && !pembina) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { id, name, email, department, phone, is_active } = await req.json();
     if (!id) return NextResponse.json({ error: 'ID wajib diisi' }, { status: 400 });
 
-    const updateFields: any = {};
-    if (name !== undefined) updateFields.name = name.trim();
-    if (email !== undefined) updateFields.email = email.toLowerCase().trim();
-    if (department !== undefined) {
-      if (!VALID_DEPARTMENTS.includes(department)) {
-        return NextResponse.json({ error: 'Departemen tidak valid' }, { status: 400 });
+    // Permission check: pembina hanya bisa edit profil sendiri
+    if (pembina && !admin) {
+      if (id !== pembina.pembina_id) {
+        return NextResponse.json({ error: 'Anda hanya bisa edit profil sendiri' }, { status: 403 });
       }
-      updateFields.department = department;
     }
-    if (phone !== undefined) updateFields.phone = phone?.trim() || null;
-    if (is_active !== undefined) updateFields.is_active = !!is_active;
+
+    const updateFields: any = {};
+
+    if (admin) {
+      // Admin bisa edit semua field
+      if (name !== undefined) updateFields.name = name.trim();
+      if (email !== undefined) updateFields.email = email.toLowerCase().trim();
+      if (department !== undefined) {
+        if (!VALID_DEPARTMENTS.includes(department)) {
+          return NextResponse.json({ error: 'Departemen tidak valid' }, { status: 400 });
+        }
+        updateFields.department = department;
+      }
+      if (phone !== undefined) updateFields.phone = phone?.trim() || null;
+      if (is_active !== undefined) updateFields.is_active = !!is_active;
+    } else {
+      // Pembina hanya bisa edit name & phone
+      if (name !== undefined) updateFields.name = name.trim();
+      if (phone !== undefined) updateFields.phone = phone?.trim() || null;
+    }
+
+    if (Object.keys(updateFields).length === 0) {
+      return NextResponse.json({ error: 'Tidak ada field untuk diupdate' }, { status: 400 });
+    }
 
     const supabase = createServerClient();
     const { data, error } = await supabase

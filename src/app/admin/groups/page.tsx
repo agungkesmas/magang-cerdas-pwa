@@ -13,7 +13,9 @@ import {
   UserPlus,
   UserMinus,
   Building2,
-  ArrowLeft
+  ArrowLeft,
+  Archive,
+  RotateCcw
 } from 'lucide-react';
 
 interface Group {
@@ -197,13 +199,32 @@ function GroupDetail({ groupId, onBack }: { groupId: string; onBack: () => void 
             {group.description && <p className="text-sm text-gray-600 mt-2">{group.description}</p>}
             <p className="text-xs text-gray-400 mt-2">Dibuat oleh: {group.created_by_name}</p>
           </div>
-          <button
-            onClick={() => { if (confirm('Hapus grup ini? Semua chat akan hilang.')) { handleDelete(); } }}
-            className="p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-md"
-            title="Hapus grup"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {group.is_active ? (
+              <button
+                onClick={() => { if (confirm('Arsipkan grup ini? Chat tidak bisa dikirim, tapi riwayat tetap ada.')) { handleArchive(true); } }}
+                className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md"
+                title="Arsipkan grup"
+              >
+                <Archive className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                onClick={() => { if (confirm('Restore grup ini? Grup akan aktif kembali.')) { handleArchive(false); } }}
+                className="p-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-md"
+                title="Restore grup"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              onClick={() => { if (confirm('Hapus grup ini? Semua chat akan hilang.')) { handleDelete(); } }}
+              className="p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-md"
+              title="Hapus grup"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -276,6 +297,20 @@ function GroupDetail({ groupId, onBack }: { groupId: string; onBack: () => void 
       )}
     </div>
   );
+
+  async function handleArchive(archive: boolean) {
+    if (archive) {
+      const res = await fetch(`/api/groups/${groupId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) onBack();
+      else alert(`Error: ${data.error}`);
+    } else {
+      const res = await fetch(`/api/groups/${groupId}/restore`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) onBack();
+      else alert(`Error: ${data.error}`);
+    }
+  }
 
   async function handleDelete() {
     const res = await fetch(`/api/groups/${groupId}`, { method: 'DELETE' });
