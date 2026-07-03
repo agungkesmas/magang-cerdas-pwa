@@ -3,13 +3,17 @@
 // Admin: semua grup
 // Pembina: grup yang dia anggotanya
 // Peserta: grup yang dia anggotanya
+// Query param: ?status=active|archived|all (default: active)
+//   - active: is_active = true
+//   - archived: is_active = false
+//   - all: semua
 // ============================================================
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getAdminToken, getPembinaToken, getInternToken } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const admin = await getAdminToken();
     const pembina = await getPembinaToken();
@@ -18,15 +22,21 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const status = searchParams.get('status') || 'active'; // active | archived | all
+
     const supabase = createServerClient();
+
+    // Build filter condition
+    const filterActive = status === 'all' ? undefined : (status === 'archived' ? false : true);
 
     // Admin: semua grup
     if (admin && !pembina && !intern) {
-      const { data: groups, error } = await supabase
+      let query = supabase
         .from('groups')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
+        .select('*');
+      if (filterActive !== undefined) query = query.eq('is_active', filterActive);
+      const { data: groups, error } = await query.order('created_at', { ascending: false });
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
       // Get member counts
@@ -68,12 +78,12 @@ export async function GET() {
       return NextResponse.json({ success: true, groups: [] });
     }
 
-    const { data: groups, error } = await supabase
+    let query = supabase
       .from('groups')
       .select('*')
-      .in('id', groupIds)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false });
+      .in('id', groupIds);
+    if (filterActive !== undefined) query = query.eq('is_active', filterActive);
+    const { data: groups, error } = await query.order('created_at', { ascending: false });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
     // Get member counts

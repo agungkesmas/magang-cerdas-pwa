@@ -122,8 +122,10 @@ export default function PembinaShell({
         <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">{children}</main>
       </div>
 
-      {/* AI Resepsionis */}
-      <AIResepsionist dashboard="admin" welcomeName={pembina.name?.split(' ')[0]} accentColor="purple" />
+      {/* AI Resepsionis — sembunyikan di chat room (konflik dengan tombol send) */}
+      {!pathname.startsWith('/pembina/chat/') && (
+        <AIResepsionist dashboard="admin" welcomeName={pembina.name?.split(' ')[0]} accentColor="purple" />
+      )}
     </div>
   );
 }
