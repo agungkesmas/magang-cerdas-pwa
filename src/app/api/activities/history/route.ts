@@ -1,9 +1,10 @@
 // ============================================================
 // /api/activities/history — Intern's activity history (completed activities with notes)
-// Sekarang support 3 sumber:
+// Support 4 sumber:
 //   1. Per-intern single completion (mode lama)
 //   2. Department-mode single completion (activity_completions)
 //   3. Recurring daily completion (activity_daily_completions) — group by activity
+//   4. Quest completion (quest_logs + activities dengan is_quest=true) — group by activity
 // ============================================================
 
 import { NextResponse } from 'next/server';
@@ -26,10 +27,10 @@ export async function GET() {
       .order('completed_at', { ascending: false });
     if (aErr) return NextResponse.json({ error: aErr.message }, { status: 500 });
 
-    // 2. Department-mode single completions
+    // 2. Department-mode single completions (exclude Quest — Quest punya entry sendiri)
     const { data: deptCompletions, error: cErr } = await supabase
       .from('activity_completions')
-      .select('activity_id, completion_notes, completed_at, activities!inner(title, description, created_at, is_recurring)')
+      .select('activity_id, completion_notes, completed_at, activities!inner(title, description, created_at, is_recurring, is_quest)')
       .eq('intern_id', intern.intern_id)
       .order('completed_at', { ascending: false });
     if (cErr) return NextResponse.json({ error: cErr.message }, { status: 500 });
@@ -41,6 +42,28 @@ export async function GET() {
       .eq('intern_id', intern.intern_id)
       .order('completed_at', { ascending: false });
     if (dErr) return NextResponse.json({ error: dErr.message }, { status: 500 });
+
+    // 4. Quest completions (quest_logs status=completed + activities is_quest=true)
+    const { data: questCompletions, error: qErr } = await supabase
+      .from('quest_logs')
+      .select(`
+        quest_id,
+        group_id,
+        status,
+        started_at,
+        submitted_at,
+        submission_notes,
+        xp_awarded,
+        activities!inner(title, description, created_at, is_quest, group_id, due_date, xp_reward),
+        groups:group_id(name, department)
+      `)
+      .eq('intern_id', intern.intern_id)
+      .eq('status', 'completed')
+      .order('submitted_at', { ascending: false });
+    if (qErr) return NextResponse.json({ error: qErr.message }, { status: 500 });
+
+    // Track activity_id yang sudah masuk via activity_completions (supaya tidak duplikat)
+    const deptActivityIds = new Set((deptCompletions || []).map((c: any) => c.activity_id));
 
     // Combine single completions (mode lama)
     const history: any[] = [];
@@ -64,7 +87,7 @@ export async function GET() {
 
     (deptCompletions || []).forEach((c: any) => {
       const act = c.activities as any;
-      if (act && !act.is_recurring) {
+      if (act && !act.is_recurring && !act.is_quest) {
         history.push({
           id: c.activity_id,
           activity_id: c.activity_id,
@@ -78,6 +101,32 @@ export async function GET() {
           exp_gained: 20
         });
       }
+    });
+
+    // Tambah Quest completions sebagai single entries dengan badge Quest
+    (questCompletions || []).forEach((q: any) => {
+      const act = q.activities as any;
+      const grp = q.groups as any;
+      if (!act || !act.is_quest) return;
+      // Skip kalau Quest ini sudah masuk via activity_completions (anti-duplikat)
+      if (deptActivityIds.has(q.quest_id)) return;
+
+      history.push({
+        id: q.quest_id,
+        activity_id: q.quest_id,
+        title: act.title,
+        description: act.description,
+        mode: 'quest',
+        completion_notes: q.submission_notes,
+        completed_at: q.submitted_at,
+        started_at: q.started_at,
+        created_at: act.created_at,
+        source: 'quest',
+        exp_gained: q.xp_awarded || act.xp_reward || 20,
+        group_name: grp?.name || null,
+        group_department: grp?.department || null,
+        deadline: act.due_date || null
+      });
     });
 
     // Group recurring completions by activity
@@ -120,7 +169,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      history, // single completions
+      history, // single completions (includes quest)
       recurring_history: recurringHistory // recurring completions (grouped)
     });
   } catch (e: any) {

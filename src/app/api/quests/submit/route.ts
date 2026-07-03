@@ -74,6 +74,16 @@ export async function POST(req: NextRequest) {
     const newTotalExp = (internData?.total_exp || 0) + xpAwarded;
     await supabase.from('interns').update({ total_exp: newTotalExp }).eq('id', intern.intern_id);
 
+    // 5b. Insert ke activity_completions supaya muncul di activities history peserta
+    // Pakai upsert karena UNIQUE(activity_id, intern_id) — kalau sudah ada, update notes
+    await supabase
+      .from('activity_completions')
+      .upsert({
+        activity_id: quest_id,
+        intern_id: intern.intern_id,
+        completion_notes: submission_notes?.trim() || `[Quest] Selesai dari grup chat. XP: ${xpAwarded}`
+      }, { onConflict: 'activity_id,intern_id' });
+
     // 6. Insert system message di chat
     await supabase.from('chat_messages').insert({
       group_id,

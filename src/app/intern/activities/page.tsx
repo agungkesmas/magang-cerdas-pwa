@@ -15,7 +15,9 @@ import {
   FileText,
   History,
   Calendar,
-  Repeat
+  Repeat,
+  Target,
+  MessageCircle
 } from 'lucide-react';
 
 interface Activity {
@@ -49,7 +51,13 @@ interface HistoryItem {
   description: string;
   completion_notes: string | null;
   completed_at: string;
+  started_at?: string;
   source: string;
+  mode?: string;
+  exp_gained?: number;
+  group_name?: string | null;
+  group_department?: string | null;
+  deadline?: string | null;
 }
 
 interface RecurringHistoryItem {
@@ -364,20 +372,39 @@ export default function InternActivitiesPage() {
             </div>
           ) : (
             <>
-              {history.map((item) => (
-                <div key={item.id + item.completed_at} className="glass-card p-3">
+              {history.map((item) => {
+                const isQuest = item.mode === 'quest' || item.source === 'quest';
+                return (
+                <div key={item.id + item.completed_at} className={`glass-card p-3 ${isQuest ? 'border-purple-400/40' : ''}`}>
                   <div className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-bpjs-green flex-shrink-0 mt-0.5" />
+                    {isQuest ? (
+                      <Target className="w-4 h-4 text-purple-300 flex-shrink-0 mt-0.5" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4 text-bpjs-green flex-shrink-0 mt-0.5" />
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h4 className="text-sm font-semibold text-white">{item.title}</h4>
                         <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                          isQuest ? 'bg-purple-500/30 text-purple-200 font-medium' :
                           item.source === 'self' ? 'bg-purple-500/20 text-purple-300' :
                           item.source === 'department' ? 'bg-blue-500/20 text-blue-300' :
                           'bg-gray-500/20 text-gray-300'
                         }`}>
-                          {item.source === 'self' ? 'Dibuat sendiri' : item.source === 'department' ? 'Departemen' : 'Ditugaskan'}
+                          {isQuest ? '🎯 Quest' :
+                           item.source === 'self' ? 'Dibuat sendiri' :
+                           item.source === 'department' ? 'Departemen' : 'Ditugaskan'}
                         </span>
+                        {isQuest && item.exp_gained && (
+                          <span className="text-xs px-1.5 py-0.5 bg-bpjs-yellow/20 text-bpjs-yellow rounded-full font-medium">
+                            +{item.exp_gained} XP
+                          </span>
+                        )}
+                        {isQuest && item.group_name && (
+                          <span className="text-xs text-white/50 flex items-center gap-1">
+                            <MessageCircle className="w-3 h-3" /> {item.group_name}
+                          </span>
+                        )}
                       </div>
                       {item.completion_notes && (
                         <p className="text-xs text-white/60 mt-1">📝 {item.completion_notes}</p>
@@ -388,7 +415,8 @@ export default function InternActivitiesPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
 
               {/* Recurring history (grouped) */}
               {recurringHistory.length > 0 && (
