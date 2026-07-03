@@ -410,7 +410,7 @@ WHERE i.school_origin = s.name
 -- ============================================================
 -- S. VERIFIKASI AKHIR
 -- ============================================================
-SELECT '=== MIGRATION FINAL SELESAI ===' as info
+SELECT 'MIGRATION FINAL SELESAI' as info
 UNION ALL SELECT 'schools: ' || COUNT(*)::text FROM schools
 UNION ALL SELECT 'majors: ' || COUNT(*)::text FROM majors
 UNION ALL SELECT 'bkk_teachers: ' || COUNT(*)::text FROM bkk_teachers

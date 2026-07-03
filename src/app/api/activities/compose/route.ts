@@ -5,7 +5,7 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminToken } from '@/lib/auth';
+import { getAdminToken, getPembinaToken } from '@/lib/auth';
 import { callLLM, LLMMessage } from '@/lib/llm';
 
 const COMPOSE_SYSTEM_PROMPT = `Kamu adalah asisten pembimbing magang di BPJS Ketenagakerjaan Cabang Cirebon.
@@ -116,7 +116,8 @@ function getStubComposition(title: string): string {
 export async function POST(req: NextRequest) {
   try {
     const admin = await getAdminToken();
-    if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const pembina = await getPembinaToken();
+    if (!admin && !pembina) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { title } = await req.json();
     if (!title?.trim()) {

@@ -154,9 +154,9 @@ CREATE INDEX IF NOT EXISTS idx_quest_logs_status ON quest_logs(status);
 -- ============================================================
 INSERT INTO pembina_magang (pembina_id, email, password_hash, raw_password, name, phone, department, is_active)
 VALUES
-  ('PB-0001', 'pembina@magang-cerdas.local', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'pembina123456', 'Pembina Default Pelayanan', '', 'Pelayanan', TRUE),
-  ('PB-0002', 'pembina.keuangan@magang-cerdas.local', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'pembina123456', 'Pembina Default Keuangan', '', 'Keuangan', TRUE),
-  ('PB-0003', 'pembina.pemasaran@magang-cerdas.local', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'pembina123456', 'Pembina Default Pemasaran', '', 'Pemasaran', TRUE)
+  ('PB-0001', 'pembina@magang-cerdas.local', '$2a$10$9KOBpXYaAV7HJ5lgaBur5eZT8cRASjZLQX/HEgAr4OPUEmg4mxaqS', 'pembina123456', 'Pembina Default Pelayanan', '', 'Pelayanan', TRUE),
+  ('PB-0002', 'pembina.keuangan@magang-cerdas.local', '$2a$10$9KOBpXYaAV7HJ5lgaBur5eZT8cRASjZLQX/HEgAr4OPUEmg4mxaqS', 'pembina123456', 'Pembina Default Keuangan', '', 'Keuangan', TRUE),
+  ('PB-0003', 'pembina.pemasaran@magang-cerdas.local', '$2a$10$9KOBpXYaAV7HJ5lgaBur5eZT8cRASjZLQX/HEgAr4OPUEmg4mxaqS', 'pembina123456', 'Pembina Default Pemasaran', '', 'Pemasaran', TRUE)
 ON CONFLICT (email) DO NOTHING;
 
 -- ============================================================
