@@ -39,7 +39,7 @@ DROP INDEX IF EXISTS idx_quest_logs_intern;
 DROP INDEX IF EXISTS idx_quest_logs_status;
 
 -- Step 5: Verifikasi
-SELECT '=== ROLLBACK PHASE 1 SELESAI ===' as info
+SELECT 'ROLLBACK PHASE 1 SELESAI' as info
 UNION ALL SELECT 'quest_logs dropped: ' || (CASE WHEN NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'quest_logs') THEN 'YES' ELSE 'NO' END)
 UNION ALL SELECT 'pembina_magang dropped: ' || (CASE WHEN NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'pembina_magang') THEN 'YES' ELSE 'NO' END)
 UNION ALL SELECT 'activities.is_quest dropped: ' || (CASE WHEN NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'activities' AND column_name = 'is_quest') THEN 'YES' ELSE 'NO' END);

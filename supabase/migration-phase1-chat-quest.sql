@@ -203,10 +203,10 @@ ON CONFLICT (group_id, user_type, user_id) DO NOTHING;
 -- ============================================================
 -- I. VERIFIKASI
 -- ============================================================
-SELECT '=== MIGRATION PHASE 1 SELESAI ===' as info
+SELECT 'MIGRATION PHASE 1 SELESAI' as info
 UNION ALL SELECT 'pembina_magang: ' || COUNT(*)::text FROM pembina_magang
 UNION ALL SELECT 'groups: ' || COUNT(*)::text FROM groups
 UNION ALL SELECT 'group_members: ' || COUNT(*)::text FROM group_members
 UNION ALL SELECT 'chat_messages: ' || COUNT(*)::text FROM chat_messages
 UNION ALL SELECT 'quest_logs: ' || COUNT(*)::text FROM quest_logs
-UNION ALL SELECT 'activities with is_quest=true: ' || COUNT(*)::text FROM activities WHERE is_quest = TRUE;
+UNION ALL SELECT 'activities is_quest: ' || COUNT(*)::text FROM activities WHERE is_quest = TRUE;
