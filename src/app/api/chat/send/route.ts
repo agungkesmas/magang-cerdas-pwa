@@ -1,5 +1,5 @@
 // ============================================================
-// /api/chat/send — Kirim pesan text ke grup
+// /api/chat/send — Kirim pesan ke grup (text, image, atau document)
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -15,10 +15,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { group_id, content } = await req.json();
+    const { group_id, content, attachment_url, attachment_type, attachment_filename } = await req.json();
     if (!group_id) return NextResponse.json({ error: 'group_id wajib diisi' }, { status: 400 });
-    if (!content?.trim()) return NextResponse.json({ error: 'Pesan tidak boleh kosong' }, { status: 400 });
-    if (content.length > 2000) return NextResponse.json({ error: 'Pesan terlalu panjang (maks 2000 karakter)' }, { status: 400 });
+
+    // Either content or attachment must be present
+    const hasContent = content?.trim() && content.length > 0;
+    const hasAttachment = attachment_url && attachment_type;
+    if (!hasContent && !hasAttachment) {
+      return NextResponse.json({ error: 'Pesan tidak boleh kosong' }, { status: 400 });
+    }
+    if (hasContent && content.length > 2000) {
+      return NextResponse.json({ error: 'Pesan terlalu panjang (maks 2000 karakter)' }, { status: 400 });
+    }
 
     // Determine sender
     let senderType: string;
@@ -55,6 +63,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Determine message_type
+    let messageType = 'text';
+    if (hasAttachment) {
+      messageType = attachment_type === 'image' ? 'image' : 'document';
+    }
+
     const { data, error } = await supabase
       .from('chat_messages')
       .insert({
@@ -62,8 +76,11 @@ export async function POST(req: NextRequest) {
         sender_type: senderType,
         sender_id: senderId,
         sender_name: senderName,
-        message_type: 'text',
-        content: content.trim()
+        message_type: messageType,
+        content: hasContent ? content.trim() : null,
+        attachment_url: hasAttachment ? attachment_url : null,
+        attachment_type: hasAttachment ? attachment_type : null,
+        attachment_filename: hasAttachment ? attachment_filename : null
       })
       .select()
       .single();
