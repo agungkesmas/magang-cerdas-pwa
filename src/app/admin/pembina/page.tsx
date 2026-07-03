@@ -26,6 +26,7 @@ interface Pembina {
   name: string;
   phone: string | null;
   department: string;
+  raw_password: string;
   is_active: boolean;
   last_login_at: string | null;
   created_at: string;
@@ -119,12 +120,35 @@ export default function AdminPembinaPage() {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button onClick={() => handleResetPwd(p.id)} title="Reset Password" className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md"><RefreshCw className="w-3.5 h-3.5" /></button>
-                  <button onClick={() => handleToggleActive(p)} className={`p-1.5 rounded-md ${p.is_active ? 'bg-orange-100 hover:bg-orange-200 text-orange-700' : 'bg-green-100 hover:bg-green-200 text-green-700'}`}>
-                    {p.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
-                  <button onClick={() => handleDelete(p)} className="p-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-md"><Trash2 className="w-3.5 h-3.5" /></button>
+                <div className="flex flex-col gap-2 min-w-0 lg:w-72">
+                  <div className="bg-gray-50 rounded-lg p-2 border border-gray-100">
+                    <div className="text-xs text-gray-500 mb-1">Kredensial Login</div>
+                    <div className="flex items-center gap-1 font-mono text-sm">
+                      <span className="font-semibold text-gray-900 truncate">{p.pembina_id}</span>
+                      <button onClick={() => handleCopy(p.pembina_id, `id-${p.id}`)} className="text-gray-400 hover:text-bpjs-blue flex-shrink-0">
+                        {copied === `id-${p.id}` ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1 font-mono text-sm">
+                      <span className="text-gray-700 truncate flex-1">{showPasswords[p.id] ? p.raw_password : '••••••••'}</span>
+                      <button onClick={() => setShowPasswords((s) => ({ ...s, [p.id]: !s[p.id] }))} className="text-gray-400 hover:text-bpjs-blue flex-shrink-0">
+                        {showPasswords[p.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                      </button>
+                      <button onClick={() => handleCopy(p.raw_password, `pwd-${p.id}`)} className="text-gray-400 hover:text-bpjs-blue flex-shrink-0">
+                        {copied === `pwd-${p.id}` ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button onClick={() => handleCopyShare(p)} className="flex-1 inline-flex items-center justify-center gap-1 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white text-xs font-semibold px-2 py-1.5 rounded-md">
+                      {copied === `share-${p.id}` ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />} Copy
+                    </button>
+                    <button onClick={() => handleResetPwd(p.id)} title="Reset Password" className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md"><RefreshCw className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => handleToggleActive(p)} className={`p-1.5 rounded-md ${p.is_active ? 'bg-orange-100 hover:bg-orange-200 text-orange-700' : 'bg-green-100 hover:bg-green-200 text-green-700'}`}>
+                      {p.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                    <button onClick={() => handleDelete(p)} className="p-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-md"><Trash2 className="w-3.5 h-3.5" /></button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -148,6 +172,12 @@ export default function AdminPembinaPage() {
   function handleCopy(text: string, key: string) {
     navigator.clipboard.writeText(text);
     setCopied(key);
+    setTimeout(() => setCopied(null), 2000);
+  }
+
+  function handleCopyShare(p: Pembina) {
+    navigator.clipboard.writeText(`Hai ${p.name}!\n\nKredensial login Dashboard Pembina Magang Anda:\nID Pembina: ${p.pembina_id}\nEmail: ${p.email}\nPassword: ${p.raw_password}\n\nLogin di: ${window.location.origin}/pembina/login`);
+    setCopied(`share-${p.id}`);
     setTimeout(() => setCopied(null), 2000);
   }
 
