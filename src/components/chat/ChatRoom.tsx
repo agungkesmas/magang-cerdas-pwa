@@ -366,7 +366,13 @@ function DeployQuestModal({ groupId, onClose, onSuccess }: { groupId: string; on
     xp_reward: '20',
     deadline: '',
     deadline_time: '17:00',
-    max_slots: ''
+    max_slots: '',
+    // Recurring fields (gaya hotel)
+    is_recurring: false,
+    start_date: '',
+    end_date: '',
+    skip_weekend: true,
+    daily_deadline_hour: '17'
   });
   const [loading, setLoading] = useState(false);
   const [composing, setComposing] = useState(false);
@@ -410,7 +416,13 @@ function DeployQuestModal({ groupId, onClose, onSuccess }: { groupId: string; on
           group_id: groupId,
           xp_reward: parseInt(form.xp_reward, 10) || 20,
           deadline: deadlineISO,
-          max_slots: form.max_slots ? parseInt(form.max_slots, 10) : null
+          max_slots: form.max_slots ? parseInt(form.max_slots, 10) : null,
+          // Recurring fields
+          is_recurring: form.is_recurring,
+          start_date: form.is_recurring ? form.start_date : undefined,
+          end_date: form.is_recurring ? form.end_date : undefined,
+          skip_weekend: form.skip_weekend,
+          daily_deadline_hour: parseInt(form.daily_deadline_hour, 10)
         })
       });
       const data = await res.json();
@@ -491,15 +503,70 @@ function DeployQuestModal({ groupId, onClose, onSuccess }: { groupId: string; on
             </div>
           </div>
 
+          {/* Mode: Sekali Selesai vs Harian Berulang (gaya hotel) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Deadline (opsional)</label>
-            <div className="grid grid-cols-2 gap-2">
-              <input type="date" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white" />
-              <select value={form.deadline_time} onChange={(e) => setForm({ ...form, deadline_time: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white">
-                {['12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00'].map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Mode Quest</label>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <button type="button" onClick={() => setForm({ ...form, is_recurring: false })}
+                className={`p-3 rounded-lg border text-left ${!form.is_recurring ? 'border-purple-500 bg-purple-50' : 'border-gray-200'}`}>
+                <div className="font-semibold text-sm">📋 Sekali Selesai</div>
+                <div className="text-xs text-gray-500 mt-0.5">Kerjakan 1x, dapat XP sekali</div>
+              </button>
+              <button type="button" onClick={() => setForm({ ...form, is_recurring: true })}
+                className={`p-3 rounded-lg border text-left ${form.is_recurring ? 'border-purple-500 bg-purple-50' : 'border-gray-200'}`}>
+                <div className="font-semibold text-sm">🔁 Harian Berulang</div>
+                <div className="text-xs text-gray-500 mt-0.5">Muncul tiap hari di rentang, +XP/hari</div>
+              </button>
             </div>
           </div>
+
+          {form.is_recurring ? (
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">📅 Rentang Tanggal *</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] text-gray-500">Mulai</span>
+                    <input type="date" required={form.is_recurring} value={form.start_date}
+                      onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-gray-500">Selesai</span>
+                    <input type="date" required={form.is_recurring} value={form.end_date}
+                      onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white" />
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="skip_weekend_quest" checked={form.skip_weekend}
+                  onChange={(e) => setForm({ ...form, skip_weekend: e.target.checked })}
+                  className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500" />
+                <label htmlFor="skip_weekend_quest" className="text-xs text-gray-700">Skip weekend (Sabtu & Minggu tidak muncul)</label>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">⏰ Deadline Harian (WIB)</label>
+                <select value={form.daily_deadline_hour} onChange={(e) => setForm({ ...form, daily_deadline_hour: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white">
+                  {[15, 16, 17, 18, 19, 20].map((h) => (
+                    <option key={h} value={h}>{h}:00 WIB</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-gray-500 mt-0.5">Peserta harus complete sebelum jam ini setiap hari</p>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Deadline (opsional)</label>
+              <div className="grid grid-cols-2 gap-2">
+                <input type="date" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white" />
+                <select value={form.deadline_time} onChange={(e) => setForm({ ...form, deadline_time: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white">
+                  {['12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00'].map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
 
           {error && <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">{error}</div>}
 

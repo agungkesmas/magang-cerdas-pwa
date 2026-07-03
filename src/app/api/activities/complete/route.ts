@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
         intern_id: intern.intern_id,
         completion_date: todayStr,
         completion_notes: completion_notes?.trim() || null,
-        exp_awarded: EXP_REWARD,
+        exp_awarded: (activity.xp_reward || EXP_REWARD),
         bonus_exp_awarded: 0
       });
       if (iErr) {
@@ -167,7 +167,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Grant EXP
-      const totalExpGain = EXP_REWARD + bonusExp;
+      const totalExpGain = (activity.xp_reward || EXP_REWARD) + bonusExp;
       const { data: internData } = await supabase
         .from('interns')
         .select('total_exp')
@@ -179,14 +179,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         mode: 'recurring',
-        exp_gained: EXP_REWARD,
+        exp_gained: (activity.xp_reward || EXP_REWARD),
         bonus_exp: bonusExp,
         total_exp_gained: totalExpGain,
         new_total_exp: newTotalExp,
         all_complete: allComplete,
         message: allComplete
           ? `🎉 Selamat! Anda menyelesaikan SEMUA hari kerja. Bonus +${bonusExp} EXP!`
-          : `+${EXP_REWARD} EXP! Tugas akan muncul lagi besok.`
+          : `+${(activity.xp_reward || EXP_REWARD)} EXP! Tugas akan muncul lagi besok.`
       });
     }
 
@@ -245,18 +245,18 @@ export async function POST(req: NextRequest) {
       .select('total_exp')
       .eq('id', intern.intern_id)
       .single();
-    const newTotalExp = (internData?.total_exp || 0) + EXP_REWARD;
+    const newTotalExp = (internData?.total_exp || 0) + (activity.xp_reward || EXP_REWARD);
     await supabase.from('interns').update({ total_exp: newTotalExp }).eq('id', intern.intern_id);
 
     return NextResponse.json({
       success: true,
       mode: 'single',
-      exp_gained: EXP_REWARD,
+      exp_gained: (activity.xp_reward || EXP_REWARD),
       bonus_exp: 0,
-      total_exp_gained: EXP_REWARD,
+      total_exp_gained: (activity.xp_reward || EXP_REWARD),
       new_total_exp: newTotalExp,
       all_complete: true,
-      message: `+${EXP_REWARD} EXP!`
+      message: `+${(activity.xp_reward || EXP_REWARD)} EXP!`
     });
   } catch (e: any) {
     console.error('[activities/complete] error:', e);

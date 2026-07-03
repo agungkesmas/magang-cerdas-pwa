@@ -1,6 +1,7 @@
 // ============================================================
 // /api/activities/intern-create — Intern tambah aktivitas sendiri
 // Two-way: peserta bisa catat aktivitas tambahan yang mereka kerjakan
+// Support: xp_reward (default 20, pilihan 10/20/30/50)
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -12,9 +13,15 @@ export async function POST(req: NextRequest) {
     const intern = await getInternToken();
     if (!intern) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { title, description } = await req.json();
+    const { title, description, xp_reward } = await req.json();
     if (!title?.trim()) return NextResponse.json({ error: 'Judul wajib diisi' }, { status: 400 });
     if (!description?.trim()) return NextResponse.json({ error: 'Deskripsi wajib diisi' }, { status: 400 });
+
+    // Validate XP (default 20, allowed: 10/20/30/50)
+    const xp = parseInt(xp_reward, 10) || 20;
+    if (![10, 20, 30, 50].includes(xp)) {
+      return NextResponse.json({ error: 'XP tidak valid (10/20/30/50)' }, { status: 400 });
+    }
 
     const supabase = createServerClient();
     const { data, error } = await supabase
@@ -26,7 +33,8 @@ export async function POST(req: NextRequest) {
         department: null,
         is_active: true,
         is_archived: false,
-        created_by_intern: true
+        created_by_intern: true,
+        xp_reward: xp
       })
       .select()
       .single();

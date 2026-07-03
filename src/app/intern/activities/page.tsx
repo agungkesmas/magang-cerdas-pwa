@@ -548,7 +548,7 @@ export default function InternActivitiesPage() {
 }
 
 function InternAddActivityModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
-  const [form, setForm] = useState({ title: '', description: '' });
+  const [form, setForm] = useState({ title: '', description: '', xp_reward: '20' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -602,6 +602,17 @@ function InternAddActivityModal({ onClose, onSuccess }: { onClose: () => void; o
               className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-bpjs-yellow"
               placeholder="Catat apa yang kamu kerjakan hari ini..."
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-1">XP Reward</label>
+            <select value={form.xp_reward} onChange={(e) => setForm({ ...form, xp_reward: e.target.value })}
+              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-bpjs-yellow">
+              <option value="10" className="bg-agent-card">10 XP (Easy)</option>
+              <option value="20" className="bg-agent-card">20 XP (Medium)</option>
+              <option value="30" className="bg-agent-card">30 XP (Hard)</option>
+              <option value="50" className="bg-agent-card">50 XP (Expert)</option>
+            </select>
+            <p className="text-[10px] text-white/40 mt-1">XP akan didapat setelah aktivitas ditandai selesai</p>
           </div>
           {error && <p className="text-xs text-red-400">{error}</p>}
           <div className="flex gap-2">
