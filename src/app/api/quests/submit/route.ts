@@ -76,13 +76,18 @@ export async function POST(req: NextRequest) {
 
     // 5b. Insert ke activity_completions supaya muncul di activities history peserta
     // Pakai upsert karena UNIQUE(activity_id, intern_id) — kalau sudah ada, update notes
-    await supabase
+    const { error: upsertErr } = await supabase
       .from('activity_completions')
       .upsert({
         activity_id: quest_id,
         intern_id: intern.intern_id,
         completion_notes: submission_notes?.trim() || `[Quest] Selesai dari grup chat. XP: ${xpAwarded}`
       }, { onConflict: 'activity_id,intern_id' });
+    if (upsertErr) {
+      console.error('[quests/submit] upsert activity_completions error:', upsertErr);
+      // Tetap lanjut — Quest sudah completed di quest_logs, XP sudah masuk
+      // History akan tetap muncul via query quest_logs (bukan via activity_completions)
+    }
 
     // 6. Insert system message di chat
     await supabase.from('chat_messages').insert({

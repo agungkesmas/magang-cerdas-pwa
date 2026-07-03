@@ -44,23 +44,47 @@ export async function GET() {
     if (dErr) return NextResponse.json({ error: dErr.message }, { status: 500 });
 
     // 4. Quest completions (quest_logs status=completed + activities is_quest=true)
-    const { data: questCompletions, error: qErr } = await supabase
-      .from('quest_logs')
-      .select(`
-        quest_id,
-        group_id,
-        status,
-        started_at,
-        submitted_at,
-        submission_notes,
-        xp_awarded,
-        activities!inner(title, description, created_at, is_quest, group_id, due_date, xp_reward),
-        groups:group_id(name, department)
-      `)
-      .eq('intern_id', intern.intern_id)
-      .eq('status', 'completed')
-      .order('submitted_at', { ascending: false });
-    if (qErr) return NextResponse.json({ error: qErr.message }, { status: 500 });
+    // NOTE: Jangan JOIN ke groups di sini karena ambiguous (quest_logs.group_id & activities.group_id
+    // dua-duanya ke groups). Pakai query terpisah untuk ambil group info.
+    let questCompletions: any[] = [];
+    try {
+      const { data: qData, error: qErr } = await supabase
+        .from('quest_logs')
+        .select(`
+          quest_id,
+          group_id,
+          status,
+          started_at,
+          submitted_at,
+          submission_notes,
+          xp_awarded,
+          activities!inner(title, description, created_at, is_quest, due_date, xp_reward)
+        `)
+        .eq('intern_id', intern.intern_id)
+        .eq('status', 'completed')
+        .order('submitted_at', { ascending: false });
+      if (qErr) {
+        console.error('[activities/history] quest_logs query error:', qErr);
+        // Jangan throw — tetap return history lain (single, recurring)
+      } else {
+        questCompletions = qData || [];
+      }
+    } catch (qException) {
+      console.error('[activities/history] quest_logs exception:', qException);
+    }
+
+    // Ambil group info terpisah (kalau ada quest completions)
+    const groupIds = [...new Set(questCompletions.map((q: any) => q.group_id).filter(Boolean))];
+    let groupMap: Record<string, { name: string; department: string | null }> = {};
+    if (groupIds.length > 0) {
+      const { data: groupData } = await supabase
+        .from('groups')
+        .select('id, name, department')
+        .in('id', groupIds);
+      (groupData || []).forEach((g: any) => {
+        groupMap[g.id] = { name: g.name, department: g.department };
+      });
+    }
 
     // Track activity_id yang sudah masuk via activity_completions (supaya tidak duplikat)
     const deptActivityIds = new Set((deptCompletions || []).map((c: any) => c.activity_id));
@@ -106,10 +130,11 @@ export async function GET() {
     // Tambah Quest completions sebagai single entries dengan badge Quest
     (questCompletions || []).forEach((q: any) => {
       const act = q.activities as any;
-      const grp = q.groups as any;
       if (!act || !act.is_quest) return;
       // Skip kalau Quest ini sudah masuk via activity_completions (anti-duplikat)
       if (deptActivityIds.has(q.quest_id)) return;
+
+      const grp = q.group_id ? groupMap[q.group_id] : null;
 
       history.push({
         id: q.quest_id,
