@@ -172,7 +172,7 @@ export default function InternActivitiesPage() {
     return !a.is_completed && !a.is_overdue;
   });
   const completed = visibleActivities.filter((a) => {
-    if (a.is_quest) return a.quest_status === 'completed' || a.is_completed;
+    if (a.is_quest) return false; // Quest completed → HANYA di tab Riwayat, bukan "Selesai Hari Ini"
     if (a.is_recurring) return a.completed_today;
     return a.is_completed;
   });
