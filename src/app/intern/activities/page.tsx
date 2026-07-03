@@ -163,18 +163,22 @@ export default function InternActivitiesPage() {
     return true;
   });
   // Pending: belum selesai
-  // - Quest: status in_progress (belum completed)
+  // - Quest: status in_progress
   // - Recurring: belum complete hari ini
-  // - Non-recurring: belum is_completed dan tidak overdue
+  // - Single: belum is_completed dan tidak overdue
   const pending = visibleActivities.filter((a) => {
     if (a.is_quest) return a.quest_status === 'in_progress';
     if (a.is_recurring) return !a.completed_today;
     return !a.is_completed && !a.is_overdue;
   });
+  // Selesai Hari Ini: HANYA recurring yang complete hari ini (besok bisa kerjakan lagi)
+  // - Quest completed → langsung ke Riwayat (tidak di sini)
+  // - Single completed → langsung ke Riwayat (tidak di sini)
+  // - Recurring completed today → tetap di Aktif (karena besok muncul lagi)
   const completed = visibleActivities.filter((a) => {
-    if (a.is_quest) return false; // Quest completed → HANYA di tab Riwayat, bukan "Selesai Hari Ini"
+    if (a.is_quest) return false;
     if (a.is_recurring) return a.completed_today;
-    return a.is_completed;
+    return false;
   });
   const overdue = visibleActivities.filter((a) => !a.is_quest && !a.is_recurring && !a.is_completed && a.is_overdue);
 

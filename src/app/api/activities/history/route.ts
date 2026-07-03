@@ -128,11 +128,10 @@ export async function GET() {
     });
 
     // Tambah Quest completions sebagai single entries dengan badge Quest
+    // NOTE: Tidak perlu anti-duplicate check karena deptCompletions sudah skip Quest (is_quest=true)
     (questCompletions || []).forEach((q: any) => {
       const act = q.activities as any;
       if (!act || !act.is_quest) return;
-      // Skip kalau Quest ini sudah masuk via activity_completions (anti-duplikat)
-      if (deptActivityIds.has(q.quest_id)) return;
 
       const grp = q.group_id ? groupMap[q.group_id] : null;
 
