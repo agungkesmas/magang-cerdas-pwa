@@ -45,8 +45,11 @@ export async function GET() {
       .lte('end_date', fourteenDaysAhead.toISOString().split('T')[0])
       .order('end_date', { ascending: true });
 
-    // All tasks
-    const { data: tasks } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
+    // All activities (replace old tasks query — activities is the new system)
+    const { count: activityCount } = await supabase
+      .from('activities')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_archived', false);
 
     // Active officials
     const { data: officials } = await supabase.from('officials').select('*').order('is_active', { ascending: false });
@@ -71,13 +74,13 @@ export async function GET() {
         check_in_rate: activeInterns.length > 0 ? Math.round((checkedInToday.size / activeInterns.length) * 100) : 0,
         total_exp: totalExp,
         near_end_count: (nearEnd || []).length,
-        total_tasks: (tasks || []).length,
+        total_tasks: activityCount || 0, // keep field name for backward compat, now counts activities
         total_officials: (officials || []).length
       },
       interns: internsEnriched,
       today_attendance: todayAtt || [],
       near_end_interns: nearEnd || [],
-      tasks: tasks || [],
+      tasks: [], // deprecated — return empty array for backward compat
       officials: officials || []
     });
   } catch (e: any) {

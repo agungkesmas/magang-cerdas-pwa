@@ -93,11 +93,9 @@ export async function GET(req: NextRequest) {
     });
     activityHistory.sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime());
 
-    // Fetch task completion summary (lowercase relationship name for PostgREST)
-    const { data: completions } = await supabase
-      .from('task_completions')
-      .select('task_id, completed_count, last_completed_at, tasks!inner(title, target_count, department)')
-      .eq('intern_id', internId);
+    // task_completions query removed — tasks table is deprecated, replaced by activities
+    // Return empty array for backward compat
+    const completions: any[] = [];
 
     // Fetch certificate if unlocked
     let certificate = null;
