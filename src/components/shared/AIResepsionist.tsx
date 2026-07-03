@@ -20,7 +20,7 @@ interface Message {
 }
 
 interface AIResepsionistProps {
-  dashboard: 'admin' | 'bkk' | 'intern';
+  dashboard: 'admin' | 'bkk' | 'intern' | 'pembina';
   welcomeName?: string;
   accentColor?: 'blue' | 'green' | 'purple';
   // Tailwind class untuk posisi bottom tombol floating & panel chat.
@@ -53,27 +53,34 @@ const ACCENT_MAP = {
 const DASHBOARD_LABEL = {
   admin: 'Admin BPJTK',
   bkk: 'Guru BKK',
-  intern: 'Peserta Magang'
+  intern: 'Peserta Magang',
+  pembina: 'Pembina Magang'
 };
 
 const SUGGESTED_QUESTIONS: Record<string, string[]> = {
   admin: [
     'Bagaimana cara tambah peserta magang?',
-    'Cara batch upload Excel peserta?',
-    'Bagaimana terima permintaan magang dari BKK?',
-    'Cara terbitkan sertifikat?'
+    'Cara tambah pembina magang?',
+    'Bagaimana buat grup chat?',
+    'Cara terima permintaan magang dari BKK?'
+  ],
+  pembina: [
+    'Bagaimana cara deploy quest?',
+    'Cara buat grup baru?',
+    'Cara tambah anggota grup?',
+    'Apa itu quest recurring?'
   ],
   bkk: [
     'Bagaimana cara ajukan permintaan magang?',
     'Di mana lihat data peserta saya?',
-    'Cara lihat arsip sertifikat?',
-    'Apa saja menu di dashboard BKK?'
+    'Cara lihat riwayat aktivitas peserta?',
+    'Cara lihat arsip sertifikat?'
   ],
   intern: [
     'Bagaimana cara check-in?',
-    'Cara dapat EXP cepat?',
-    'Kapan sertifikat terbuka?',
-    'Cara ajukan izin sakit?'
+    'Chat grup buat apa?',
+    'Cara kerjakan quest dari chat?',
+    'Cara dapat EXP cepat?'
   ]
 };
 

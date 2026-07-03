@@ -124,7 +124,7 @@ export default function PembinaShell({
 
       {/* AI Resepsionis — sembunyikan di chat room (konflik dengan tombol send) */}
       {!pathname.startsWith('/pembina/chat/') && (
-        <AIResepsionist dashboard="admin" welcomeName={pembina.name?.split(' ')[0]} accentColor="purple" />
+        <AIResepsionist dashboard="pembina" welcomeName={pembina.name?.split(' ')[0]} accentColor="purple" />
       )}
     </div>
   );
