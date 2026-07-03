@@ -35,6 +35,14 @@ interface Activity {
   start_date?: string | null;
   end_date?: string | null;
   skip_weekend?: boolean;
+  // Quest fields
+  is_quest?: boolean;
+  group_id?: string | null;
+  xp_reward?: number;
+  quest_status?: string | null;
+  quest_started_at?: string | null;
+  quest_submitted_at?: string | null;
+  quest_xp_awarded?: number | null;
   daily_deadline_hour?: number;
   is_today_in_range?: boolean;
   completed_today?: boolean;
@@ -147,21 +155,28 @@ export default function InternActivitiesPage() {
   }
 
   // Filter logic: untuk recurring, tampilkan hanya yang is_today_in_range = true
-  // Untuk non-recurring, tampilkan semua yang assigned
+  // Untuk Quest (is_quest), tampilkan yang in_progress atau completed
+  // Untuk non-recurring non-quest, tampilkan semua yang assigned
   const visibleActivities = activities.filter((a) => {
+    if (a.is_quest) return true; // Quest selalu tampil kalau sudah di-start/completed
     if (a.is_recurring) return a.is_today_in_range !== false;
     return true;
   });
-  // Pending: belum selesai (untuk recurring: belum complete hari ini)
+  // Pending: belum selesai
+  // - Quest: status in_progress (belum completed)
+  // - Recurring: belum complete hari ini
+  // - Non-recurring: belum is_completed dan tidak overdue
   const pending = visibleActivities.filter((a) => {
+    if (a.is_quest) return a.quest_status === 'in_progress';
     if (a.is_recurring) return !a.completed_today;
     return !a.is_completed && !a.is_overdue;
   });
   const completed = visibleActivities.filter((a) => {
+    if (a.is_quest) return a.quest_status === 'completed' || a.is_completed;
     if (a.is_recurring) return a.completed_today;
     return a.is_completed;
   });
-  const overdue = visibleActivities.filter((a) => !a.is_recurring && !a.is_completed && a.is_overdue);
+  const overdue = visibleActivities.filter((a) => !a.is_quest && !a.is_recurring && !a.is_completed && a.is_overdue);
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -228,20 +243,30 @@ export default function InternActivitiesPage() {
                     <Sparkles className="w-4 h-4 text-bpjs-yellow" /> Aktif ({pending.length})
                   </h2>
                   {pending.map((act) => (
-                    <div key={act.id} className="glass-card p-4">
+                    <div key={act.id} className={`glass-card p-4 ${act.is_quest ? 'border-purple-400/40' : ''}`}>
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-bold text-white">{act.title}</h3>
+                            {act.is_quest && (
+                              <span className="text-xs px-2 py-0.5 bg-purple-500/30 text-purple-200 rounded-full font-medium flex items-center gap-1">
+                                <Target className="w-3 h-3" /> Quest
+                              </span>
+                            )}
                             {act.is_recurring && (
                               <span className="text-xs px-2 py-0.5 bg-bpjs-green/20 text-bpjs-green rounded-full font-medium flex items-center gap-1">
                                 🔁 Harian
                               </span>
                             )}
-                            {act.created_by_intern && (
+                            {act.created_by_intern && !act.is_quest && (
                               <span className="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded-full">Dibuat sendiri</span>
                             )}
-                            {act.due_date && !act.is_recurring && (
+                            {act.is_quest && act.xp_reward && (
+                              <span className="text-xs px-2 py-0.5 bg-bpjs-yellow/20 text-bpjs-yellow rounded-full font-medium flex items-center gap-1">
+                                <Zap className="w-3 h-3" /> {act.xp_reward} XP
+                              </span>
+                            )}
+                            {act.due_date && !act.is_recurring && !act.is_quest && (
                               <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded-full flex items-center gap-1">
                                 <Clock className="w-3 h-3" /> {new Date(act.due_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
                               </span>
@@ -252,8 +277,21 @@ export default function InternActivitiesPage() {
                                 {new Date(act.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} → {new Date(act.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
                               </span>
                             )}
+                            {act.is_quest && act.quest_status === 'in_progress' && (
+                              <span className="text-xs px-2 py-0.5 bg-bpjs-blue/20 text-bpjs-blue rounded-full font-medium">
+                                🔵 Sedang Dikerjakan
+                              </span>
+                            )}
                           </div>
                           <p className="text-sm text-white/70 leading-relaxed mt-1 whitespace-pre-line">{act.description}</p>
+
+                          {/* Quest info: mulai kapan */}
+                          {act.is_quest && act.quest_started_at && (
+                            <p className="text-xs text-white/40 mt-2">
+                              Mulai: {new Date(act.quest_started_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                              {act.due_date && ` • Deadline: ${new Date(act.due_date).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`}
+                            </p>
+                          )}
 
                           {/* Recurring progress bar */}
                           {act.is_recurring && act.progress_total_days && act.progress_total_days > 0 && (
@@ -288,6 +326,16 @@ export default function InternActivitiesPage() {
                         </div>
                       )}
 
+                      {/* Quest: tombol buka chat (submit via chat, bukan di sini) */}
+                      {act.is_quest && act.quest_status === 'in_progress' && (
+                        <a href={`/intern/chat/${act.group_id}`} className="w-full mt-2 flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 rounded-lg transition-colors text-sm">
+                          <MessageCircle className="w-4 h-4" /> Buka Chat untuk Submit Quest
+                        </a>
+                      )}
+
+                      {/* Non-quest: tombol tandai selesai */}
+                      {!act.is_quest && (
+                      <>
                       {showCompleteModal === act.id ? (
                         <div className="mt-3 space-y-2">
                           <textarea
@@ -325,6 +373,8 @@ export default function InternActivitiesPage() {
                           )}
                         </button>
                       )}
+                      </>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -337,16 +387,36 @@ export default function InternActivitiesPage() {
                     <CheckCircle2 className="w-4 h-4" /> Selesai Hari Ini ({completed.length})
                   </h2>
                   {completed.map((act) => (
-                    <div key={act.id} className="glass-card p-3 opacity-70">
+                    <div key={act.id} className={`glass-card p-3 opacity-70 ${act.is_quest ? 'border-purple-400/40' : ''}`}>
                       <div className="flex items-start gap-2">
-                        <CheckCircle2 className="w-5 h-5 text-bpjs-green flex-shrink-0 mt-0.5" />
+                        {act.is_quest ? (
+                          <Target className="w-5 h-5 text-purple-300 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <CheckCircle2 className="w-5 h-5 text-bpjs-green flex-shrink-0 mt-0.5" />
+                        )}
                         <div className="flex-1">
-                          <h3 className="font-bold text-white text-sm">{act.title} {act.is_recurring && <span className="text-xs text-bpjs-green ml-1">(hari ini)</span>}</h3>
-                          {act.my_completion && !act.is_recurring && (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-bold text-white text-sm">{act.title}</h3>
+                            {act.is_quest && (
+                              <span className="text-xs px-1.5 py-0.5 bg-purple-500/30 text-purple-200 rounded-full font-medium">🎯 Quest</span>
+                            )}
+                            {act.is_recurring && !act.is_quest && <span className="text-xs text-bpjs-green ml-1">(hari ini)</span>}
+                            {act.is_quest && act.quest_xp_awarded && (
+                              <span className="text-xs px-1.5 py-0.5 bg-bpjs-yellow/20 text-bpjs-yellow rounded-full font-medium">
+                                +{act.quest_xp_awarded} XP
+                              </span>
+                            )}
+                          </div>
+                          {act.my_completion && !act.is_recurring && !act.is_quest && (
                             <p className="text-xs text-white/50 mt-0.5">📝 {new Date(act.my_completion).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
                           )}
-                          {act.is_recurring && act.today_completion && (
+                          {act.is_recurring && act.today_completion && !act.is_quest && (
                             <p className="text-xs text-white/50 mt-0.5">📝 Selesai hari ini {new Date(act.today_completion.completed_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} • +{(act.today_completion.exp_awarded || 0) + (act.today_completion.bonus_exp_awarded || 0)} EXP</p>
+                          )}
+                          {act.is_quest && act.quest_submitted_at && (
+                            <p className="text-xs text-white/50 mt-0.5">
+                              📝 Selesai {new Date(act.quest_submitted_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                            </p>
                           )}
                         </div>
                       </div>

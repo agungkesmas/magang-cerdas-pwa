@@ -169,6 +169,40 @@ export async function GET(req: NextRequest) {
     // Filter archived di code
     const allActivities = (activities || []).filter((a: any) => !a.is_archived);
 
+    // ============================================================
+    // TAMBAHAN: Fetch Quests (is_quest=true) yang sudah dimulai/diselesaikan
+    // oleh intern ini (via quest_logs)
+    // ============================================================
+    const { data: myQuestLogs } = await supabase
+      .from('quest_logs')
+      .select('quest_id, status, started_at, submitted_at, submission_notes, xp_awarded')
+      .eq('intern_id', intern!.intern_id)
+      .in('status', ['in_progress', 'completed']);
+
+    const questLogMap: Record<string, any> = {};
+    (myQuestLogs || []).forEach((ql: any) => {
+      questLogMap[ql.quest_id] = ql;
+    });
+
+    const questIds = Object.keys(questLogMap);
+    if (questIds.length > 0) {
+      const { data: questActivities, error: qErr } = await supabase
+        .from('activities')
+        .select('*')
+        .in('id', questIds)
+        .eq('is_quest', true);
+      if (qErr) console.error('[activities/list] quest fetch error:', qErr);
+
+      if (questActivities && questActivities.length > 0) {
+        // Merge Quests ke allActivities
+        questActivities.forEach((qa: any) => {
+          if (!qa.is_archived) {
+            allActivities.push(qa);
+          }
+        });
+      }
+    }
+
     // Get single completions by this intern (mode lama)
     const { data: myCompletions } = await supabase
       .from('activity_completions')
@@ -228,7 +262,7 @@ export async function GET(req: NextRequest) {
       return {
         ...a,
         my_completion: a.completed_by_intern_id === intern!.intern_id ? a.completed_at : (myCompletionMap[a.id] || null),
-        is_completed: a.completed_by_intern_id === intern!.intern_id || !!myCompletionMap[a.id],
+        is_completed: a.completed_by_intern_id === intern!.intern_id || !!myCompletionMap[a.id] || (questLogMap[a.id]?.status === 'completed'),
         is_overdue: a.due_date ? new Date(a.due_date).getTime() < Date.now() : false,
         // Recurring fields
         is_today_in_range: todayInRange,
@@ -237,7 +271,13 @@ export async function GET(req: NextRequest) {
         progress_completed_days: progressCompletedDays,
         progress_total_days: progressTotalDays,
         is_past_daily_deadline: isPastDailyDeadline,
-        my_daily_history: myDailyCompletionsMap[a.id] || []
+        my_daily_history: myDailyCompletionsMap[a.id] || [],
+        // Quest fields
+        is_quest: !!a.is_quest,
+        quest_status: questLogMap[a.id]?.status || null,
+        quest_started_at: questLogMap[a.id]?.started_at || null,
+        quest_submitted_at: questLogMap[a.id]?.submitted_at || null,
+        quest_xp_awarded: questLogMap[a.id]?.xp_awarded || null
       };
     });
 
