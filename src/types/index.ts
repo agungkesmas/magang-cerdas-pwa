@@ -77,16 +77,6 @@ export interface Attendance {
   notes: string | null;
 }
 
-export interface LogbookEntry {
-  id: string;
-  intern_id: string;
-  entry_date: string;
-  activity: string;
-  learning_summary: string | null;
-  difficulties: string | null;
-  created_at: string;
-}
-
 export interface Official {
   id: string;
   name: string;

@@ -653,7 +653,7 @@ function SecurityTab() {
 
       const interns = data.interns || [];
       // CSV format
-      const headers = ['Nama', 'Username', 'Password', 'Jurusan', 'Departemen', 'Institusi', 'Mulai', 'Selesai', 'EXP', 'Streak', 'Aktif', 'Logbook'];
+      const headers = ['Nama', 'Username', 'Password', 'Jurusan', 'Departemen', 'Institusi', 'Mulai', 'Selesai', 'EXP', 'Streak', 'Aktif'];
       const rows = interns.map((i: any) => [
         `"${i.name || ''}"`,
         `"${i.username || ''}"`,
@@ -665,8 +665,7 @@ function SecurityTab() {
         `"${i.end_date || ''}"`,
         i.total_exp || 0,
         i.streak_count || 0,
-        i.is_active ? 'Ya' : 'Tidak',
-        i.logbook_enabled !== false ? 'Digital' : 'Manual'
+        i.is_active ? 'Ya' : 'Tidak'
       ].join(','));
 
       const csv = [headers.join(','), ...rows].join('\n');
