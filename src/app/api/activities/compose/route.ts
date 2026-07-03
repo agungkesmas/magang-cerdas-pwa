@@ -28,7 +28,7 @@ Contoh output:
 2. Cari antrian klaim JHT hari ini — filter berdasarkan tanggal masuk.
 3. Untuk setiap dokumen, cek kelengkapan: KTP, KK, surat pengunduran diri bermeterai, buku tabungan.
 4. Cocokkan nama di KTP dengan nama di sistem JMO — kalau beda, flag ke pembimbing.
-5. Catat hasil verifikasi di logbook harian kamu.
+5. Catat hasil verifikasi di menu Aktivitas.
 6. Kalau ada dokumen kurang, hubungi peserta via telepon (nomor di sistem).
 💡 Kalau bingung, tanya kakak pembimbing ya!`;
 
@@ -42,7 +42,7 @@ function getStubComposition(title: string): string {
 3. Untuk setiap dokumen, cek kelengkapan: KTP, KK, surat resmi, buku tabungan, dll.
 4. Cocokkan data di dokumen fisik dengan data di sistem — kalau ada beda, catat dan laporkan.
 5. Verifikasi tanda tangan & meterai (kalau ada) — pastikan original, bukan fotokopi.
-6. Catat hasil verifikasi di logbook harian, tandai dokumen yang lengkap/kurang.
+6. Catat hasil verifikasi di menu Aktivitas, tandai dokumen yang lengkap/kurang.
 7. Kalau ada dokumen kurang, hubungi peserta atau eskalasi ke pembimbing.
 💡 Kalau bingung, tanya kakak pembimbing ya!`;
   }
@@ -105,11 +105,11 @@ function getStubComposition(title: string): string {
   // Default — generic task
   return `1. Pahami dulu tujuan tugas ini — tanya pembimbing kalau tidak jelas.
 2. Siapkan alat/bahan yang dibutuhkan (laptop, akun sistem, dokumen, dll).
-3. Kerjakan step by step, catat progres di logbook setiap selesai 1 tahap.
+3. Kerjakan step by step, tandai selesai di menu Aktivitas setiap selesai 1 tahap.
 4. Kalau nemu kendala, catat dan cari solusi — kalau buntu, tanya pembimbing.
 5. Review hasil sebelum submit — cek ulang apakah sudah sesuai instruksi.
 6. Submit hasil ke pembimbing, minta feedback.
-7. Catat pembelajaran di logbook: apa yang baru kamu pelajari hari ini?
+7. Catat hasil di menu Aktivitas: apa yang baru kamu pelajari hari ini?
 💡 Kalau bingung, tanya kakak pembimbing ya!`;
 }
 

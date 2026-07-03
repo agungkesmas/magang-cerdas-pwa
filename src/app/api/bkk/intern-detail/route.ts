@@ -1,6 +1,6 @@
 // ============================================================
 // /api/bkk/intern-detail — Detail view for one intern (BKK teacher)
-// Returns: profile, attendance summary, logbook entries, task completion summary
+// Returns: profile, attendance summary, activity history, task completion summary
 // Privacy-filtered: NO photos, GPS, AI instructions, raw passwords
 // Access control: intern's school_origin must be in teacher's schools[]
 // ============================================================
@@ -49,12 +49,49 @@ export async function GET(req: NextRequest) {
       .order('timestamp', { ascending: false })
       .limit(100);
 
-    // Fetch logbook entries
-    const { data: logbook } = await supabase
-      .from('logbook')
-      .select('id, entry_date, activity, learning_summary, difficulties, created_at')
+    // Fetch activity history (completed activities + quest completions)
+    const { data: activityCompletions } = await supabase
+      .from('activity_completions')
+      .select('activity_id, completion_notes, completed_at, activities!inner(title, description, is_quest, xp_reward)')
       .eq('intern_id', internId)
-      .order('entry_date', { ascending: false });
+      .order('completed_at', { ascending: false });
+
+    const { data: questCompletions } = await supabase
+      .from('quest_logs')
+      .select('quest_id, submitted_at, submission_notes, xp_awarded, activities!inner(title, is_quest)')
+      .eq('intern_id', internId)
+      .eq('status', 'completed')
+      .order('submitted_at', { ascending: false });
+
+    // Merge into unified activity history
+    const activityHistory: any[] = [];
+    (activityCompletions || []).forEach((c: any) => {
+      const act = c.activities as any;
+      if (act && !act.is_quest) {
+        activityHistory.push({
+          title: act.title,
+          description: act.description,
+          completed_at: c.completed_at,
+          notes: c.completion_notes,
+          xp: act.xp_reward || 20,
+          is_quest: false
+        });
+      }
+    });
+    (questCompletions || []).forEach((q: any) => {
+      const act = q.activities as any;
+      if (act && act.is_quest) {
+        activityHistory.push({
+          title: act.title,
+          description: '',
+          completed_at: q.submitted_at,
+          notes: q.submission_notes,
+          xp: q.xp_awarded || 20,
+          is_quest: true
+        });
+      }
+    });
+    activityHistory.sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime());
 
     // Fetch task completion summary (lowercase relationship name for PostgREST)
     const { data: completions } = await supabase
@@ -104,7 +141,7 @@ export async function GET(req: NextRequest) {
         last_attendance: att?.[0]?.timestamp || null,
         last_7_days: last7Days
       },
-      logbook_entries: logbook || [],
+      activity_history: activityHistory,
       task_completions: (completions || []).map((c: any) => ({
         task_id: c.task_id,
         task_title: c.tasks?.title,

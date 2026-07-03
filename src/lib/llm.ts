@@ -99,7 +99,7 @@ export function getStubInstruction(task: string, major: string): string {
     }
   }
   // Default
-  return `Hai! ${task} 🚀 Manfaatin pengetahuan dari jurusan ${m} kamu buat ngerjain tugas ini ya. Catat pembelajaran di logbook harian, dan jangan ragu tanya kakak pembimbing kalau bingung. Semangat! 💪`;
+  return `Hai! ${task} 🚀 Manfaatin pengetahuan dari jurusan ${m} kamu buat ngerjain tugas ini ya. Catat hasil di menu Aktivitas, dan jangan ragu tanya kakak pembimbing kalau bingung. Semangat! 💪`;
 }
 
 // ============================================================

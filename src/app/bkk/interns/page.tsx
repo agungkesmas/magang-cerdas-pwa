@@ -14,7 +14,7 @@ import {
   Calendar,
   CheckCircle2,
   XCircle,
-  BookHeart,
+  CheckSquare,
   AlertTriangle,
   ExternalLink
 } from 'lucide-react';
@@ -169,8 +169,8 @@ function InternList() {
                         {intern.attendance.check_in_count} check-in
                       </span>
                       <span className="flex items-center gap-1">
-                        <BookHeart className="w-3 h-3 text-bpjs-blue" />
-                        {intern.logbook_count} logbook
+                        <CheckSquare className="w-3 h-3 text-bpjs-blue" />
+                        {intern.logbook_count || 0} aktivitas
                       </span>
                     </div>
                   </div>
@@ -229,7 +229,7 @@ function InternDetail({ internId }: { internId: string }) {
     );
   }
 
-  const { intern, attendance_summary, logbook_entries, task_completions, certificate } = data;
+  const { intern, attendance_summary, activity_history, task_completions, certificate } = data;
 
   return (
     <div className="space-y-5">
@@ -381,29 +381,28 @@ function InternDetail({ internId }: { internId: string }) {
         </div>
       )}
 
-      {/* Logbook review */}
+      {/* Activity history */}
       <div className="bg-white rounded-2xl border border-gray-200 p-5">
         <h2 className="font-bold text-gray-900 mb-3" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-          Catatan Logbook ({logbook_entries.length})
+          Riwayat Aktivitas ({activity_history?.length || 0})
         </h2>
-        {logbook_entries.length === 0 ? (
+        {(!activity_history || activity_history.length === 0) ? (
           <div className="text-center py-6">
-            <BookHeart className="w-10 h-10 mx-auto text-gray-300 mb-2" />
-            <p className="text-gray-500 text-sm">Belum ada catatan logbook.</p>
+            <CheckSquare className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+            <p className="text-gray-500 text-sm">Belum ada aktivitas yang diselesaikan.</p>
           </div>
         ) : (
           <div className="space-y-3 max-h-96 overflow-y-auto">
-            {logbook_entries.map((log: any) => (
-              <div key={log.id} className="border-l-2 border-bpjs-green/30 pl-3 py-1">
+            {activity_history.map((act: any, i: number) => (
+              <div key={i} className="border-l-2 border-bpjs-green/30 pl-3 py-1">
                 <div className="text-xs font-semibold text-bpjs-green mb-1">
-                  {new Date(log.entry_date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                  {new Date(act.completed_at).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                  {act.is_quest && <span className="ml-2 px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full text-[10px] font-medium">🎯 Quest</span>}
+                  <span className="ml-2 text-bpjs-yellow font-bold">+{act.xp} XP</span>
                 </div>
-                <p className="text-sm text-gray-800 font-medium">{log.activity}</p>
-                {log.learning_summary && (
-                  <p className="text-xs text-gray-600 mt-1 italic">💡 {log.learning_summary}</p>
-                )}
-                {log.difficulties && (
-                  <p className="text-xs text-orange-700 mt-1">⚠️ {log.difficulties}</p>
+                <p className="text-sm text-gray-800 font-medium">{act.title}</p>
+                {act.notes && (
+                  <p className="text-xs text-gray-600 mt-1 italic">📝 {act.notes}</p>
                 )}
               </div>
             ))}

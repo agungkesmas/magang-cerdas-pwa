@@ -22,8 +22,6 @@ import {
   User,
   Mail,
   AlertCircle,
-  BookX,
-  BookHeart,
   BookOpen
 } from 'lucide-react';
 
@@ -256,17 +254,6 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={handleToggleLogbook}
-              className={`p-2 rounded-lg ${
-                schoolLogbookEnabled
-                  ? 'bg-purple-500/30 hover:bg-purple-500/40 text-purple-100'
-                  : 'bg-orange-500/30 hover:bg-orange-500/40 text-orange-100'
-              }`}
-              title={schoolLogbookEnabled ? 'Nonaktifkan logbook digital untuk semua peserta institusi ini' : 'Aktifkan logbook digital'}
-            >
-              {schoolLogbookEnabled ? <BookHeart className="w-4 h-4" /> : <BookX className="w-4 h-4" />}
-            </button>
-            <button
               onClick={() => setShowSchoolEdit(true)}
               className="p-2 bg-white/10 hover:bg-white/20 rounded-lg"
               title="Edit institusi"
@@ -282,16 +269,6 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
             </button>
           </div>
         </div>
-
-        {/* Logbook status banner */}
-        {!schoolLogbookEnabled && (
-          <div className="mt-3 bg-orange-500/20 border border-orange-400/30 rounded-lg px-4 py-2 flex items-center gap-2">
-            <BookX className="w-4 h-4 text-orange-200" />
-            <span className="text-sm text-orange-100">
-              Logbook digital dinonaktifkan untuk institusi ini. Semua peserta akan menggunakan buku logbook manual.
-            </span>
-          </div>
-        )}
 
         {/* Stats */}
         <div className="grid grid-cols-4 gap-3 mt-4">
@@ -568,11 +545,6 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
                             {i.department} • {i.total_exp} EXP
                           </p>
                         </div>
-                        {!i.logbook_enabled && (
-                          <span title="Logbook dinonaktifkan">
-                            <BookX className="w-4 h-4 text-orange-500" />
-                          </span>
-                        )}
                       </Link>
                     ))}
                   </div>
