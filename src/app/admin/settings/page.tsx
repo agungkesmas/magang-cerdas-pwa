@@ -136,10 +136,10 @@ export default function AdminSettingsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-white border border-gray-200 rounded-lg p-1">
+      <div className="flex gap-1 bg-white border border-gray-200 rounded-lg p-1 overflow-x-auto flex-nowrap">
         <button
           onClick={() => setTab('office')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium flex-shrink-0 whitespace-nowrap ${
             tab === 'office' ? 'bg-bpjs-blue text-white' : 'text-gray-700 hover:bg-gray-50'
           }`}
         >
@@ -147,7 +147,7 @@ export default function AdminSettingsPage() {
         </button>
         <button
           onClick={() => setTab('llm')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium flex-shrink-0 whitespace-nowrap ${
             tab === 'llm' ? 'bg-bpjs-blue text-white' : 'text-gray-700 hover:bg-gray-50'
           }`}
         >
@@ -155,7 +155,7 @@ export default function AdminSettingsPage() {
         </button>
         <button
           onClick={() => setTab('security')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium flex-shrink-0 whitespace-nowrap ${
             tab === 'security' ? 'bg-bpjs-blue text-white' : 'text-gray-700 hover:bg-gray-50'
           }`}
         >
@@ -163,7 +163,7 @@ export default function AdminSettingsPage() {
         </button>
         <button
           onClick={() => setTab('officials')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium flex-shrink-0 whitespace-nowrap ${
             tab === 'officials' ? 'bg-bpjs-blue text-white' : 'text-gray-700 hover:bg-gray-50'
           }`}
         >
@@ -171,7 +171,7 @@ export default function AdminSettingsPage() {
         </button>
         <button
           onClick={() => setTab('holidays')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium flex-shrink-0 whitespace-nowrap ${
             tab === 'holidays' ? 'bg-bpjs-blue text-white' : 'text-gray-700 hover:bg-gray-50'
           }`}
         >
@@ -179,7 +179,7 @@ export default function AdminSettingsPage() {
         </button>
         <button
           onClick={() => setTab('certificate')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium flex-shrink-0 whitespace-nowrap ${
             tab === 'certificate' ? 'bg-bpjs-blue text-white' : 'text-gray-700 hover:bg-gray-50'
           }`}
         >

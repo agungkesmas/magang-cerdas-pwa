@@ -285,7 +285,7 @@ export default function PembinaHomePage() {
           </div>
           <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1 -mr-1 leaderboard-scroll">
             {myInterns.map((intern) => (
-              <div key={intern.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-purple-50/40 transition-colors">
+              <div key={intern.id} className="flex items-start gap-3 p-2 rounded-lg hover:bg-purple-50/40 transition-colors flex-wrap">
                 <div className="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
                   <span className="text-purple-600 font-bold text-sm">{intern.name.charAt(0).toUpperCase()}</span>
                 </div>
@@ -355,6 +355,8 @@ export default function PembinaHomePage() {
                   <p className="font-bold text-bpjs-yellow text-sm">{intern.total_exp}</p>
                   <p className="text-[10px] text-gray-400">EXP</p>
                 </div>
+                {/* Buttons — wrap ke baris baru di mobile */}
+                <div className="flex items-center gap-1.5 w-full sm:w-auto justify-end sm:justify-start">
                 <button
                   onClick={() => setAssignTaskFor(intern)}
                   title={`Beri tugas ke ${intern.name}`}
@@ -413,6 +415,7 @@ export default function PembinaHomePage() {
                 >
                   {dmLoading === intern.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
                 </button>
+                </div>
               </div>
             ))}
           </div>

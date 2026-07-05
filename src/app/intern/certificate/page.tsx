@@ -370,12 +370,13 @@ function CertificatePreview({ profile, certSettings }: { profile: any; certSetti
       </div>
 
       {/* Preview sertifikat — desain sama dengan halaman verifikasi publik */}
-      <div className="bg-white rounded-2xl shadow-2xl overflow-hidden relative">
+      <div className="overflow-x-auto -mx-4 px-4">
+      <div className="bg-white rounded-2xl shadow-2xl overflow-hidden relative min-w-0">
         {/* Border dekoratif atas — pakai warna custom */}
         <div style={{ height: '8px', background: `linear-gradient(to right, ${borderColor}, ${accentColor}, ${borderColor})` }} />
 
         {/* Konten */}
-        <div className="p-6 sm:p-8 relative">
+        <div className="p-4 sm:p-8 relative">
           {/* Watermark */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none">
             <Trophy className="w-72 h-72" style={{ color: borderColor }} />
@@ -496,6 +497,7 @@ function CertificatePreview({ profile, certSettings }: { profile: any; certSetti
 
         {/* Border dekoratif bawah — pakai warna custom */}
         <div style={{ height: '8px', background: `linear-gradient(to right, ${borderColor}, ${accentColor}, ${borderColor})` }} />
+      </div>
       </div>
 
       {/* CTA — cara dapatkan sertifikat */}
