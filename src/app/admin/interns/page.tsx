@@ -97,6 +97,7 @@ export default function AdminInternsPage() {
   const [printItems, setPrintItems] = useState<PrintableCredential[] | null>(null);
   const [tab, setTab] = useState<'active' | 'archived'>('active');
   const [tagFilter, setTagFilter] = useState<string>('all');
+  const [tagDropdownFor, setTagDropdownFor] = useState<string | null>(null);
 
   const fetchInterns = useCallback(async () => {
     setLoading(true);
@@ -332,24 +333,38 @@ export default function AdminInternsPage() {
                       <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">{intern.major}</span>
                       {!intern.is_active && <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full font-medium">Arsip</span>}
                       {(intern.tags || []).map(tag => (
-                        <span key={tag} className={`text-xs px-2 py-0.5 rounded-full border ${TAG_COLORS[tag] || 'bg-gray-100 text-gray-600 border-gray-300'}`}>{tag}</span>
+                        <button
+                          key={tag}
+                          onClick={() => handleToggleTag(intern.id, tag, intern.tags || [])}
+                          className={`text-xs px-2 py-0.5 rounded-full border ${TAG_COLORS[tag] || 'bg-gray-100 text-gray-600 border-gray-300'} hover:opacity-70 cursor-pointer`}
+                          title={`Klik untuk hapus tag "${tag}"`}
+                        >
+                          {tag} ✕
+                        </button>
                       ))}
-                      {/* Tag dropdown */}
-                      <div className="relative inline-block group">
-                        <button className="text-xs px-2 py-0.5 bg-bpjs-blue/10 text-bpjs-blue rounded-full hover:bg-bpjs-blue/20 font-medium">+ Tag</button>
-                        <div className="hidden group-hover:block absolute z-20 top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-2 min-w-[160px]">
-                          {PREDEFINED_TAGS.map(t => (
-                            <button
-                              key={t.label}
-                              onClick={() => handleToggleTag(intern.id, t.label, intern.tags || [])}
-                              className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded text-xs hover:bg-gray-50 ${(intern.tags || []).includes(t.label) ? 'font-bold' : ''}`}
-                            >
-                              <span className={`w-2 h-2 rounded-full ${t.color.split(' ')[0]}`}></span>
-                              {t.label}
-                              {(intern.tags || []).includes(t.label) && <span className="ml-auto text-green-600">✓</span>}
-                            </button>
-                          ))}
-                        </div>
+                      {/* Tag dropdown — click based */}
+                      <div className="relative inline-block">
+                        <button
+                          onClick={() => setTagDropdownFor(tagDropdownFor === intern.id ? null : intern.id)}
+                          className="text-xs px-2 py-0.5 bg-bpjs-blue/10 text-bpjs-blue rounded-full hover:bg-bpjs-blue/20 font-medium"
+                        >
+                          {tagDropdownFor === intern.id ? '✕ Tutup' : '+ Tag'}
+                        </button>
+                        {tagDropdownFor === intern.id && (
+                          <div className="absolute z-30 top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-2 min-w-[180px]">
+                            {PREDEFINED_TAGS.map(t => (
+                              <button
+                                key={t.label}
+                                onClick={() => handleToggleTag(intern.id, t.label, intern.tags || [])}
+                                className={`flex items-center gap-2 w-full text-left px-2 py-1.5 rounded text-xs hover:bg-gray-50 ${(intern.tags || []).includes(t.label) ? 'font-bold' : ''}`}
+                              >
+                                <span className={`w-2.5 h-2.5 rounded-full ${t.color.split(' ')[0]}`}></span>
+                                {t.label}
+                                {(intern.tags || []).includes(t.label) && <span className="ml-auto text-green-600">✓</span>}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-4 mt-1 text-xs text-gray-500 flex-wrap">
