@@ -280,13 +280,15 @@ export default function InternProfilePage() {
             <p className="font-medium text-white/80 mb-1">Yang bisa diubah:</p>
             <ul className="space-y-0.5">
               <li>✅ Foto profil (klik icon kamera)</li>
-              <li>✅ Nomor telepon</li>
+              <li>✅ Email</li>
+              <li>✅ WhatsApp</li>
+              <li>✅ Nomor telepon lain</li>
             </ul>
             <p className="font-medium text-white/80 mt-2 mb-1">Yang tidak bisa diubah (hubungi admin):</p>
             <ul className="space-y-0.5">
               <li>🔒 Nama, username, password</li>
               <li>🔒 Jurusan, departemen, institusi</li>
-              <li>🔒 Periode magang</li>
+              <li>🔒 Periode magang, EXP, streak</li>
             </ul>
           </div>
         </div>

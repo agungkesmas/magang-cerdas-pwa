@@ -17,11 +17,12 @@ export async function GET(req: NextRequest) {
 
     const supabase = createServerClient();
 
-    // Admin: return semua field (termasuk raw_password untuk manajemen)
+    // Admin: return semua field (termasuk raw_password + contact info untuk manajemen)
     // Pembina: exclude raw_password (security — tidak perlu lihat password peserta)
+    //          tapi tetap bisa lihat contact info (email/whatsapp) untuk koordinasi
     const selectFields = admin
-      ? 'id, name, school_origin, major, department, start_date, end_date, total_exp, streak_count, username, raw_password, is_active, certificate_unlocked, created_at'
-      : 'id, name, school_origin, major, department, start_date, end_date, total_exp, streak_count, username, is_active, certificate_unlocked, created_at';
+      ? 'id, name, school_origin, major, department, start_date, end_date, total_exp, streak_count, username, raw_password, is_active, certificate_unlocked, email, whatsapp, phone, photo_url, created_at'
+      : 'id, name, school_origin, major, department, start_date, end_date, total_exp, streak_count, username, is_active, certificate_unlocked, email, whatsapp, phone, photo_url, created_at';
 
     const { data, error } = await supabase
       .from('interns')
