@@ -55,8 +55,9 @@ export default function PembinaHomePage() {
     );
   }
 
-  const totalPembina = groups.reduce((sum, g) => sum + (g.pembina_count || 0), 0);
-  const totalPeserta = groups.reduce((sum, g) => sum + (g.peserta_count || 0), 0);
+  const visibleGroups = groups.filter(g => g.group_type !== 'dm');
+  const totalPembina = visibleGroups.reduce((sum, g) => sum + (g.pembina_count || 0), 0);
+  const totalPeserta = visibleGroups.reduce((sum, g) => sum + (g.peserta_count || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -239,7 +240,7 @@ export default function PembinaHomePage() {
           </div>
         ) : (
           <div className="grid gap-2">
-            {groups.map((g) => (
+            {visibleGroups.map((g) => (
               <Link
                 key={g.id}
                 href={`/pembina/chat/${g.id}`}
