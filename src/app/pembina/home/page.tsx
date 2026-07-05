@@ -16,7 +16,8 @@ import {
   Send,
   Mail,
   Clock,
-  Zap
+  Zap,
+  Tag
 } from 'lucide-react';
 
 export default function PembinaHomePage() {
@@ -27,6 +28,40 @@ export default function PembinaHomePage() {
   const [loading, setLoading] = useState(true);
   const [assignTaskFor, setAssignTaskFor] = useState<any | null>(null);
   const [dmLoading, setDmLoading] = useState<string | null>(null);
+  // Tags (sharing dengan admin — pembina bisa toggle tag peserta bimbingan)
+  const [tagDropdownFor, setTagDropdownFor] = useState<string | null>(null);
+  const [tagLoading, setTagLoading] = useState<string | null>(null); // intern_id yang sedang di-toggle
+
+  // Predefined tags (harus sama dengan admin/interns/page.tsx + API pembina/interns/[id]/tags)
+  const PREDEFINED_TAGS = [
+    { label: 'Unggul', color: 'bg-green-100 text-green-700 border-green-300' },
+    { label: 'Perlu Perhatian', color: 'bg-amber-100 text-amber-700 border-amber-300' },
+    { label: 'Leadership', color: 'bg-blue-100 text-blue-700 border-blue-300' },
+    { label: 'Fast Learner', color: 'bg-purple-100 text-purple-700 border-purple-300' },
+    { label: 'Bermasalah', color: 'bg-red-100 text-red-700 border-red-300' }
+  ];
+  const TAG_COLORS: Record<string, string> = Object.fromEntries(PREDEFINED_TAGS.map(t => [t.label, t.color]));
+
+  async function handleToggleTag(internId: string, tag: string, currentTags: string[] = []) {
+    setTagLoading(internId);
+    try {
+      const res = await fetch(`/api/pembina/interns/${internId}/tags`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tag })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      // Update state lokal (anti refetch full list)
+      setMyInterns(prev => prev.map(i =>
+        i.id === internId ? { ...i, tags: data.tags } : i
+      ));
+    } catch (e: any) {
+      alert('Gagal update tag: ' + e.message);
+    } finally {
+      setTagLoading(null);
+    }
+  }
 
   useEffect(() => {
     Promise.all([
@@ -167,6 +202,45 @@ export default function PembinaHomePage() {
                       'text-green-600'
                     }`}>{intern.days_remaining} hari tersisa</span>
                   </div>
+                  {/* Tags badges — sharing dengan admin (internal, tidak tampil ke peserta) */}
+                  {intern.tags && intern.tags.length > 0 && (
+                    <div className="flex items-center gap-1 mt-1 flex-wrap">
+                      {intern.tags.map((tag: string) => (
+                        <span
+                          key={tag}
+                          onClick={() => handleToggleTag(intern.id, tag, intern.tags || [])}
+                          className={`text-[10px] px-1.5 py-0.5 rounded-full border ${TAG_COLORS[tag] || 'bg-gray-100 text-gray-600 border-gray-300'} hover:opacity-70 cursor-pointer`}
+                          title={`Klik untuk hapus tag "${tag}"`}
+                        >
+                          {tag} ✕
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {/* Tag dropdown — click based */}
+                  {tagDropdownFor === intern.id && (
+                    <div className="mt-1 p-2 bg-white border border-gray-200 rounded-lg shadow-sm space-y-1">
+                      <p className="text-[10px] text-gray-500 font-medium">Pilih tag:</p>
+                      {PREDEFINED_TAGS.map(t => (
+                        <button
+                          key={t.label}
+                          onClick={() => handleToggleTag(intern.id, t.label, intern.tags || [])}
+                          disabled={tagLoading === intern.id}
+                          className={`block w-full text-left text-[11px] px-2 py-1 rounded ${TAG_COLORS[t.label]} hover:opacity-80 disabled:opacity-50 ${
+                            (intern.tags || []).includes(t.label) ? 'font-bold ring-1 ring-offset-1' : ''
+                          }`}
+                        >
+                          {t.label} {(intern.tags || []).includes(t.label) ? '✓' : ''}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setTagDropdownFor(null)}
+                        className="block w-full text-center text-[10px] text-gray-400 hover:text-gray-600 pt-1"
+                      >
+                        Tutup
+                      </button>
+                    </div>
+                  )}
                   {/* Progress bar */}
                   <div className="mt-1 flex items-center gap-2">
                     <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden max-w-[200px]">
@@ -189,6 +263,23 @@ export default function PembinaHomePage() {
                   className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-md flex-shrink-0"
                 >
                   <Target className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setTagDropdownFor(tagDropdownFor === intern.id ? null : intern.id)}
+                  disabled={tagLoading === intern.id}
+                  title={`Tag/Flag ${intern.name} (Unggul, Perlu Perhatian, dll)`}
+                  className={`relative p-2 rounded-md flex-shrink-0 disabled:opacity-50 ${
+                    (intern.tags || []).length > 0
+                      ? 'bg-amber-100 hover:bg-amber-200 text-amber-700'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                  }`}
+                >
+                  {tagLoading === intern.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Tag className="w-4 h-4" />}
+                  {(intern.tags || []).length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                      {(intern.tags || []).length}
+                    </span>
+                  )}
                 </button>
                 <Link
                   href={`/pembina/interns/${intern.id}`}

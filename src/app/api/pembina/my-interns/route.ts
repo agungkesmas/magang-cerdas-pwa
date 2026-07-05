@@ -42,10 +42,10 @@ export async function GET() {
     // Deduplicate intern IDs (peserta bisa ada di multiple grup)
     const internIds = [...new Set(pesertaMembers.map((m: any) => m.user_id))];
 
-    // Get intern profiles
+    // Get intern profiles (tags included supaya pembina bisa lihat & edit tag)
     const { data: interns } = await supabase
       .from('interns')
-      .select('id, name, major, department, school_origin, total_exp, streak_count, is_active, start_date, end_date, photo_url')
+      .select('id, name, major, department, school_origin, total_exp, streak_count, is_active, start_date, end_date, photo_url, tags')
       .in('id', internIds)
       .eq('is_active', true)
       .order('total_exp', { ascending: false });
