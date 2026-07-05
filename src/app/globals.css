@@ -115,3 +115,63 @@ input[type="file"] {
 /* Safe area for mobile */
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
 .safe-top { padding-top: env(safe-area-inset-top, 0px); }
+
+/* ============================================================
+   SECURITY: Disable screenshot & text selection
+   Untuk dashboard Peserta Magang & BKK (kecuali saat mode maintenance)
+   Aktifkan dengan menambahkan class "secure-mode" ke body
+   ============================================================ */
+body.secure-mode {
+  /* Disable text selection */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Allow selection in input/textarea (user perlu ketik) */
+body.secure-mode input,
+body.secure-mode textarea,
+body.secure-mode select {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Disable screenshot on Android (FLAG_SECURE) via CSS — limited support */
+body.secure-mode {
+  /* iOS Safari: prevent callout on long press */
+  -webkit-touch-callout: none;
+  /* Prevent context menu (right-click / long-press) */
+  -webkit-tap-highlight-color: rgba(0,0,0,0);
+}
+
+/* Prevent drag of images (anti save image) */
+body.secure-mode img {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+  pointer-events: auto;
+}
+
+/* Print protection — hide everything when printing */
+body.secure-mode {
+  -webkit-print-color-adjust: exact;
+}
+
+@media print {
+  body.secure-mode * {
+    display: none !important;
+  }
+  body.secure-mode::after {
+    content: "🚫 Mencetak dilarang. Hubungi admin untuk informasi.";
+    display: block !important;
+    font-size: 24px;
+    text-align: center;
+    padding: 100px;
+    color: red;
+  }
+}
