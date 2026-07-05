@@ -43,6 +43,7 @@ export default function AdminPembinaPage() {
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [copied, setCopied] = useState<string | null>(null);
   const [printItems, setPrintItems] = useState<PrintableCredential[] | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const fetchPembina = useCallback(async () => {
     setLoading(true);
@@ -100,11 +101,92 @@ export default function AdminPembinaPage() {
           <p className="text-gray-500">Belum ada pembina terdaftar.</p>
         </div>
       ) : (
-        <div className="grid gap-3">
+        <>
+          {/* Bulk action bar */}
+          {(() => {
+            const selectedCount = filtered.filter((p) => selectedIds.has(p.id)).length;
+            const allSelected = filtered.length > 0 && selectedCount === filtered.length;
+            return (
+              <div className="bg-white border border-gray-200 rounded-xl p-3 flex items-center justify-between gap-3 flex-wrap">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedIds(new Set(filtered.map((p) => p.id)));
+                      else setSelectedIds(new Set());
+                    }}
+                    className="w-4 h-4 rounded border-gray-300 text-bpjs-blue focus:ring-bpjs-blue"
+                  />
+                  <span className="font-medium text-gray-700">
+                    {allSelected ? 'Batalkan pilih semua' : 'Pilih semua'} ({filtered.length})
+                  </span>
+                </label>
+                {selectedCount > 0 && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm text-gray-600">{selectedCount} dipilih</span>
+                    <button
+                      onClick={() => {
+                        const items = pembinaList
+                          .filter((p) => selectedIds.has(p.id))
+                          .map((p) => ({
+                            name: p.name,
+                            idLabel: 'ID Pembina',
+                            idValue: p.pembina_id,
+                            password: p.raw_password,
+                            loginUrl: '/pembina/login',
+                            subInfo: [{ label: 'Departemen', value: p.department }],
+                          }));
+                        setPrintItems(items);
+                      }}
+                      className="inline-flex items-center gap-1 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white text-xs font-semibold px-3 py-1.5 rounded-md"
+                    >
+                      <Printer className="w-3.5 h-3.5" /> Print Terpilih ({selectedCount})
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!confirm(`Yakin hapus ${selectedCount} pembina terpilih? Tindakan ini tidak bisa dibatalkan.`)) return;
+                        for (const id of selectedIds) {
+                          await fetch('/api/pembina/delete', {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id }),
+                          });
+                        }
+                        setSelectedIds(new Set());
+                        fetchPembina();
+                      }}
+                      className="inline-flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Hapus Terpilih ({selectedCount})
+                    </button>
+                    <button onClick={() => setSelectedIds(new Set())} className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1.5">
+                      Batal
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          <div className="grid gap-3">
           {filtered.map((p) => (
-            <div key={p.id} className={`bg-white rounded-xl border p-4 ${p.is_active ? 'border-gray-200' : 'border-red-200 bg-red-50/30'}`}>
+            <div key={p.id} className={`bg-white rounded-xl border p-4 ${p.is_active ? 'border-gray-200' : 'border-red-200 bg-red-50/30'} ${selectedIds.has(p.id) ? 'ring-2 ring-bpjs-blue/40' : ''}`}>
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div className="flex items-start gap-4 min-w-0 flex-1">
+                <div className="flex items-start gap-3 min-w-0 flex-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(p.id)}
+                    onChange={(e) => {
+                      setSelectedIds((prev) => {
+                        const next = new Set(prev);
+                        if (e.target.checked) next.add(p.id);
+                        else next.delete(p.id);
+                        return next;
+                      });
+                    }}
+                    className="w-4 h-4 mt-3 rounded border-gray-300 text-bpjs-blue focus:ring-bpjs-blue flex-shrink-0"
+                  />
                   <div className="w-12 h-12 rounded-full bg-bpjs-blue/10 flex items-center justify-center flex-shrink-0">
                     <UserCog className="w-6 h-6 text-bpjs-blue" />
                   </div>
@@ -158,6 +240,7 @@ export default function AdminPembinaPage() {
             </div>
           ))}
         </div>
+        </>
       )}
 
       {showForm && (

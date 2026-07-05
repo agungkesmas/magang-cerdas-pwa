@@ -52,6 +52,7 @@ export default function AdminBKKTeachersPage() {
   const [copied, setCopied] = useState<string | null>(null);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [printItems, setPrintItems] = useState<PrintableCredential[] | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -210,17 +211,101 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
           <p className="text-gray-500">Belum ada guru BKK. Klik "Tambah Guru BKK" untuk memulai.</p>
         </div>
       ) : (
-        <div className="grid gap-3">
+        <>
+          {/* Bulk action bar */}
+          {(() => {
+            const selectedCount = filtered.filter((t) => selectedIds.has(t.id)).length;
+            const allSelected = filtered.length > 0 && selectedCount === filtered.length;
+            return (
+              <div className="bg-white border border-gray-200 rounded-xl p-3 flex items-center justify-between gap-3 flex-wrap">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedIds(new Set(filtered.map((t) => t.id)));
+                      else setSelectedIds(new Set());
+                    }}
+                    className="w-4 h-4 rounded border-gray-300 text-bpjs-green focus:ring-bpjs-green"
+                  />
+                  <span className="font-medium text-gray-700">
+                    {allSelected ? 'Batalkan pilih semua' : 'Pilih semua'} ({filtered.length})
+                  </span>
+                </label>
+                {selectedCount > 0 && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm text-gray-600">{selectedCount} dipilih</span>
+                    <button
+                      onClick={() => {
+                        const items = teachers
+                          .filter((t) => selectedIds.has(t.id))
+                          .map((t) => ({
+                            name: t.name,
+                            idLabel: 'ID BKK',
+                            idValue: t.bkk_id || '-',
+                            password: t.raw_password,
+                            loginUrl: '/bkk/login',
+                            subInfo: [
+                              { label: 'Email', value: t.email },
+                              ...(t.schools?.length > 0 ? [{ label: 'Sekolah', value: t.schools.map((s) => s.name).join(', ') }] : []),
+                            ],
+                          }));
+                        setPrintItems(items);
+                      }}
+                      className="inline-flex items-center gap-1 bg-bpjs-green hover:bg-bpjs-green-dark text-white text-xs font-semibold px-3 py-1.5 rounded-md"
+                    >
+                      <Printer className="w-3.5 h-3.5" /> Print Terpilih ({selectedCount})
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!confirm(`Yakin hapus ${selectedCount} guru BKK terpilih? Tindakan ini tidak bisa dibatalkan.`)) return;
+                        for (const id of selectedIds) {
+                          await fetch('/api/bkk-teachers/update', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id, action: 'delete' }),
+                          });
+                        }
+                        setSelectedIds(new Set());
+                        fetchAll();
+                      }}
+                      className="inline-flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Hapus Terpilih ({selectedCount})
+                    </button>
+                    <button onClick={() => setSelectedIds(new Set())} className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1.5">
+                      Batal
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          <div className="grid gap-3">
           {filtered.map((t) => (
             <div
               key={t.id}
               className={`bg-white rounded-xl border p-4 transition-shadow hover:shadow-md ${
                 t.is_active ? 'border-gray-200' : 'border-red-200 bg-red-50/30'
-              }`}
+              } ${selectedIds.has(t.id) ? 'ring-2 ring-bpjs-green/40' : ''}`}
             >
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 {/* Identity */}
-                <div className="flex items-start gap-4 min-w-0 flex-1">
+                <div className="flex items-start gap-3 min-w-0 flex-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(t.id)}
+                    onChange={(e) => {
+                      setSelectedIds((prev) => {
+                        const next = new Set(prev);
+                        if (e.target.checked) next.add(t.id);
+                        else next.delete(t.id);
+                        return next;
+                      });
+                    }}
+                    className="w-4 h-4 mt-3 rounded border-gray-300 text-bpjs-green focus:ring-bpjs-green flex-shrink-0"
+                  />
                   <div className="w-12 h-12 rounded-full bg-bpjs-green/10 flex items-center justify-center flex-shrink-0">
                     <GraduationCap className="w-6 h-6 text-bpjs-green" />
                   </div>
@@ -349,6 +434,7 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
             </div>
           ))}
         </div>
+        </>
       )}
 
       {/* Add/Edit Modal */}
