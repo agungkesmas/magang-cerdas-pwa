@@ -21,6 +21,7 @@ import {
   Download,
   Printer
 } from 'lucide-react';
+import PrintCredentialsModal, { PrintableCredential } from '@/components/admin/PrintCredentialsModal';
 
 interface Intern {
   id: string;
@@ -79,6 +80,8 @@ export default function AdminInternsPage() {
   const [showBatch, setShowBatch] = useState(false);
   const [batchResults, setBatchResults] = useState<BatchResult[] | null>(null);
   const [batchLoading, setBatchLoading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [printItems, setPrintItems] = useState<PrintableCredential[] | null>(null);
 
   const fetchInterns = useCallback(async () => {
     setLoading(true);
@@ -136,14 +139,109 @@ export default function AdminInternsPage() {
       {loading ? (
         <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-bpjs-blue" /></div>
       ) : (
-        <div className="grid gap-3">
-          {interns.filter((i) => {
-            const s = search.toLowerCase();
-            return !s || i.name.toLowerCase().includes(s) || i.major.toLowerCase().includes(s) || i.username.toLowerCase().includes(s);
-          }).map((intern) => (
-            <div key={intern.id} className={`bg-white rounded-xl border p-4 ${intern.is_active ? 'border-gray-200' : 'border-red-200 bg-red-50/30'}`}>
+        <>
+          {/* Bulk action bar — muncul kalau ada yang dipilih */}
+          {(() => {
+            const filteredList = interns.filter((i) => {
+              const s = search.toLowerCase();
+              return !s || i.name.toLowerCase().includes(s) || i.major.toLowerCase().includes(s) || i.username.toLowerCase().includes(s);
+            });
+            const selectedCount = filteredList.filter((i) => selectedIds.has(i.id)).length;
+            const allSelected = filteredList.length > 0 && selectedCount === filteredList.length;
+            if (selectedCount === 0 && filteredList.length === 0) return null;
+            return (
+              <div className="bg-white border border-gray-200 rounded-xl p-3 flex items-center justify-between gap-3 flex-wrap">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedIds(new Set(filteredList.map((i) => i.id)));
+                      } else {
+                        setSelectedIds(new Set());
+                      }
+                    }}
+                    className="w-4 h-4 rounded border-gray-300 text-bpjs-blue focus:ring-bpjs-blue"
+                  />
+                  <span className="font-medium text-gray-700">
+                    {allSelected ? 'Batalkan pilih semua' : 'Pilih semua'} ({filteredList.length})
+                  </span>
+                </label>
+                {selectedCount > 0 && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm text-gray-600">{selectedCount} dipilih</span>
+                    <button
+                      onClick={() => {
+                        const items = interns
+                          .filter((i) => selectedIds.has(i.id))
+                          .map((i) => ({
+                            name: i.name,
+                            idLabel: 'Username',
+                            idValue: i.username,
+                            password: i.raw_password,
+                            loginUrl: '/intern/login',
+                            subInfo: [
+                              { label: 'Jurusan', value: i.major },
+                              { label: 'Dept', value: i.department },
+                            ],
+                          }));
+                        setPrintItems(items);
+                      }}
+                      className="inline-flex items-center gap-1 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white text-xs font-semibold px-3 py-1.5 rounded-md"
+                    >
+                      <Printer className="w-3.5 h-3.5" /> Print Terpilih ({selectedCount})
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!confirm(`Yakin hapus ${selectedCount} peserta terpilih? Tindakan ini tidak bisa dibatalkan.`)) return;
+                        for (const id of selectedIds) {
+                          await fetch('/api/interns/update', {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id }),
+                          });
+                        }
+                        setSelectedIds(new Set());
+                        fetchInterns();
+                      }}
+                      className="inline-flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Hapus Terpilih ({selectedCount})
+                    </button>
+                    <button
+                      onClick={() => setSelectedIds(new Set())}
+                      className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1.5"
+                    >
+                      Batal
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          <div className="grid gap-3">
+            {interns.filter((i) => {
+              const s = search.toLowerCase();
+              return !s || i.name.toLowerCase().includes(s) || i.major.toLowerCase().includes(s) || i.username.toLowerCase().includes(s);
+            }).map((intern) => (
+            <div key={intern.id} className={`bg-white rounded-xl border p-4 ${intern.is_active ? 'border-gray-200' : 'border-red-200 bg-red-50/30'} ${selectedIds.has(intern.id) ? 'ring-2 ring-bpjs-blue/40' : ''}`}>
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div className="flex items-start gap-4 min-w-0 flex-1">
+                <div className="flex items-start gap-3 min-w-0 flex-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(intern.id)}
+                    onChange={(e) => {
+                      setSelectedIds((prev) => {
+                        const next = new Set(prev);
+                        if (e.target.checked) next.add(intern.id);
+                        else next.delete(intern.id);
+                        return next;
+                      });
+                    }}
+                    className="w-4 h-4 mt-3 rounded border-gray-300 text-bpjs-blue focus:ring-bpjs-blue flex-shrink-0"
+                  />
                   <div className="w-12 h-12 rounded-full bg-bpjs-blue/10 flex items-center justify-center flex-shrink-0">
                     <span className="text-bpjs-blue font-bold text-lg">{intern.name.charAt(0).toUpperCase()}</span>
                   </div>
@@ -189,6 +287,25 @@ export default function AdminInternsPage() {
                     <button onClick={() => handleCopyShare(intern)} className="flex-1 inline-flex items-center justify-center gap-1 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white text-xs font-semibold px-2 py-1.5 rounded-md">
                       {copied === `share-${intern.id}` ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />} Copy
                     </button>
+                    <button
+                      onClick={() => {
+                        setPrintItems([{
+                          name: intern.name,
+                          idLabel: 'Username',
+                          idValue: intern.username,
+                          password: intern.raw_password,
+                          loginUrl: '/intern/login',
+                          subInfo: [
+                            { label: 'Jurusan', value: intern.major },
+                            { label: 'Dept', value: intern.department },
+                          ],
+                        }]);
+                      }}
+                      title="Print Kartu Kredensial"
+                      className="p-1.5 bg-bpjs-yellow/20 hover:bg-bpjs-yellow/30 text-bpjs-yellow-dark rounded-md"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                    </button>
                     <button onClick={() => { setEditingIntern(intern); setShowForm(true); }} className="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md"><Edit className="w-3.5 h-3.5" /></button>
                     <button onClick={() => handleRegenPwd(intern.id)} className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md"><RefreshCw className="w-3.5 h-3.5" /></button>
                     <button onClick={() => handleToggleActive(intern.id)} className={`p-1.5 rounded-md ${intern.is_active ? 'bg-orange-100 hover:bg-orange-200 text-orange-700' : 'bg-green-100 hover:bg-green-200 text-green-700'}`}>
@@ -201,6 +318,7 @@ export default function AdminInternsPage() {
             </div>
           ))}
         </div>
+        </>
       )}
 
       {showForm && (
@@ -216,6 +334,10 @@ export default function AdminInternsPage() {
           onClose={() => { setShowBatch(false); setBatchResults(null); }}
           onSuccess={(results) => { setBatchResults(results); fetchInterns(); }}
         />
+      )}
+
+      {printItems && (
+        <PrintCredentialsModal items={printItems} role="peserta" onClose={() => setPrintItems(null)} />
       )}
 
       {createdCreds && (
@@ -551,7 +673,7 @@ function BatchUploadModal({ onClose, onSuccess }: { onClose: () => void; onSucce
         </div>
 
         {showPrint && results && (
-          <PrintCredentialsModal results={results.filter((r) => r.success)} onClose={() => setShowPrint(false)} />
+          <BatchPrintCredentialsModal results={results.filter((r) => r.success)} onClose={() => setShowPrint(false)} />
         )}
       </div>
     </div>
@@ -559,9 +681,9 @@ function BatchUploadModal({ onClose, onSuccess }: { onClose: () => void; onSucce
 }
 
 // ============================================================
-// PrintCredentialsModal — Printable cards
+// BatchPrintCredentialsModal — Printable cards (untuk batch upload results)
 // ============================================================
-function PrintCredentialsModal({ results, onClose }: { results: BatchResult[]; onClose: () => void }) {
+function BatchPrintCredentialsModal({ results, onClose }: { results: BatchResult[]; onClose: () => void }) {
   const handlePrint = () => {
     window.print();
   };

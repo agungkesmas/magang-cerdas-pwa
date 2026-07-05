@@ -16,8 +16,10 @@ import {
   UserCog,
   Mail,
   Building2,
-  Award
+  Award,
+  Printer
 } from 'lucide-react';
+import PrintCredentialsModal, { PrintableCredential } from '@/components/admin/PrintCredentialsModal';
 
 interface Pembina {
   id: string;
@@ -40,6 +42,7 @@ export default function AdminPembinaPage() {
   const [createdCreds, setCreatedCreds] = useState<any>(null);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [copied, setCopied] = useState<string | null>(null);
+  const [printItems, setPrintItems] = useState<PrintableCredential[] | null>(null);
 
   const fetchPembina = useCallback(async () => {
     setLoading(true);
@@ -143,6 +146,7 @@ export default function AdminPembinaPage() {
                     <button onClick={() => handleCopyShare(p)} className="flex-1 inline-flex items-center justify-center gap-1 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white text-xs font-semibold px-2 py-1.5 rounded-md">
                       {copied === `share-${p.id}` ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />} Copy
                     </button>
+                    <button onClick={() => handlePrintCreds(p)} title="Print Kartu Kredensial" className="p-1.5 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-md"><Printer className="w-3.5 h-3.5" /></button>
                     <button onClick={() => handleResetPwd(p.id)} title="Reset Password" className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md"><RefreshCw className="w-3.5 h-3.5" /></button>
                     <button onClick={() => handleToggleActive(p)} className={`p-1.5 rounded-md ${p.is_active ? 'bg-orange-100 hover:bg-orange-200 text-orange-700' : 'bg-green-100 hover:bg-green-200 text-green-700'}`}>
                       {p.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -166,8 +170,25 @@ export default function AdminPembinaPage() {
       {createdCreds && (
         <CreatedCredsModal creds={createdCreds} onClose={() => setCreatedCreds(null)} copied={copied} setCopied={setCopied} />
       )}
+
+      {printItems && (
+        <PrintCredentialsModal items={printItems} role="pembina" onClose={() => setPrintItems(null)} />
+      )}
     </div>
   );
+
+  function handlePrintCreds(p: Pembina) {
+    setPrintItems([
+      {
+        name: p.name,
+        idLabel: 'ID Pembina',
+        idValue: p.pembina_id,
+        password: p.raw_password,
+        loginUrl: '/pembina/login',
+        subInfo: [{ label: 'Departemen', value: p.department }],
+      },
+    ]);
+  }
 
   function handleCopy(text: string, key: string) {
     navigator.clipboard.writeText(text);
