@@ -558,6 +558,9 @@ export default function InternAttendancePage() {
         )
       )}
 
+      {/* Warning: hari libur/weekend — check-in butuh approval pembina */}
+      <HolidayWarning />
+
       {/* Today's leave status (if approved) */}
       {todayLeave && (
         <div className="glass-card p-4 bg-bpjs-green/10 border-bpjs-green/30">
@@ -843,5 +846,55 @@ function LeaveForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: () 
         </button>
       </div>
     </form>
+  );
+}
+
+// ============================================================
+// HolidayWarning — Warning hari libur/weekend di halaman check-in
+// ============================================================
+function HolidayWarning() {
+  const [holiday, setHoliday] = useState<{ name: string; type: string } | null>(null);
+  const [isWeekend, setIsWeekend] = useState(false);
+
+  useEffect(() => {
+    const now = new Date();
+    const day = now.getDay(); // 0=Minggu, 6=Sabtu
+    if (day === 0 || day === 6) {
+      setIsWeekend(true);
+    }
+    // Fetch holidays
+    fetch('/api/holidays')
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          const today = now.toISOString().split('T')[0];
+          const found = (d.holidays || []).find((h: any) => h.date === today);
+          if (found) setHoliday({ name: found.name, type: found.type });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  if (!isWeekend && !holiday) return null;
+
+  const reason = holiday ? `Hari libur: ${holiday.name}` : 'Weekend (Sabtu/Minggu)';
+
+  return (
+    <div className="glass-card p-4 bg-amber-500/10 border-amber-500/30 border">
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+          <AlertTriangle className="w-5 h-5 text-amber-400" />
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-bold text-amber-300">
+            ⚠️ Hari ini {reason}
+          </p>
+          <p className="text-xs text-white/70 mt-0.5">
+            Check-in/out Anda di hari ini akan <span className="font-semibold text-amber-300">menunggu persetujuan pembina</span> sebelum EXP diberikan.
+            Pastikan Anda benar-benar ditugaskan oleh pembina untuk masuk di hari ini.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }

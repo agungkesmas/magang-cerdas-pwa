@@ -10,7 +10,10 @@ import {
   ShieldCheck,
   Star,
   Zap,
-  Crown
+  Crown,
+  Calendar,
+  Clock,
+  TrendingUp
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -126,6 +129,9 @@ export default function InternCertificatePage() {
           </div>
         </div>
       )}
+
+      {/* Preview Sertifikat Prestisius — motivasi peserta */}
+      {!isUnlocked && <CertificatePreview profile={profile} />}
 
       {/* Leaderboard */}
       <div className="glass-card p-4">
@@ -259,7 +265,14 @@ export default function InternCertificatePage() {
                   <div className="text-xs text-gray-500 mb-1">Verification ID</div>
                   <div className="font-mono text-sm font-bold text-bpjs-blue">{certificate.verification_id}</div>
                   <div className="text-xs text-gray-500 mt-1">
-                    Verify: {typeof window !== 'undefined' ? window.location.origin : ''}/api/certificate/verify?id={certificate.verification_id}
+                    <a
+                      href={`/verify/${certificate.verification_id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-bpjs-blue hover:underline"
+                    >
+                      {typeof window !== 'undefined' ? window.location.origin : ''}/verify/{certificate.verification_id}
+                    </a>
                   </div>
                 </div>
                 <div className="text-center">
@@ -287,6 +300,186 @@ export default function InternCertificatePage() {
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+// ============================================================
+// CertificatePreview — Preview sertifikat prestisius saat vault terkunci
+// Tujuan: motivasi peserta supaya berusaha capai tier Competent+ untuk dapatkan sertifikat
+// ============================================================
+function CertificatePreview({ profile }: { profile: any }) {
+  const { calculateTierProgress, calculateMaxExp, countWorkingDays } = require('@/lib/utils');
+
+  const tp = calculateTierProgress(profile.total_exp, profile.start_date, profile.end_date);
+  const maxExp = calculateMaxExp(profile.start_date, profile.end_date);
+  const workingDays = countWorkingDays(profile.start_date, profile.end_date);
+  const totalHours = workingDays * 8;
+
+  const tierConfig = {
+    Excellence: {
+      label: 'EXCELLENCE',
+      gradient: 'from-amber-400 to-yellow-500',
+      icon: Crown,
+      desc: 'Pencapaian Istimewa — Top 50% Peserta'
+    },
+    Competent: {
+      label: 'COMPETENT',
+      gradient: 'from-blue-500 to-bpjs-blue',
+      icon: Star,
+      desc: 'Kompeten — Standar Industri Tercapai'
+    },
+    Participation: {
+      label: 'PARTICIPATION',
+      gradient: 'from-gray-400 to-gray-500',
+      icon: Award,
+      desc: 'Partisipasi Aktif Program Magang'
+    }
+  };
+  const tier = tierConfig[tp.current_tier as keyof typeof tierConfig];
+  const TierIcon = tier.icon;
+
+  return (
+    <div className="space-y-4">
+      {/* Header info */}
+      <div className="text-center">
+        <h3 className="text-lg font-bold text-white mb-1" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+          🎓 Preview Sertifikat Magang Anda
+        </h3>
+        <p className="text-sm text-white/60">
+          Inilah sertifikat prestisius yang akan Anda dapatkan setelah menyelesaikan magang
+        </p>
+      </div>
+
+      {/* Preview sertifikat — desain sama dengan halaman verifikasi publik */}
+      <div className="bg-white rounded-2xl shadow-2xl overflow-hidden relative">
+        {/* Border dekoratif atas */}
+        <div className={`h-2 bg-gradient-to-r ${tier.gradient}`} />
+
+        {/* Konten */}
+        <div className="p-6 sm:p-8 relative">
+          {/* Watermark */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none">
+            <Trophy className="w-72 h-72 text-bpjs-blue" />
+          </div>
+
+          {/* Header sertifikat */}
+          <div className="relative flex items-start justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <div className="w-12 h-12 bg-bpjs-blue rounded-lg flex items-center justify-center">
+                <Trophy className="w-7 h-7 text-bpjs-yellow" strokeWidth={2.5} />
+              </div>
+              <div>
+                <div className="font-bold text-bpjs-blue-dark text-sm leading-tight">
+                  BPJS KETENAGAKERJAAN
+                </div>
+                <div className="text-[10px] text-gray-500">CABANG CIREBON</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-[9px] text-gray-400 uppercase tracking-wider">Sertifikat Magang</div>
+              <div className="font-mono text-[11px] font-bold text-bpjs-blue mt-0.5 bg-gray-100 px-2 py-0.5 rounded">
+                MC-XXXX-XXXXXX
+              </div>
+            </div>
+          </div>
+
+          {/* Title */}
+          <div className="text-center mb-6 relative">
+            <p className="text-[10px] text-gray-500 uppercase tracking-[0.3em] mb-1">Dengan ini menyatakan bahwa</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-bpjs-blue-dark mb-1" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+              {profile.name}
+            </h2>
+            <p className="text-xs text-gray-600">
+              {profile.school_origin || 'Institusi'} • {profile.major}
+            </p>
+            <p className="text-xs text-gray-700 mt-2">
+              telah menyelesaikan program magang di <span className="font-semibold text-bpjs-blue-dark">BPJS Ketenagakerjaan Cabang Cirebon</span> pada departemen <span className="font-semibold text-bpjs-blue-dark">{profile.department}</span>
+            </p>
+            <p className="text-xs font-semibold text-gray-800 mt-1">
+              {new Date(profile.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} — {new Date(profile.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
+          </div>
+
+          {/* Tier badge — estimasi tier saat ini */}
+          <div className="flex justify-center mb-6">
+            <div className={`relative inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-br ${tier.gradient} shadow-lg ring-2 ring-offset-2 ring-gray-200`}>
+              <TierIcon className="w-6 h-6 text-white fill-current" />
+              <div className="text-left">
+                <div className="text-[9px] text-white/80 uppercase tracking-wider">TIER ESTIMASI SAAT INI</div>
+                <div className="text-lg font-bold text-white">
+                  {tier.label}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats estimasi */}
+          <div className="bg-gradient-to-br from-gray-50 to-bpjs-blue/5 rounded-lg p-3 mb-4 border border-gray-200">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+              <div>
+                <Calendar className="w-4 h-4 mx-auto mb-0.5 text-bpjs-blue" />
+                <div className="text-base font-bold text-bpjs-blue">{workingDays}</div>
+                <div className="text-[9px] text-gray-500 uppercase">Hari Kerja</div>
+              </div>
+              <div>
+                <Clock className="w-4 h-4 mx-auto mb-0.5 text-bpjs-green" />
+                <div className="text-base font-bold text-bpjs-green">{totalHours.toLocaleString('id-ID')}</div>
+                <div className="text-[9px] text-gray-500 uppercase">Jam Magang</div>
+              </div>
+              <div>
+                <Zap className="w-4 h-4 mx-auto mb-0.5 text-bpjs-yellow" />
+                <div className="text-base font-bold text-bpjs-yellow">{profile.total_exp}</div>
+                <div className="text-[9px] text-gray-500 uppercase">EXP Anda</div>
+              </div>
+              <div>
+                <TrendingUp className="w-4 h-4 mx-auto mb-0.5 text-orange-500" />
+                <div className="text-base font-bold text-orange-500">{tp.percentage}%</div>
+                <div className="text-[9px] text-gray-500 uppercase">Capaian</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer mock */}
+          <div className="flex items-start justify-between pt-4 border-t border-gray-200">
+            <div>
+              <div className="text-[9px] text-gray-400 uppercase tracking-wider">Verification ID</div>
+              <div className="font-mono text-[11px] font-bold text-gray-400">MC-XXXX-XXXXXX</div>
+              <div className="text-[9px] text-gray-400 mt-0.5">Scan QR untuk verifikasi online</div>
+            </div>
+            <div className="text-center">
+              <div className="h-8 mb-1 w-32 bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
+              <div className="border-t border-gray-300 pt-0.5 min-w-[140px]">
+                <div className="text-[10px] font-bold text-gray-400">Kepala Cabang</div>
+                <div className="text-[9px] text-gray-400">BPJS Ketenagakerjaan</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Border dekoratif bawah */}
+        <div className={`h-2 bg-gradient-to-r ${tier.gradient}`} />
+      </div>
+
+      {/* CTA — cara dapatkan sertifikat */}
+      <div className="bg-bpjs-yellow/10 border border-bpjs-yellow/30 rounded-xl p-4 text-center">
+        <p className="text-sm text-white font-medium mb-1">
+          🎯 Cara Mendapatkan Sertifikat Ini
+        </p>
+        <p className="text-xs text-white/70 mb-3">
+          Capai tier <span className="font-bold text-bpjs-yellow">Competent</span> (25% dari {maxExp.toLocaleString('id-ID')} EXP) untuk membuka Vault & meminta admin menerbitkan sertifikat resmi.
+        </p>
+        <div className="inline-flex items-center gap-2 text-xs text-white/80">
+          <span>EXP Anda:</span>
+          <span className="font-bold text-bpjs-yellow">{profile.total_exp.toLocaleString('id-ID')}</span>
+          <span>/</span>
+          <span>{maxExp.toLocaleString('id-ID')}</span>
+          <span>•</span>
+          <span>Butuh</span>
+          <span className="font-bold text-bpjs-yellow">{tp.next_tier_exp ? (tp.next_tier_exp - profile.total_exp).toLocaleString('id-ID') : 0} EXP</span>
+          <span>lagi ke {tp.next_tier || 'Excellence'}</span>
+        </div>
+      </div>
     </div>
   );
 }

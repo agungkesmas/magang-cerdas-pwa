@@ -9,7 +9,8 @@ import {
   CheckCircle2,
   FileText,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  ShieldCheck
 } from 'lucide-react';
 
 interface AttendanceRow {
@@ -412,6 +413,51 @@ export default function AdminAttendancePage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Approval history — check-in/out di hari libur yang sudah diproses pembina */}
+      {records.filter((r: any) => r.approval_status === 'approved' || r.approval_status === 'rejected').length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-bpjs-blue" />
+            Riwayat Approval Check-in/out Hari Libur
+          </h3>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {records
+              .filter((r: any) => r.approval_status === 'approved' || r.approval_status === 'rejected')
+              .slice(0, 15)
+              .map((r: any) => (
+                <div key={r.id} className="flex items-center justify-between text-xs p-2 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-gray-900">{r.intern?.name}</span>
+                    <span className={`px-2 py-0.5 rounded-full font-medium ${r.type === 'Check-In' ? 'bg-bpjs-green/10 text-bpjs-green' : 'bg-orange-100 text-orange-700'}`}>
+                      {r.type}
+                    </span>
+                    {r.is_holiday_checkin && (
+                      <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px]">
+                        📅 Libur
+                      </span>
+                    )}
+                    <span className="text-gray-500">
+                      {new Date(r.timestamp).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-0.5 rounded-full font-medium ${
+                      r.approval_status === 'approved' ? 'bg-bpjs-green/10 text-bpjs-green' : 'bg-red-100 text-red-700'
+                    }`}>
+                      {r.approval_status === 'approved' ? '✓ Disetujui' : '✗ Ditolak'}
+                    </span>
+                    {r.approved_at && (
+                      <span className="text-gray-400 text-[10px]">
+                        {new Date(r.approved_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
           </div>
         </div>
       )}
