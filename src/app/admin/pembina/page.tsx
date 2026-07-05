@@ -17,7 +17,9 @@ import {
   Mail,
   Building2,
   Award,
-  Printer
+  Printer,
+  Archive,
+  RotateCcw
 } from 'lucide-react';
 import PrintCredentialsModal, { PrintableCredential } from '@/components/admin/PrintCredentialsModal';
 import BatchUploadModal from '@/components/admin/BatchUploadModal';
@@ -47,6 +49,7 @@ export default function AdminPembinaPage() {
   const [printItems, setPrintItems] = useState<PrintableCredential[] | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBatch, setShowBatch] = useState(false);
+  const [tab, setTab] = useState<'active' | 'archived'>('active');
 
   const fetchPembina = useCallback(async () => {
     setLoading(true);
@@ -63,7 +66,9 @@ export default function AdminPembinaPage() {
 
   const filtered = pembinaList.filter((p) => {
     const s = search.toLowerCase();
-    return !s || p.name.toLowerCase().includes(s) || p.email.toLowerCase().includes(s) || p.pembina_id.toLowerCase().includes(s);
+    const matchSearch = !s || p.name.toLowerCase().includes(s) || p.email.toLowerCase().includes(s) || p.pembina_id.toLowerCase().includes(s);
+    const matchTab = tab === 'active' ? p.is_active : !p.is_active;
+    return matchSearch && matchTab;
   });
 
   return (
@@ -74,7 +79,7 @@ export default function AdminPembinaPage() {
             Kelola Pembina Magang
           </h1>
           <p className="text-gray-500 text-sm mt-1">
-            {pembinaList.length} pembina terdaftar • {pembinaList.filter((p) => p.is_active).length} aktif
+            {pembinaList.filter(p => p.is_active).length} aktif • {pembinaList.filter(p => !p.is_active).length} arsip • {pembinaList.length} total
           </p>
         </div>
         <div className="flex gap-2">
@@ -102,6 +107,22 @@ export default function AdminPembinaPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
         />
+      </div>
+
+      {/* Tab Aktif / Arsip */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => { setTab('active'); setSelectedIds(new Set()); }}
+          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'active' ? 'bg-bpjs-blue text-white shadow-sm' : 'text-gray-600 bg-white border border-gray-200'}`}
+        >
+          Aktif ({pembinaList.filter(p => p.is_active).length})
+        </button>
+        <button
+          onClick={() => { setTab('archived'); setSelectedIds(new Set()); }}
+          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'archived' ? 'bg-gray-600 text-white shadow-sm' : 'text-gray-600 bg-white border border-gray-200'}`}
+        >
+          Arsip ({pembinaList.filter(p => !p.is_active).length})
+        </button>
       </div>
 
       {loading ? (
@@ -154,9 +175,46 @@ export default function AdminPembinaPage() {
                     >
                       <Printer className="w-3.5 h-3.5" /> Print Terpilih ({selectedCount})
                     </button>
+                    {tab === 'active' ? (
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Arsipkan ${selectedCount} pembina terpilih? Data tetap utuh, bisa di-restore kapan saja.`)) return;
+                          for (const id of selectedIds) {
+                            await fetch('/api/pembina/update', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ id, is_active: false }),
+                            });
+                          }
+                          setSelectedIds(new Set());
+                          fetchPembina();
+                        }}
+                        className="inline-flex items-center gap-1 bg-gray-600 hover:bg-gray-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md"
+                      >
+                        <Archive className="w-3.5 h-3.5" /> Arsipkan Terpilih ({selectedCount})
+                      </button>
+                    ) : (
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Restore ${selectedCount} pembina terpilih? Mereka akan aktif kembali.`)) return;
+                          for (const id of selectedIds) {
+                            await fetch('/api/pembina/update', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ id, is_active: true }),
+                            });
+                          }
+                          setSelectedIds(new Set());
+                          fetchPembina();
+                        }}
+                        className="inline-flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" /> Restore Terpilih ({selectedCount})
+                      </button>
+                    )}
                     <button
                       onClick={async () => {
-                        if (!confirm(`Yakin hapus ${selectedCount} pembina terpilih? Tindakan ini tidak bisa dibatalkan.`)) return;
+                        if (!confirm(`Yakin HAPUS PERMANEN ${selectedCount} pembina terpilih? Data akan hilang selamanya.`)) return;
                         for (const id of selectedIds) {
                           await fetch(`/api/pembina/delete?id=${id}`, { method: 'DELETE' });
                         }
@@ -165,7 +223,7 @@ export default function AdminPembinaPage() {
                       }}
                       className="inline-flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md"
                     >
-                      <Trash2 className="w-3.5 h-3.5" /> Hapus Terpilih ({selectedCount})
+                      <Trash2 className="w-3.5 h-3.5" /> Hapus Permanen ({selectedCount})
                     </button>
                     <button onClick={() => setSelectedIds(new Set())} className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1.5">
                       Batal
@@ -202,7 +260,7 @@ export default function AdminPembinaPage() {
                       <h3 className="font-semibold text-gray-900">{p.name}</h3>
                       <span className="text-xs px-2 py-0.5 bg-bpjs-blue/10 text-bpjs-blue rounded-full font-mono font-bold">{p.pembina_id}</span>
                       <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">{p.department}</span>
-                      {!p.is_active && <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full">Nonaktif</span>}
+                      {!p.is_active && <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full font-medium">Arsip</span>}
                     </div>
                     <div className="flex items-center gap-4 mt-1 text-xs text-gray-500 flex-wrap">
                       <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{p.email}</span>
@@ -237,8 +295,12 @@ export default function AdminPembinaPage() {
                     </button>
                     <button onClick={() => handlePrintCreds(p)} title="Print Kartu Kredensial" className="inline-flex items-center gap-1 bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs font-semibold px-2.5 py-1.5 rounded-md"><Printer className="w-3.5 h-3.5" /> Print</button>
                     <button onClick={() => handleResetPwd(p.id)} title="Reset Password" className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md"><RefreshCw className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => handleToggleActive(p)} className={`p-1.5 rounded-md ${p.is_active ? 'bg-orange-100 hover:bg-orange-200 text-orange-700' : 'bg-green-100 hover:bg-green-200 text-green-700'}`}>
-                      {p.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    <button
+                      onClick={() => handleToggleActive(p)}
+                      title={p.is_active ? 'Arsipkan pembina' : 'Restore pembina'}
+                      className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-md ${p.is_active ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-green-100 hover:bg-green-200 text-green-700'}`}
+                    >
+                      {p.is_active ? <><Archive className="w-3.5 h-3.5" /> Arsipkan</> : <><RotateCcw className="w-3.5 h-3.5" /> Restore</>}
                     </button>
                     <button onClick={() => handleDelete(p)} className="p-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-md"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>

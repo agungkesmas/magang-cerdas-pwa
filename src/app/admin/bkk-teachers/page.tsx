@@ -18,7 +18,9 @@ import {
   School as SchoolIcon,
   Edit,
   AlertCircle,
-  Printer
+  Printer,
+  Archive,
+  RotateCcw
 } from 'lucide-react';
 import PrintCredentialsModal, { PrintableCredential } from '@/components/admin/PrintCredentialsModal';
 import BatchUploadModal from '@/components/admin/BatchUploadModal';
@@ -56,6 +58,7 @@ export default function AdminBKKTeachersPage() {
   const [printItems, setPrintItems] = useState<PrintableCredential[] | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBatch, setShowBatch] = useState(false);
+  const [tab, setTab] = useState<'active' | 'archived'>('active');
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -148,10 +151,13 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
   };
 
   const filtered = teachers.filter(
-    (t) =>
-      t.name.toLowerCase().includes(search.toLowerCase()) ||
-      t.email.toLowerCase().includes(search.toLowerCase()) ||
-      t.schools.some((s) => s.name.toLowerCase().includes(search.toLowerCase()))
+    (t) => {
+      const matchSearch = t.name.toLowerCase().includes(search.toLowerCase()) ||
+        t.email.toLowerCase().includes(search.toLowerCase()) ||
+        t.schools.some((s) => s.name.toLowerCase().includes(search.toLowerCase()));
+      const matchTab = tab === 'active' ? t.is_active : !t.is_active;
+      return matchSearch && matchTab;
+    }
   );
 
   return (
@@ -163,7 +169,7 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
             Guru BKK
           </h1>
           <p className="text-gray-500 text-sm mt-1">
-            {teachers.length} guru BKK • {teachers.filter((t) => t.is_active).length} aktif
+            {teachers.filter(t => t.is_active).length} aktif • {teachers.filter(t => !t.is_active).length} arsip • {teachers.length} total
           </p>
         </div>
         <div className="flex gap-2">
@@ -211,6 +217,22 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
           </div>
         </div>
       )}
+
+      {/* Tab Aktif / Arsip */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => { setTab('active'); setSelectedIds(new Set()); }}
+          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'active' ? 'bg-bpjs-green text-white shadow-sm' : 'text-gray-600 bg-white border border-gray-200'}`}
+        >
+          Aktif ({teachers.filter(t => t.is_active).length})
+        </button>
+        <button
+          onClick={() => { setTab('archived'); setSelectedIds(new Set()); }}
+          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'archived' ? 'bg-gray-600 text-white shadow-sm' : 'text-gray-600 bg-white border border-gray-200'}`}
+        >
+          Arsip ({teachers.filter(t => !t.is_active).length})
+        </button>
+      </div>
 
       {/* List */}
       {loading ? (
@@ -268,9 +290,46 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
                     >
                       <Printer className="w-3.5 h-3.5" /> Print Terpilih ({selectedCount})
                     </button>
+                    {tab === 'active' ? (
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Arsipkan ${selectedCount} guru BKK terpilih? Data tetap utuh, bisa di-restore kapan saja.`)) return;
+                          for (const id of selectedIds) {
+                            await fetch('/api/bkk-teachers/update', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ id, is_active: false }),
+                            });
+                          }
+                          setSelectedIds(new Set());
+                          fetchAll();
+                        }}
+                        className="inline-flex items-center gap-1 bg-gray-600 hover:bg-gray-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md"
+                      >
+                        <Archive className="w-3.5 h-3.5" /> Arsipkan Terpilih ({selectedCount})
+                      </button>
+                    ) : (
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Restore ${selectedCount} guru BKK terpilih? Mereka akan aktif kembali.`)) return;
+                          for (const id of selectedIds) {
+                            await fetch('/api/bkk-teachers/update', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ id, is_active: true }),
+                            });
+                          }
+                          setSelectedIds(new Set());
+                          fetchAll();
+                        }}
+                        className="inline-flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" /> Restore Terpilih ({selectedCount})
+                      </button>
+                    )}
                     <button
                       onClick={async () => {
-                        if (!confirm(`Yakin hapus ${selectedCount} guru BKK terpilih? Tindakan ini tidak bisa dibatalkan.`)) return;
+                        if (!confirm(`Yakin HAPUS PERMANEN ${selectedCount} guru BKK terpilih? Data akan hilang selamanya.`)) return;
                         for (const id of selectedIds) {
                           await fetch(`/api/bkk-teachers/update?id=${id}`, { method: 'DELETE' });
                         }
@@ -279,7 +338,7 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
                       }}
                       className="inline-flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md"
                     >
-                      <Trash2 className="w-3.5 h-3.5" /> Hapus Terpilih ({selectedCount})
+                      <Trash2 className="w-3.5 h-3.5" /> Hapus Permanen ({selectedCount})
                     </button>
                     <button onClick={() => setSelectedIds(new Set())} className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1.5">
                       Batal
@@ -321,8 +380,8 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-semibold text-gray-900">{t.name}</h3>
                       {!t.is_active && (
-                        <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full font-medium">
-                          Nonaktif
+                        <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full font-medium">
+                          Arsip
                         </span>
                       )}
                     </div>
@@ -420,14 +479,10 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
                     </button>
                     <button
                       onClick={() => handleToggleActive(t)}
-                      title={t.is_active ? 'Nonaktifkan' : 'Aktifkan'}
-                      className={`p-1.5 rounded-md ${
-                        t.is_active
-                          ? 'bg-orange-100 hover:bg-orange-200 text-orange-700'
-                          : 'bg-green-100 hover:bg-green-200 text-green-700'
-                      }`}
+                      title={t.is_active ? 'Arsipkan BKK' : 'Restore BKK'}
+                      className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-md ${t.is_active ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-green-100 hover:bg-green-200 text-green-700'}`}
                     >
-                      {t.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      {t.is_active ? <><Archive className="w-3.5 h-3.5" /> Arsipkan</> : <><RotateCcw className="w-3.5 h-3.5" /> Restore</>}
                     </button>
                     <button
                       onClick={() => handleDelete(t.id)}

@@ -19,7 +19,9 @@ import {
   Edit,
   Upload,
   Download,
-  Printer
+  Printer,
+  Archive,
+  RotateCcw
 } from 'lucide-react';
 import PrintCredentialsModal, { PrintableCredential } from '@/components/admin/PrintCredentialsModal';
 
@@ -82,6 +84,7 @@ export default function AdminInternsPage() {
   const [batchLoading, setBatchLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [printItems, setPrintItems] = useState<PrintableCredential[] | null>(null);
+  const [tab, setTab] = useState<'active' | 'archived'>('active');
 
   const fetchInterns = useCallback(async () => {
     setLoading(true);
@@ -106,7 +109,7 @@ export default function AdminInternsPage() {
             Manajemen Peserta Magang
           </h1>
           <p className="text-gray-500 text-sm mt-1">
-            {interns.length} peserta terdaftar • {interns.filter((i) => i.is_active).length} aktif
+            {interns.filter((i) => i.is_active).length} aktif • {interns.filter((i) => !i.is_active).length} arsip • {interns.length} total
           </p>
         </div>
         <div className="flex gap-2">
@@ -136,6 +139,22 @@ export default function AdminInternsPage() {
         />
       </div>
 
+      {/* Tab Aktif / Arsip */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => { setTab('active'); setSelectedIds(new Set()); }}
+          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'active' ? 'bg-bpjs-blue text-white shadow-sm' : 'text-gray-600 bg-white border border-gray-200'}`}
+        >
+          Aktif ({interns.filter(i => i.is_active).length})
+        </button>
+        <button
+          onClick={() => { setTab('archived'); setSelectedIds(new Set()); }}
+          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'archived' ? 'bg-gray-600 text-white shadow-sm' : 'text-gray-600 bg-white border border-gray-200'}`}
+        >
+          Arsip ({interns.filter(i => !i.is_active).length})
+        </button>
+      </div>
+
       {loading ? (
         <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-bpjs-blue" /></div>
       ) : (
@@ -144,7 +163,9 @@ export default function AdminInternsPage() {
           {(() => {
             const filteredList = interns.filter((i) => {
               const s = search.toLowerCase();
-              return !s || i.name.toLowerCase().includes(s) || i.major.toLowerCase().includes(s) || i.username.toLowerCase().includes(s);
+              const matchSearch = !s || i.name.toLowerCase().includes(s) || i.major.toLowerCase().includes(s) || i.username.toLowerCase().includes(s);
+              const matchTab = tab === 'active' ? i.is_active : !i.is_active;
+              return matchSearch && matchTab;
             });
             const selectedCount = filteredList.filter((i) => selectedIds.has(i.id)).length;
             const allSelected = filteredList.length > 0 && selectedCount === filteredList.length;
@@ -192,9 +213,46 @@ export default function AdminInternsPage() {
                     >
                       <Printer className="w-3.5 h-3.5" /> Print Terpilih ({selectedCount})
                     </button>
+                    {tab === 'active' ? (
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Arsipkan ${selectedCount} peserta terpilih? Data tetap utuh, bisa di-restore kapan saja.`)) return;
+                          for (const id of selectedIds) {
+                            await fetch('/api/interns/update', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ id, is_active: false }),
+                            });
+                          }
+                          setSelectedIds(new Set());
+                          fetchInterns();
+                        }}
+                        className="inline-flex items-center gap-1 bg-gray-600 hover:bg-gray-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md"
+                      >
+                        <Archive className="w-3.5 h-3.5" /> Arsipkan Terpilih ({selectedCount})
+                      </button>
+                    ) : (
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Restore ${selectedCount} peserta terpilih? Mereka akan aktif kembali.`)) return;
+                          for (const id of selectedIds) {
+                            await fetch('/api/interns/update', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ id, is_active: true }),
+                            });
+                          }
+                          setSelectedIds(new Set());
+                          fetchInterns();
+                        }}
+                        className="inline-flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" /> Restore Terpilih ({selectedCount})
+                      </button>
+                    )}
                     <button
                       onClick={async () => {
-                        if (!confirm(`Yakin hapus ${selectedCount} peserta terpilih? Tindakan ini tidak bisa dibatalkan.`)) return;
+                        if (!confirm(`Yakin HAPUS PERMANEN ${selectedCount} peserta terpilih? Semua data (EXP, attendance, chat) akan hilang selamanya.`)) return;
                         for (const id of selectedIds) {
                           await fetch(`/api/interns/update?id=${id}`, { method: 'DELETE' });
                         }
@@ -203,7 +261,7 @@ export default function AdminInternsPage() {
                       }}
                       className="inline-flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md"
                     >
-                      <Trash2 className="w-3.5 h-3.5" /> Hapus Terpilih ({selectedCount})
+                      <Trash2 className="w-3.5 h-3.5" /> Hapus Permanen ({selectedCount})
                     </button>
                     <button
                       onClick={() => setSelectedIds(new Set())}
@@ -220,9 +278,11 @@ export default function AdminInternsPage() {
           <div className="grid gap-3">
             {interns.filter((i) => {
               const s = search.toLowerCase();
-              return !s || i.name.toLowerCase().includes(s) || i.major.toLowerCase().includes(s) || i.username.toLowerCase().includes(s);
+              const matchSearch = !s || i.name.toLowerCase().includes(s) || i.major.toLowerCase().includes(s) || i.username.toLowerCase().includes(s);
+              const matchTab = tab === 'active' ? i.is_active : !i.is_active;
+              return matchSearch && matchTab;
             }).map((intern) => (
-            <div key={intern.id} className={`bg-white rounded-xl border p-4 ${intern.is_active ? 'border-gray-200' : 'border-red-200 bg-red-50/30'} ${selectedIds.has(intern.id) ? 'ring-2 ring-bpjs-blue/40' : ''}`}>
+            <div key={intern.id} className={`bg-white rounded-xl border p-4 ${intern.is_active ? 'border-gray-200' : 'border-gray-300 bg-gray-50/50'} ${selectedIds.has(intern.id) ? 'ring-2 ring-bpjs-blue/40' : ''}`}>
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div className="flex items-start gap-3 min-w-0 flex-1">
                   <input
@@ -246,7 +306,7 @@ export default function AdminInternsPage() {
                       <h3 className="font-semibold text-gray-900">{intern.name}</h3>
                       <span className="text-xs px-2 py-0.5 bg-bpjs-blue/10 text-bpjs-blue rounded-full">{intern.department}</span>
                       <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">{intern.major}</span>
-                      {!intern.is_active && <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full">Nonaktif</span>}
+                      {!intern.is_active && <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full font-medium">Arsip</span>}
                     </div>
                     <div className="flex items-center gap-4 mt-1 text-xs text-gray-500 flex-wrap">
                       <span className={`flex items-center gap-1 font-medium ${
@@ -324,8 +384,12 @@ export default function AdminInternsPage() {
                     </button>
                     <button onClick={() => { setEditingIntern(intern); setShowForm(true); }} className="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md"><Edit className="w-3.5 h-3.5" /></button>
                     <button onClick={() => handleRegenPwd(intern.id)} className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md"><RefreshCw className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => handleToggleActive(intern.id)} className={`p-1.5 rounded-md ${intern.is_active ? 'bg-orange-100 hover:bg-orange-200 text-orange-700' : 'bg-green-100 hover:bg-green-200 text-green-700'}`}>
-                      {intern.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    <button
+                      onClick={() => handleToggleActive(intern.id)}
+                      title={intern.is_active ? 'Arsipkan peserta' : 'Restore peserta'}
+                      className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-md ${intern.is_active ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-green-100 hover:bg-green-200 text-green-700'}`}
+                    >
+                      {intern.is_active ? <><Archive className="w-3.5 h-3.5" /> Arsipkan</> : <><RotateCcw className="w-3.5 h-3.5" /> Restore</>}
                     </button>
                     <button onClick={() => handleDelete(intern.id)} className="p-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-md"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>
