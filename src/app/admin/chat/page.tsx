@@ -153,8 +153,8 @@ export default function AdminChatListPage() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                      <h3 className="font-bold text-gray-900 line-clamp-2">{g.name}</h3>
+                    <h3 className="font-bold text-gray-900 leading-tight">{g.name}</h3>
+                    <div className="flex items-center gap-2 flex-wrap mt-0.5">
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                           isSystem
