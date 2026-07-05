@@ -333,6 +333,13 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
           {userRole === 'admin' && (
             <div className="flex items-center gap-2">
               <button
+                onClick={() => setShowDeployForm(true)}
+                className="inline-flex items-center gap-1 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white text-sm font-semibold px-3 py-2 rounded-lg"
+                title="Deploy quest ke grup ini (broadcast tugas dari admin)"
+              >
+                <Plus className="w-4 h-4" /> Deploy Quest
+              </button>
+              <button
                 onClick={() => setShowClearFiles(true)}
                 className="inline-flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium px-3 py-2 rounded-lg"
                 title="Hapus semua file dari grup (hemat storage)"
@@ -618,9 +625,10 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
       )}
 
       {/* Deploy Quest Modal */}
-      {showDeployForm && (
+      {showDeployForm && (userRole === 'pembina' || userRole === 'admin') && (
         <DeployQuestModal
           groupId={groupId}
+          userRole={userRole}
           onClose={() => setShowDeployForm(false)}
           onSuccess={() => { setShowDeployForm(false); fetchData(); }}
         />
@@ -630,9 +638,9 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
 }
 
 // ============================================================
-// DeployQuestModal — pembina buat quest baru
+// DeployQuestModal — pembina ATAU admin buat quest baru
 // ============================================================
-function DeployQuestModal({ groupId, onClose, onSuccess }: { groupId: string; onClose: () => void; onSuccess: () => void }) {
+function DeployQuestModal({ groupId, onClose, onSuccess, userRole = 'pembina' }: { groupId: string; onClose: () => void; onSuccess: () => void; userRole?: 'pembina' | 'admin' }) {
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -716,7 +724,11 @@ function DeployQuestModal({ groupId, onClose, onSuccess }: { groupId: string; on
       <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="flex items-center justify-between p-5 border-b border-gray-100 sticky top-0 bg-white">
           <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-            <Target className="w-5 h-5 text-purple-600" /> Deploy Quest Baru
+            <Target className={`w-5 h-5 ${userRole === 'admin' ? 'text-bpjs-blue' : 'text-purple-600'}`} />
+            Deploy Quest Baru
+            {userRole === 'admin' && (
+              <span className="text-[10px] px-2 py-0.5 bg-bpjs-blue/10 text-bpjs-blue rounded-full font-medium">ADMIN</span>
+            )}
           </h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
         </div>
@@ -850,7 +862,7 @@ function DeployQuestModal({ groupId, onClose, onSuccess }: { groupId: string; on
 
           <div className="flex gap-2 pt-2 sticky bottom-0 bg-white">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium">Batal</button>
-            <button type="submit" disabled={loading} className="flex-1 inline-flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded-lg text-sm disabled:opacity-50">
+            <button type="submit" disabled={loading} className={`flex-1 inline-flex items-center justify-center gap-2 ${userRole === 'admin' ? 'bg-bpjs-blue hover:bg-bpjs-blue-dark' : 'bg-purple-600 hover:bg-purple-700'} text-white font-semibold px-4 py-2 rounded-lg text-sm disabled:opacity-50`}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Target className="w-4 h-4" />} Deploy Quest
             </button>
           </div>
