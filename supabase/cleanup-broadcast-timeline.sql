@@ -19,10 +19,12 @@ DELETE FROM activity_daily_completions
 WHERE activity_id NOT IN (SELECT id FROM activities);
 
 -- ============================================================
--- STEP 3: Cleanup quest_logs yang point ke quests yg sudah dihapus
+-- STEP 3: Cleanup quest_logs yang point ke activities (quest) yg sudah dihapus
+-- (quest_logs.quest_id references activities.id, bukan tabel quests terpisah)
+-- ON DELETE CASCADE seharusnya sudah handle, tapi jaga-jaga
 -- ============================================================
 DELETE FROM quest_logs
-WHERE quest_id IS NOT NULL AND quest_id NOT IN (SELECT id FROM quests);
+WHERE quest_id NOT IN (SELECT id FROM activities);
 
 -- ============================================================
 -- STEP 4: Cleanup group_members yang point ke groups/interns/pembina yg sudah dihapus

@@ -70,10 +70,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         .order('timestamp', { ascending: false })
         .limit(500),
 
-      // Activity completions (one-time)
+      // Activity completions (one-time) — XP dari activities.xp_reward
       supabase
         .from('activity_completions')
-        .select('id, activity_id, completed_at, activities!inner(id, title, description, department, due_date, is_recurring, exp_awarded)')
+        .select('id, activity_id, completed_at, activities!inner(id, title, description, department, due_date, is_recurring, xp_reward)')
         .eq('intern_id', internId)
         .order('completed_at', { ascending: false })
         .limit(200),
@@ -86,10 +86,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         .order('completed_at', { ascending: false })
         .limit(500),
 
-      // Quest logs
+      // Quest logs (quest_id references activities.id — Quest = activities dengan is_quest=true)
       supabase
         .from('quest_logs')
-        .select('id, quest_id, status, exp_awarded, notes, submitted_at, quests(title, description, exp_reward)')
+        .select('id, quest_id, status, xp_awarded, submission_notes, submitted_at, started_at, activities!inner(id, title, description, xp_reward, is_quest)')
         .eq('intern_id', internId)
         .order('submitted_at', { ascending: false })
         .limit(200),
@@ -194,16 +194,20 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
     // Quest logs
     (questLogsRes.data || []).forEach((q: any) => {
+      const act = q.activities;
       timeline.push({
         id: `quest-${q.id}`,
-        timestamp: q.submitted_at,
+        timestamp: q.submitted_at || q.started_at || q.created_at,
         type: 'quest',
-        title: `Quest: ${q.quests?.title || 'Quest'}`,
-        description: q.quests?.description || q.notes || undefined,
+        title: `Quest: ${act?.title || 'Quest'}`,
+        description: act?.description || q.submission_notes || undefined,
         metadata: {
           quest_id: q.quest_id,
           status: q.status,
-          exp_awarded: q.exp_awarded
+          xp_awarded: q.xp_awarded,
+          xp_reward: act?.xp_reward,
+          started_at: q.started_at,
+          submitted_at: q.submitted_at
         }
       });
     });
@@ -271,7 +275,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       total_checkins: (attendanceRes.data || []).filter((a: any) => a.type === 'Check-In').length,
       total_checkouts: (attendanceRes.data || []).filter((a: any) => a.type === 'Check-Out').length,
       total_tasks_completed: (completionsRes.data || []).length + (dailyCompletionsRes.data || []).length,
-      total_quests: (questLogsRes.data || []).filter((q: any) => q.status === 'approved' || q.status === 'completed').length,
+      total_quests: (questLogsRes.data || []).filter((q: any) => q.status === 'completed').length,
       total_leaves: (leavesRes.data || []).length,
       has_certificate: (certificatesRes.data || []).length > 0,
       certificate_count: (certificatesRes.data || []).length,

@@ -422,9 +422,11 @@ export default function InternTimelineView({ internId, backHref = '/admin/activi
                       ) : item.type === 'quest' ? (
                         <div className="text-[10px] text-gray-500 mt-1 flex flex-wrap gap-2">
                           <span className="capitalize">Status: {item.metadata?.status}</span>
-                          {item.metadata?.exp_awarded > 0 && (
-                            <span className="text-bpjs-green font-medium">+{item.metadata.exp_awarded} EXP</span>
-                          )}
+                          {item.metadata?.xp_awarded > 0 ? (
+                            <span className="text-bpjs-green font-medium">+{item.metadata.xp_awarded} EXP</span>
+                          ) : item.metadata?.xp_reward ? (
+                            <span className="text-bpjs-green font-medium">+{item.metadata.xp_reward} EXP</span>
+                          ) : null}
                         </div>
                       ) : item.type === 'leave' ? (
                         <div className="text-[10px] text-gray-500 mt-1 flex flex-wrap gap-2">
