@@ -66,7 +66,7 @@ export default function InternChatListPage() {
                   <MessageCircle className="w-6 h-6 text-bpjs-yellow" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-white truncate">{g.name}</h3>
+                  <h3 className="font-bold text-white line-clamp-2">{g.name}</h3>
                   <div className="flex items-center gap-3 text-xs text-white/60 mt-0.5">
                     <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {g.peserta_count} peserta</span>
                     <span>{g.pembina_count} pembina</span>
