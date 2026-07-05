@@ -11,27 +11,35 @@ import {
   Target,
   Award,
   TrendingUp,
-  ArrowRight
+  ArrowRight,
+  X,
+  Send
 } from 'lucide-react';
 
 export default function PembinaHomePage() {
   const [pembina, setPembina] = useState<any>(null);
   const [groups, setGroups] = useState<any[]>([]);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [myInterns, setMyInterns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [assignTaskFor, setAssignTaskFor] = useState<any | null>(null);
 
   useEffect(() => {
     Promise.all([
       fetch('/api/groups/list').then(r => r.json()),
       fetch('/api/leaderboard').then(r => r.json()),
+      fetch('/api/pembina/my-interns').then(r => r.json()),
     ])
-      .then(([groupData, lbData]) => {
+      .then(([groupData, lbData, internsData]) => {
         if (groupData.success) {
           setGroups(groupData.groups || []);
           setPembina({ name: 'Pembina' });
         }
         if (lbData.success) {
           setLeaderboard(lbData.leaderboard || []);
+        }
+        if (internsData.success) {
+          setMyInterns(internsData.interns || []);
         }
       })
       .finally(() => setLoading(false));
@@ -128,6 +136,61 @@ export default function PembinaHomePage() {
         </Link>
       </div>
 
+      {/* Peserta Saya — list peserta yang dibimbing */}
+      {myInterns.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-200 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+              <Users className="w-5 h-5 text-purple-600" /> Peserta Saya
+            </h2>
+            <span className="text-xs text-gray-400">{myInterns.length} peserta aktif</span>
+          </div>
+          <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1 -mr-1 leaderboard-scroll">
+            {myInterns.map((intern) => (
+              <div key={intern.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-purple-50/40 transition-colors">
+                <div className="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                  <span className="text-purple-600 font-bold text-sm">{intern.name.charAt(0).toUpperCase()}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 text-sm truncate">{intern.name}</p>
+                  <div className="flex items-center gap-2 text-xs text-gray-500 flex-wrap">
+                    <span>{intern.major}</span>
+                    <span>•</span>
+                    <span className={`font-medium ${
+                      intern.time_progress >= 80 ? 'text-red-600' :
+                      intern.time_progress >= 50 ? 'text-amber-600' :
+                      'text-green-600'
+                    }`}>{intern.days_remaining} hari tersisa</span>
+                  </div>
+                  {/* Progress bar */}
+                  <div className="mt-1 flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden max-w-[200px]">
+                      <div className={`h-full rounded-full ${
+                        intern.time_progress >= 80 ? 'bg-red-400' :
+                        intern.time_progress >= 50 ? 'bg-amber-400' :
+                        'bg-green-400'
+                      }`} style={{ width: `${intern.time_progress}%` }} />
+                    </div>
+                    <span className="text-[10px] text-gray-400">{intern.time_progress}%</span>
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="font-bold text-bpjs-yellow text-sm">{intern.total_exp}</p>
+                  <p className="text-[10px] text-gray-400">EXP</p>
+                </div>
+                <button
+                  onClick={() => setAssignTaskFor(intern)}
+                  title={`Beri tugas ke ${intern.name}`}
+                  className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-md flex-shrink-0"
+                >
+                  <Target className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* List Grup */}
       <div className="bg-white rounded-2xl border border-gray-200 p-5">
         <div className="flex items-center justify-between mb-4">
@@ -209,6 +272,18 @@ export default function PembinaHomePage() {
           )}
         </div>
       )}
+
+      {/* Assign Task Modal */}
+      {assignTaskFor && (
+        <AssignTaskModal
+          intern={assignTaskFor}
+          onClose={() => setAssignTaskFor(null)}
+          onSuccess={() => {
+            setAssignTaskFor(null);
+            alert('Tugas berhasil diberikan!');
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -222,6 +297,118 @@ function StatCard({ icon: Icon, label, value, color, sub }: { icon: any; label: 
       <div className="text-2xl font-bold text-gray-900">{value}</div>
       <div className="text-xs text-gray-500 mt-0.5">{label}</div>
       <div className="text-xs text-gray-400 mt-0.5">{sub}</div>
+    </div>
+  );
+}
+
+// ============================================================
+// AssignTaskModal — Pembina beri tugas individual ke peserta
+// ============================================================
+function AssignTaskModal({ intern, onClose, onSuccess }: { intern: any; onClose: () => void; onSuccess: () => void }) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [xp, setXp] = useState(20);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/pembina/assign-task', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          intern_id: intern.id,
+          title: title.trim(),
+          description: description.trim(),
+          xp_reward: xp,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      onSuccess();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <Target className="w-5 h-5 text-purple-600" /> Beri Tugas
+          </h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="bg-purple-50 rounded-lg p-3 mb-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+            <span className="text-purple-600 font-bold">{intern.name.charAt(0).toUpperCase()}</span>
+          </div>
+          <div>
+            <p className="font-semibold text-gray-900 text-sm">{intern.name}</p>
+            <p className="text-xs text-gray-500">{intern.major} • {intern.department}</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Judul Tugas *</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Contoh: Pelajari alur JKK"
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi *</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Jelaskan tugas yang harus dikerjakan..."
+              required
+              rows={4}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">XP Reward</label>
+            <div className="flex gap-2">
+              {[10, 20, 30, 50].map(v => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setXp(v)}
+                  className={`px-3 py-1.5 rounded-md text-sm font-semibold ${
+                    xp === v ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {v} XP
+                </button>
+              ))}
+            </div>
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2.5 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            Beri Tugas ke {intern.name.split(' ')[0]}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
