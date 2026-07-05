@@ -184,13 +184,12 @@ export default function VerifyPageClient({ data, error }: { data: VerifyData | n
           {/* Header sertifikat */}
           <div className="relative flex items-start justify-between mb-8">
             <div className="flex items-center gap-3">
-              {/* Logo BPJS Ketenagakerjaan asli */}
+              {/* Logo BPJS Ketenagakerjaan asli (icon + text) */}
               <img
                 src="/bpjs-ketenagakerjaan-logo.png"
                 alt="BPJS Ketenagakerjaan"
-                className="h-14 w-auto object-contain"
+                className="h-16 w-auto object-contain"
                 onError={(e) => {
-                  // Fallback ke text logo kalau PNG gagal load
                   (e.target as HTMLImageElement).style.display = 'none';
                   const parent = (e.target as HTMLImageElement).parentElement;
                   if (parent) {

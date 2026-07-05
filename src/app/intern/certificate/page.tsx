@@ -195,7 +195,7 @@ export default function InternCertificatePage() {
                   <img
                     src="/bpjs-ketenagakerjaan-logo.png"
                     alt="BPJS Ketenagakerjaan"
-                    className="h-12 w-auto object-contain"
+                    className="h-14 w-auto object-contain"
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = 'none';
                       const parent = (e.target as HTMLImageElement).parentElement;
@@ -374,7 +374,7 @@ function CertificatePreview({ profile }: { profile: any }) {
               <img
                 src="/bpjs-ketenagakerjaan-logo.png"
                 alt="BPJS Ketenagakerjaan"
-                className="h-10 w-auto object-contain"
+                className="h-12 w-auto object-contain"
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none';
                   const parent = (e.target as HTMLImageElement).parentElement;
