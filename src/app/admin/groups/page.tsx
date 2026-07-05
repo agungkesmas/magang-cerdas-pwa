@@ -150,7 +150,7 @@ export default function AdminGroupsPage() {
                 <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setSelectedGroup(g.id)}>
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <h3 className="font-bold text-gray-900">{g.name}</h3>
-                    <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">{g.group_type}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${g.group_type === 'system' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{g.group_type === 'system' ? 'Sistem' : g.group_type}</span>
                     {g.department && <span className="text-xs px-2 py-0.5 bg-bpjs-blue/10 text-bpjs-blue rounded-full">{g.department}</span>}
                     {!g.is_active && <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full font-medium">Arsip</span>}
                   </div>
@@ -161,7 +161,8 @@ export default function AdminGroupsPage() {
                     <span>Dibuat oleh: {g.created_by_name}</span>
                   </div>
                 </div>
-                {/* Quick action buttons */}
+                {/* Quick action buttons — hidden for system groups */}
+                {g.group_type !== 'system' && (
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {g.is_active ? (
                     <button
@@ -181,6 +182,7 @@ export default function AdminGroupsPage() {
                     </button>
                   )}
                 </div>
+                )}
               </div>
             </div>
           ))}
@@ -242,37 +244,41 @@ function GroupDetail({ groupId, onBack }: { groupId: string; onBack: () => void 
               {group.name}
             </h1>
             <div className="flex items-center gap-2 flex-wrap mt-1">
-              <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">{group.group_type}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${group.group_type === 'system' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{group.group_type === 'system' ? 'Sistem' : group.group_type}</span>
               {group.department && <span className="text-xs px-2 py-0.5 bg-bpjs-blue/10 text-bpjs-blue rounded-full">{group.department}</span>}
             </div>
             {group.description && <p className="text-sm text-gray-600 mt-2">{group.description}</p>}
             <p className="text-xs text-gray-400 mt-2">Dibuat oleh: {group.created_by_name}</p>
           </div>
           <div className="flex items-center gap-2">
-            {group.is_active ? (
-              <button
-                onClick={() => { if (confirm('Arsipkan grup ini? Chat tidak bisa dikirim, tapi riwayat tetap ada.')) { handleArchive(true); } }}
-                className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md"
-                title="Arsipkan grup"
-              >
-                <Archive className="w-4 h-4" />
-              </button>
-            ) : (
-              <button
-                onClick={() => { if (confirm('Restore grup ini? Grup akan aktif kembali.')) { handleArchive(false); } }}
-                className="p-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-md"
-                title="Restore grup"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
-            )}
-            <button
-              onClick={() => { if (confirm('Hapus grup ini? Semua chat akan hilang.')) { handleDelete(); } }}
+            {group.group_type !== 'system' && (
+              <>
+                {group.is_active ? (
+                  <button
+                    onClick={() => { if (confirm('Arsipkan grup ini? Chat tidak bisa dikirim, tapi riwayat tetap ada.')) { handleArchive(true); } }}
+                    className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md"
+                    title="Arsipkan grup"
+                  >
+                    <Archive className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { if (confirm('Restore grup ini? Grup akan aktif kembali.')) { handleArchive(false); } }}
+                    className="p-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-md"
+                    title="Restore grup"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  onClick={() => { if (confirm('Hapus grup ini? Semua chat akan hilang.')) { handleDelete(); } }}
               className="p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-md"
               title="Hapus grup"
             >
               <Trash2 className="w-4 h-4" />
             </button>
+              </>
+            )}
           </div>
         </div>
       </div>

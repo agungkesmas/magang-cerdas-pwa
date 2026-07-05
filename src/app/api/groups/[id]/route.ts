@@ -102,6 +102,16 @@ export async function DELETE(req: NextRequest, { params }: Params) {
 
     const supabase = createServerClient();
 
+    // Protect system groups — tidak bisa di-arsip/hapus
+    const { data: group } = await supabase
+      .from('groups')
+      .select('group_type')
+      .eq('id', params.id)
+      .single();
+    if (group?.group_type === 'system') {
+      return NextResponse.json({ error: 'Grup sistem tidak bisa di-arsip atau dihapus' }, { status: 403 });
+    }
+
     // Verify access (kalau pembina, harus group_admin)
     if (pembina && !admin) {
       const { data: membership } = await supabase

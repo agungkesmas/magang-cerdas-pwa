@@ -136,7 +136,7 @@ export default function PembinaGroupsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <h3 className="font-bold text-gray-900">{g.name}</h3>
-                    <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">{g.group_type}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${g.group_type === 'system' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{g.group_type === 'system' ? 'Sistem' : g.group_type}</span>
                     {g.department && <span className="text-xs px-2 py-0.5 bg-bpjs-blue/10 text-bpjs-blue rounded-full">{g.department}</span>}
                     {g.my_role === 'group_admin' && <span className="text-xs px-2 py-0.5 bg-bpjs-yellow/20 text-bpjs-blue-dark rounded-full">Admin</span>}
                     {!g.is_active && <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full">Arsip</span>}
@@ -219,7 +219,7 @@ function GroupDetail({ groupId, onBack }: { groupId: string; onBack: () => void 
               {group.name}
             </h1>
             <div className="flex items-center gap-2 flex-wrap mt-1">
-              <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">{group.group_type}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${group.group_type === 'system' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{group.group_type === 'system' ? 'Sistem' : group.group_type}</span>
               {group.department && <span className="text-xs px-2 py-0.5 bg-bpjs-blue/10 text-bpjs-blue rounded-full">{group.department}</span>}
               {canManage && <span className="text-xs px-2 py-0.5 bg-bpjs-yellow/20 text-bpjs-blue-dark rounded-full">Anda Admin</span>}
               {!group.is_active && <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full">Arsip</span>}
@@ -234,15 +234,17 @@ function GroupDetail({ groupId, onBack }: { groupId: string; onBack: () => void 
                   <Link href={`/pembina/chat/${groupId}`} className="text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-md font-medium text-center">
                     Buka Chat
                   </Link>
-                  <button onClick={() => handleArchive(true)} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-md font-medium flex items-center gap-1 justify-center">
-                    <Archive className="w-3 h-3" /> Arsipkan
-                  </button>
+                  {group.group_type !== 'system' && (
+                    <button onClick={() => handleArchive(true)} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-md font-medium flex items-center gap-1 justify-center">
+                      <Archive className="w-3 h-3" /> Arsipkan
+                    </button>
+                  )}
                 </>
-              ) : (
+              ) : group.group_type !== 'system' ? (
                 <button onClick={() => handleArchive(false)} className="text-xs bg-bpjs-green text-white px-3 py-1.5 rounded-md font-medium flex items-center gap-1 justify-center">
                   <RotateCcw className="w-3 h-3" /> Restore
                 </button>
-              )}
+              ) : null}
             </div>
           )}
         </div>

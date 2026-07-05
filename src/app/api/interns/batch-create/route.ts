@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getAdminToken, generateInternCredentials, hashPassword } from '@/lib/auth';
+import { syncInternToSystemGroups } from '@/lib/system-groups';
 import { Department } from '@/types';
 
 const VALID_DEPARTMENTS: Department[] = ['Pelayanan', 'Pemasaran', 'Keuangan'];
@@ -157,6 +158,9 @@ export async function POST(req: NextRequest) {
             whatsapp: data.whatsapp,
             success: true
           });
+
+          // Auto-sync to system groups
+          await syncInternToSystemGroups(supabase, data.id, data.department, true);
         }
       } catch (e: any) {
         results.push({ index: i + 1, name: item.name || '(error)', error: e.message });

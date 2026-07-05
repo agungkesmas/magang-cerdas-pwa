@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getAdminToken, hashPassword } from '@/lib/auth';
+import { syncPembinaToSystemGroups } from '@/lib/system-groups';
 
 const VALID_DEPARTMENTS = ['Pelayanan', 'Pemasaran', 'Keuangan', 'Lintas Bidang'];
 
@@ -107,6 +108,9 @@ export async function POST(req: NextRequest) {
         }
       }
     }
+
+    // Auto-sync to system department groups
+    await syncPembinaToSystemGroups(supabase, data.id, department, true);
 
     return NextResponse.json({
       success: true,

@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getAdminToken, getPembinaToken } from '@/lib/auth';
+import { syncPembinaToSystemGroups } from '@/lib/system-groups';
 
 const VALID_DEPARTMENTS = ['Pelayanan', 'Pemasaran', 'Keuangan', 'Lintas Bidang'];
 
@@ -59,6 +60,11 @@ export async function PUT(req: NextRequest) {
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // Sync system groups if department or is_active changed (admin only)
+    if (admin && (updateFields.is_active !== undefined || updateFields.department !== undefined)) {
+      await syncPembinaToSystemGroups(supabase, data.id, data.department, data.is_active);
+    }
 
     return NextResponse.json({ success: true, pembina: data });
   } catch (e: any) {

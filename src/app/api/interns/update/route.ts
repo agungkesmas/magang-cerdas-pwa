@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getAdminToken, generateInternCredentials, hashPassword } from '@/lib/auth';
+import { syncInternToSystemGroups } from '@/lib/system-groups';
 
 export async function PUT(req: NextRequest) {
   try {
@@ -47,20 +48,25 @@ export async function PUT(req: NextRequest) {
     if (action === 'toggle_active') {
       const { data: intern } = await supabase
         .from('interns')
-        .select('is_active')
+        .select('is_active, department')
         .eq('id', id)
         .single();
       if (!intern) {
         return NextResponse.json({ error: 'Intern not found' }, { status: 404 });
       }
+      const newActive = !intern.is_active;
       const { error } = await supabase
         .from('interns')
-        .update({ is_active: !intern.is_active })
+        .update({ is_active: newActive })
         .eq('id', id);
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
-      return NextResponse.json({ success: true, is_active: !intern.is_active });
+
+      // Sync system groups
+      await syncInternToSystemGroups(supabase, id, intern.department, newActive);
+
+      return NextResponse.json({ success: true, is_active: newActive });
     }
 
     if (action === 'toggle_logbook') {
@@ -84,7 +90,7 @@ export async function PUT(req: NextRequest) {
     }
 
     // Default: update fields
-    const allowedFields = ['name', 'school_origin', 'major', 'major_id', 'department', 'start_date', 'end_date', 'logbook_enabled', 'email', 'whatsapp'];
+    const allowedFields = ['name', 'school_origin', 'major', 'major_id', 'department', 'start_date', 'end_date', 'logbook_enabled', 'email', 'whatsapp', 'is_active'];
     const cleanUpdates: Record<string, unknown> = {};
     for (const f of allowedFields) {
       if (updates[f] !== undefined) cleanUpdates[f] = updates[f];
@@ -109,6 +115,19 @@ export async function PUT(req: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // Sync system groups if is_active or department changed
+    if (cleanUpdates.is_active !== undefined || cleanUpdates.department !== undefined) {
+      const { data: updated } = await supabase
+        .from('interns')
+        .select('department, is_active')
+        .eq('id', id)
+        .single();
+      if (updated) {
+        await syncInternToSystemGroups(supabase, id, updated.department, updated.is_active);
+      }
+    }
+
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

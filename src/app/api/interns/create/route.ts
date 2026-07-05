@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { generateInternCredentials, hashPassword, getAdminToken } from '@/lib/auth';
+import { syncInternToSystemGroups } from '@/lib/system-groups';
 import { Intern, Department } from '@/types';
 
 const VALID_DEPARTMENTS: Department[] = ['Pelayanan', 'Pemasaran', 'Keuangan'];
@@ -102,6 +103,10 @@ export async function POST(req: NextRequest) {
     }
 
     const intern = data as Intern;
+
+    // Auto-sync to system groups
+    await syncInternToSystemGroups(supabase, intern.id, intern.department, true);
+
     return NextResponse.json({
       success: true,
       intern: {
