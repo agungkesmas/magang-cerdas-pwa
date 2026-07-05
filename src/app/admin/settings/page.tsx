@@ -1252,6 +1252,7 @@ function CertificateTab() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [borderColor, setBorderColor] = useState('#0F4C81');
   const [accentColor, setAccentColor] = useState('#D4AF37');
+  const [logoSize, setLogoSize] = useState(64);
 
   const fetchSettings = useCallback(async () => {
     setLoading(true);
@@ -1263,6 +1264,7 @@ function CertificateTab() {
         setLogoUrl(d.settings.logo_url);
         setBorderColor(d.settings.border_color || '#0F4C81');
         setAccentColor(d.settings.accent_color || '#D4AF37');
+        setLogoSize(d.settings.logo_size || 64);
       }
     } catch (e: any) {
       setError(e.message);
@@ -1383,7 +1385,8 @@ function CertificateTab() {
         body: JSON.stringify({
           logo_url: logoUrl,
           border_color: borderColor,
-          accent_color: accentColor
+          accent_color: accentColor,
+          logo_size: logoSize
         })
       });
       const d = await res.json();
@@ -1402,6 +1405,7 @@ function CertificateTab() {
     setLogoUrl(null);
     setBorderColor('#0F4C81');
     setAccentColor('#D4AF37');
+    setLogoSize(64);
     setSuccess('Di-reset ke default. Klik Save untuk simpan.');
   };
 
@@ -1488,6 +1492,30 @@ function CertificateTab() {
               <p className="text-[11px] text-gray-400 mt-2">
                 💡 Setelah upload, warna border otomatis di-extract dari logo (bisa di-override di bawah).
               </p>
+
+              {/* Slider ukuran logo */}
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Ukuran Logo: <span className="font-bold text-bpjs-blue">{logoSize}px</span>
+                </label>
+                <input
+                  type="range"
+                  min={40}
+                  max={200}
+                  step={4}
+                  value={logoSize}
+                  onChange={(e) => setLogoSize(parseInt(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-bpjs-blue"
+                />
+                <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
+                  <span>40px (kecil)</span>
+                  <span>120px (sedang)</span>
+                  <span>200px (besar)</span>
+                </div>
+                <p className="text-[11px] text-gray-500 mt-1">
+                  Geser slider untuk atur tinggi logo di sertifikat. Lebar mengikuti rasio asli.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -1580,6 +1608,7 @@ function CertificateTab() {
         logoUrl={logoUrl}
         borderColor={borderColor}
         accentColor={accentColor}
+        logoSize={logoSize}
       />
     </div>
   );
@@ -1588,10 +1617,11 @@ function CertificateTab() {
 // ============================================================
 // CertificatePreviewMini — Live preview sertifikat dengan config custom
 // ============================================================
-function CertificatePreviewMini({ logoUrl, borderColor, accentColor }: {
+function CertificatePreviewMini({ logoUrl, borderColor, accentColor, logoSize }: {
   logoUrl: string | null;
   borderColor: string;
   accentColor: string;
+  logoSize: number;
 }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -1608,9 +1638,19 @@ function CertificatePreviewMini({ logoUrl, borderColor, accentColor }: {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 {logoUrl ? (
-                  <img src={logoUrl} alt="Logo" className="h-10 w-auto object-contain" />
+                  <img
+                    src={logoUrl}
+                    alt="Logo"
+                    style={{ height: `${Math.round(logoSize * 0.6)}px`, width: 'auto' }}
+                    className="object-contain"
+                  />
                 ) : (
-                  <img src="/bpjs-ketenagakerjaan-logo.png" alt="BPJS" className="h-10 w-auto object-contain" />
+                  <img
+                    src="/bpjs-ketenagakerjaan-logo.png"
+                    alt="BPJS"
+                    style={{ height: `${Math.round(logoSize * 0.6)}px`, width: 'auto' }}
+                    className="object-contain"
+                  />
                 )}
               </div>
               <div className="text-right text-[8px] text-gray-400">

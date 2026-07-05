@@ -14,7 +14,7 @@ export async function GET() {
     const supabase = createServerClient();
     const { data, error } = await supabase
       .from('certificate_settings')
-      .select('logo_url, border_color, accent_color')
+      .select('logo_url, border_color, accent_color, logo_size')
       .eq('id', 1)
       .maybeSingle();
 
@@ -26,7 +26,8 @@ export async function GET() {
         settings: {
           logo_url: null,
           border_color: '#0F4C81',
-          accent_color: '#D4AF37'
+          accent_color: '#D4AF37',
+          logo_size: 64
         }
       });
     }
@@ -35,7 +36,8 @@ export async function GET() {
     const settings = data || {
       logo_url: null,
       border_color: '#0F4C81',
-      accent_color: '#D4AF37'
+      accent_color: '#D4AF37',
+      logo_size: 64
     };
 
     return NextResponse.json({ success: true, settings });
@@ -46,7 +48,8 @@ export async function GET() {
       settings: {
         logo_url: null,
         border_color: '#0F4C81',
-        accent_color: '#D4AF37'
+        accent_color: '#D4AF37',
+        logo_size: 64
       }
     });
   }

@@ -15,10 +15,14 @@ CREATE TABLE IF NOT EXISTS certificate_settings (
   logo_url TEXT,
   border_color VARCHAR(7) DEFAULT '#0F4C81', -- BPJS blue default
   accent_color VARCHAR(7) DEFAULT '#D4AF37', -- Gold default untuk Excellence tier
+  logo_size INT DEFAULT 64, -- ukuran logo di sertifikat (40-200px)
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   updated_by UUID,
   CONSTRAINT certificate_settings_singleton CHECK (id = 1) -- hanya 1 row
 );
+
+-- Tambah kolom logo_size kalau tabel sudah ada dari migration versi lama
+ALTER TABLE certificate_settings ADD COLUMN IF NOT EXISTS logo_size INT DEFAULT 64;
 
 ALTER TABLE certificate_settings ENABLE ROW LEVEL SECURITY;
 

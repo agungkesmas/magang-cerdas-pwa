@@ -69,23 +69,25 @@ export default async function VerifyPage({ params }: { params: { id: string } })
     const endDate = new Date(intern.end_date);
     const durationMonths = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30));
 
-    // === Fetch certificate settings (logo custom + warna border) ===
+    // === Fetch certificate settings (logo custom + warna border + ukuran logo) ===
     let certSettings = {
       logo_url: null as string | null,
       border_color: '#0F4C81',
-      accent_color: '#D4AF37'
+      accent_color: '#D4AF37',
+      logo_size: 64
     };
     try {
       const { data: cs } = await supabase
         .from('certificate_settings')
-        .select('logo_url, border_color, accent_color')
+        .select('logo_url, border_color, accent_color, logo_size')
         .eq('id', 1)
         .maybeSingle();
       if (cs) {
         certSettings = {
           logo_url: cs.logo_url,
           border_color: cs.border_color || '#0F4C81',
-          accent_color: cs.accent_color || '#D4AF37'
+          accent_color: cs.accent_color || '#D4AF37',
+          logo_size: cs.logo_size || 64
         };
       }
     } catch (e) {

@@ -62,6 +62,7 @@ interface VerifyData {
     logo_url: string | null;
     border_color: string;
     accent_color: string;
+    logo_size: number;
   };
 }
 
@@ -107,11 +108,13 @@ export default function VerifyPageClient({ data, error }: { data: VerifyData | n
   const certSettings = settings || {
     logo_url: null,
     border_color: '#0F4C81',
-    accent_color: '#D4AF37'
+    accent_color: '#D4AF37',
+    logo_size: 64
   };
   const borderColor = certSettings.border_color;
   const accentColor = certSettings.accent_color;
   const logoUrl = certSettings.logo_url;
+  const logoSize = certSettings.logo_size || 64;
 
   const tierConfig = {
     Excellence: {
@@ -199,14 +202,14 @@ export default function VerifyPageClient({ data, error }: { data: VerifyData | n
           {/* Header sertifikat */}
           <div className="relative flex items-start justify-between mb-8">
             <div className="flex items-center gap-3">
-              {/* Logo: custom (kalau ada) atau default BPJS */}
+              {/* Logo: custom (kalau ada) atau default BPJS — ukuran dari settings */}
               {logoUrl ? (
                 <img
                   src={logoUrl}
                   alt="Logo"
-                  className="h-16 w-auto object-contain"
+                  style={{ height: `${logoSize}px`, width: 'auto' }}
+                  className="object-contain"
                   onError={(e) => {
-                    // Fallback ke default BPJS kalau custom gagal load
                     (e.target as HTMLImageElement).src = '/bpjs-ketenagakerjaan-logo.png';
                   }}
                 />
@@ -214,7 +217,8 @@ export default function VerifyPageClient({ data, error }: { data: VerifyData | n
                 <img
                   src="/bpjs-ketenagakerjaan-logo.png"
                   alt="BPJS Ketenagakerjaan"
-                  className="h-16 w-auto object-contain"
+                  style={{ height: `${logoSize}px`, width: 'auto' }}
+                  className="object-contain"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
                     const parent = (e.target as HTMLImageElement).parentElement;

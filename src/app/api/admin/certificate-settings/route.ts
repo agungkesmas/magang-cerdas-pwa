@@ -44,7 +44,7 @@ export async function PUT(req: NextRequest) {
     if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { logo_url, border_color, accent_color } = body;
+    const { logo_url, border_color, accent_color, logo_size } = body;
 
     // Validasi warna (hex format #RRGGBB)
     if (border_color !== undefined && !HEX_COLOR_REGEX.test(border_color)) {
@@ -54,6 +54,14 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'accent_color harus format #RRGGBB (mis: #D4AF37)' }, { status: 400 });
     }
 
+    // Validasi logo_size (40-200px)
+    if (logo_size !== undefined) {
+      const size = parseInt(logo_size, 10);
+      if (isNaN(size) || size < 40 || size > 200) {
+        return NextResponse.json({ error: 'logo_size harus antara 40 dan 200' }, { status: 400 });
+      }
+    }
+
     const supabase = createServerClient();
 
     // Build update object (hanya field yang dikirim)
@@ -61,6 +69,7 @@ export async function PUT(req: NextRequest) {
     if (logo_url !== undefined) updates.logo_url = logo_url;
     if (border_color !== undefined) updates.border_color = border_color;
     if (accent_color !== undefined) updates.accent_color = accent_color;
+    if (logo_size !== undefined) updates.logo_size = parseInt(logo_size, 10);
 
     // Upsert (kalau belum ada row, insert; kalau sudah ada, update)
     const { data, error } = await supabase
