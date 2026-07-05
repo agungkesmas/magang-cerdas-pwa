@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { calculateTier, calculateTierProgress } from '@/lib/utils';
 
 export default function InternCertificatePage() {
   const [data, setData] = useState<any>(null);
@@ -91,21 +92,36 @@ export default function InternCertificatePage() {
             </div>
             <h3 className="text-lg font-bold text-white mb-1">Vault Terkunci</h3>
             <p className="text-sm text-white/60 mb-3">
-              Capai <span className="text-bpjs-yellow font-bold">1000 EXP</span> untuk membuka Vault Tier 1
+              Capai <span className="text-bpjs-yellow font-bold">tier Competent</span> (25% dari maksimal EXP magang Anda) untuk membuka Vault
               <br />
               Atau minta Admin menerbitkan sertifikat untuk Anda.
             </p>
             <div className="max-w-xs mx-auto">
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className="text-white/60">{profile.total_exp} / 1000 EXP</span>
-                <span className="text-bpjs-yellow">{Math.min(100, (profile.total_exp / 1000) * 100).toFixed(0)}%</span>
-              </div>
-              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-bpjs-yellow to-amber-500"
-                  style={{ width: `${Math.min(100, (profile.total_exp / 1000) * 100)}%` }}
-                />
-              </div>
+              {(() => {
+                const tp = calculateTierProgress(profile.total_exp, profile.start_date, profile.end_date);
+                return (
+                  <>
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="text-white/60">
+                        {profile.total_exp} / {tp.max_exp} EXP
+                      </span>
+                      <span className="text-bpjs-yellow">{tp.percentage}%</span>
+                    </div>
+                    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-bpjs-yellow to-amber-500"
+                        style={{ width: `${tp.percentage}%` }}
+                      />
+                    </div>
+                    <div className="mt-2 text-[11px] text-white/50">
+                      Tier saat ini: <span className="font-semibold text-white/80">{tp.current_tier}</span>
+                      {tp.next_tier && (
+                        <> • Butuh <span className="text-bpjs-yellow font-semibold">{(tp.next_tier_exp || 0) - profile.total_exp} EXP</span> lagi ke {tp.next_tier}</>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>

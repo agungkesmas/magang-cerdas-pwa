@@ -103,7 +103,7 @@ function BKKCertsContent() {
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex items-center gap-2 mb-1">
             <Star className="w-5 h-5 text-amber-500" />
-            <span className="text-xs text-gray-500">Siap Diterbitkan (≥500 EXP)</span>
+            <span className="text-xs text-gray-500">Siap Diterbitkan (tier Competent+)</span>
           </div>
           <div className="text-2xl font-bold text-gray-900">{pending.length}</div>
         </div>
