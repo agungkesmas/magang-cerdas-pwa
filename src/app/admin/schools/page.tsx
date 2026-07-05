@@ -13,8 +13,10 @@ import {
   Phone,
   User,
   GraduationCap,
-  ChevronRight
+  ChevronRight,
+  Printer
 } from 'lucide-react';
+import PrintCredentialsModal, { PrintableCredential } from '@/components/admin/PrintCredentialsModal';
 
 interface School {
   id: string;
@@ -30,6 +32,8 @@ export default function AdminSchoolsPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<School | null>(null);
+  const [printItems, setPrintItems] = useState<PrintableCredential[] | null>(null);
+  const [printingSchoolId, setPrintingSchoolId] = useState<string | null>(null);
 
   const fetchSchools = useCallback(async () => {
     setLoading(true);
@@ -54,6 +58,36 @@ export default function AdminSchoolsPage() {
       alert('Error: ' + data.error);
     } else {
       fetchSchools();
+    }
+  };
+
+  // Print all BKK credentials di satu sekolah
+  const handlePrintAllBKK = async (school: School) => {
+    setPrintingSchoolId(school.id);
+    try {
+      const res = await fetch(`/api/schools/${school.id}/bkk-teachers`);
+      const data = await res.json();
+      const teachers = data.bkk_teachers || data.teachers || [];
+      if (teachers.length === 0) {
+        alert(`Belum ada guru BKK di ${school.name}. Tambahkan dulu di halaman detail sekolah.`);
+        return;
+      }
+      const items: PrintableCredential[] = teachers.map((t: any) => ({
+        name: t.name,
+        idLabel: 'ID BKK',
+        idValue: t.bkk_id || '-',
+        password: t.raw_password,
+        loginUrl: '/bkk/login',
+        subInfo: [
+          { label: 'Email', value: t.email },
+          { label: 'Sekolah', value: school.name },
+        ],
+      }));
+      setPrintItems(items);
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    } finally {
+      setPrintingSchoolId(null);
     }
   };
 
@@ -137,7 +171,19 @@ export default function AdminSchoolsPage() {
               </Link>
 
               {/* Action buttons (di luar Link agar tidak navigate) */}
-              <div className="px-4 pb-3 flex items-center gap-2 border-t border-gray-100 pt-2">
+              <div className="px-4 pb-3 flex items-center gap-2 border-t border-gray-100 pt-2 flex-wrap">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handlePrintAllBKK(s);
+                  }}
+                  disabled={printingSchoolId === s.id}
+                  title="Print Kartu Kredensial semua guru BKK di sekolah ini"
+                  className="inline-flex items-center gap-1 text-xs text-bpjs-green-dark hover:bg-bpjs-green/10 px-2 py-1 rounded disabled:opacity-50"
+                >
+                  {printingSchoolId === s.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Printer className="w-3 h-3" />}
+                  Print BKK
+                </button>
                 <button
                   onClick={(e) => {
                     e.preventDefault();
@@ -176,6 +222,10 @@ export default function AdminSchoolsPage() {
             fetchSchools();
           }}
         />
+      )}
+
+      {printItems && (
+        <PrintCredentialsModal items={printItems} role="bkk" onClose={() => setPrintItems(null)} />
       )}
     </div>
   );

@@ -17,8 +17,10 @@ import {
   Phone,
   School as SchoolIcon,
   Edit,
-  AlertCircle
+  AlertCircle,
+  Printer
 } from 'lucide-react';
+import PrintCredentialsModal, { PrintableCredential } from '@/components/admin/PrintCredentialsModal';
 
 interface School {
   id: string;
@@ -28,6 +30,7 @@ interface School {
 
 interface BKKTeacher {
   id: string;
+  bkk_id?: string;
   name: string;
   email: string;
   phone: string | null;
@@ -48,6 +51,7 @@ export default function AdminBKKTeachersPage() {
   const [createdCreds, setCreatedCreds] = useState<any>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+  const [printItems, setPrintItems] = useState<PrintableCredential[] | null>(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -90,6 +94,22 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
     navigator.clipboard.writeText(shareText);
     setCopied(`share-${t.id}`);
     setTimeout(() => setCopied(null), 2000);
+  };
+
+  const handlePrintCreds = (t: BKKTeacher) => {
+    setPrintItems([
+      {
+        name: t.name,
+        idLabel: 'ID BKK',
+        idValue: t.bkk_id || '-',
+        password: t.raw_password,
+        loginUrl: '/bkk/login',
+        subInfo: [
+          { label: 'Email', value: t.email },
+          ...(t.schools?.length > 0 ? [{ label: 'Sekolah', value: t.schools.map((s) => s.name).join(', ') }] : []),
+        ],
+      },
+    ]);
   };
 
   const handleResetPwd = async (id: string) => {
@@ -282,6 +302,13 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
                       Copy Semua
                     </button>
                     <button
+                      onClick={() => handlePrintCreds(t)}
+                      title="Print Kartu Kredensial"
+                      className="p-1.5 bg-bpjs-green/20 hover:bg-bpjs-green/30 text-bpjs-green-dark rounded-md"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                    </button>
+                    <button
                       onClick={() => {
                         setEditingTeacher(t);
                         setShowForm(true);
@@ -398,6 +425,10 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
             </button>
           </div>
         </div>
+      )}
+
+      {printItems && (
+        <PrintCredentialsModal items={printItems} role="bkk" onClose={() => setPrintItems(null)} />
       )}
     </div>
   );
