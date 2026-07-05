@@ -12,7 +12,8 @@ import {
   Loader2,
   Star,
   BookOpen,
-  ArrowRight
+  ArrowRight,
+  Calendar
 } from 'lucide-react';
 import { calculateTierProgress } from '@/lib/utils';
 
@@ -193,6 +194,9 @@ export default function InternHomePage() {
         </div>
       </Link>
 
+      {/* Tanggal Merah Bulan Ini — info hari libur */}
+      <HolidaysWidget />
+
       {/* Leaderboard mini */}
       {data.leaderboard.length > 0 && (
         <div className="glass-card p-4">
@@ -267,6 +271,84 @@ export default function InternHomePage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ============================================================
+// HolidaysWidget — Tampilkan tanggal merah bulan ini
+// ============================================================
+function HolidaysWidget() {
+  const [holidays, setHolidays] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/holidays')
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          const now = new Date();
+          const thisMonth = now.getMonth();
+          const thisYear = now.getFullYear();
+          // Filter: bulan ini + 7 hari ke depan (untuk early warning)
+          const upcoming = (d.holidays || []).filter((h: any) => {
+            const d2 = new Date(h.date);
+            const diffDays = (d2.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+            return diffDays >= -1 && diffDays <= 30; // dari kemarin sampai 30 hari ke depan
+          });
+          setHolidays(upcoming);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading || holidays.length === 0) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return (
+    <div className="glass-card p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Calendar className="w-4 h-4 text-bpjs-yellow" />
+        <span className="text-sm font-semibold text-white">Tanggal Merah Mendatang</span>
+      </div>
+      <div className="space-y-1.5">
+        {holidays.slice(0, 4).map((h, i) => {
+          const d = new Date(h.date);
+          const isToday = d.toDateString() === today.toDateString();
+          const isPast = d < today;
+          return (
+            <div
+              key={i}
+              className={`flex items-center gap-2 text-sm p-1.5 rounded ${
+                isToday ? 'bg-bpjs-yellow/20 border border-bpjs-yellow/40' : 'bg-white/5'
+              } ${isPast ? 'opacity-50' : ''}`}
+            >
+              <div className="text-center flex-shrink-0 w-10">
+                <div className="text-[10px] text-white/60 uppercase">
+                  {d.toLocaleDateString('id-ID', { month: 'short' })}
+                </div>
+                <div className="text-base font-bold text-white leading-tight">{d.getDate()}</div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-white text-xs font-medium truncate">{h.name}</div>
+                <div className="text-[10px] text-white/50">
+                  {d.toLocaleDateString('id-ID', { weekday: 'long' })}
+                  {h.type === 'collective' && ' • Cuti Bersama'}
+                  {h.type === 'bpjs' && ' • BPJS'}
+                </div>
+              </div>
+              {isToday && (
+                <span className="text-[10px] bg-bpjs-yellow text-bpjs-blue-dark font-bold px-1.5 py-0.5 rounded">HARI INI</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[10px] text-white/40 mt-2 italic">
+        💡 Check-in di hari libur/weekend butuh persetujuan pembina.
+      </p>
     </div>
   );
 }

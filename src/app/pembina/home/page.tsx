@@ -31,6 +31,8 @@ export default function PembinaHomePage() {
   // Tags (sharing dengan admin — pembina bisa toggle tag peserta bimbingan)
   const [tagDropdownFor, setTagDropdownFor] = useState<string | null>(null);
   const [tagLoading, setTagLoading] = useState<string | null>(null); // intern_id yang sedang di-toggle
+  const [pendingAttendances, setPendingAttendances] = useState<any[]>([]);
+  const [attActionLoading, setAttActionLoading] = useState<string | null>(null); // attendance_id yang sedang diproses
 
   // Predefined tags (harus sama dengan admin/interns/page.tsx + API pembina/interns/[id]/tags)
   const PREDEFINED_TAGS = [
@@ -68,8 +70,9 @@ export default function PembinaHomePage() {
       fetch('/api/groups/list').then(r => r.json()),
       fetch('/api/leaderboard').then(r => r.json()),
       fetch('/api/pembina/my-interns').then(r => r.json()),
+      fetch('/api/pembina/pending-attendances').then(r => r.json()),
     ])
-      .then(([groupData, lbData, internsData]) => {
+      .then(([groupData, lbData, internsData, pendingData]) => {
         if (groupData.success) {
           setGroups(groupData.groups || []);
           setPembina({ name: 'Pembina' });
@@ -80,9 +83,36 @@ export default function PembinaHomePage() {
         if (internsData.success) {
           setMyInterns(internsData.interns || []);
         }
+        if (pendingData.success) {
+          setPendingAttendances(pendingData.pending || []);
+        }
       })
       .finally(() => setLoading(false));
   }, []);
+
+  // Approve/reject pending attendance
+  async function handleAttendanceAction(attendanceId: string, action: 'approve' | 'reject') {
+    const note = action === 'reject'
+      ? prompt('Alasan penolakan (opsional):') || ''
+      : prompt('Catatan untuk peserta (opsional):') || '';
+    setAttActionLoading(attendanceId);
+    try {
+      const res = await fetch('/api/pembina/approve-attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attendance_id: attendanceId, action, notes: note || undefined })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      // Remove dari list pending
+      setPendingAttendances(prev => prev.filter(p => p.id !== attendanceId));
+      alert(data.message);
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    } finally {
+      setAttActionLoading(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -175,6 +205,74 @@ export default function PembinaHomePage() {
           <p className="text-xs text-gray-500 mt-0.5">Buat tugas baru</p>
         </Link>
       </div>
+
+      {/* Pending Approval — check-in/out di hari libur/weekend */}
+      {pendingAttendances.length > 0 && (
+        <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-amber-900 flex items-center gap-2" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+              <Clock className="w-5 h-5 text-amber-600" /> Persetujuan Check-in/out
+              <span className="text-xs px-2 py-0.5 bg-amber-500 text-white rounded-full">
+                {pendingAttendances.length} pending
+              </span>
+            </h2>
+          </div>
+          <p className="text-xs text-amber-700 mb-3">
+            Peserta berikut check-in/out di hari libur/weekend. Verifikasi apakah mereka benar ditugaskan pada hari tersebut.
+          </p>
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1 -mr-1">
+            {pendingAttendances.map((att) => {
+              const internName = att.interns?.name || 'Peserta';
+              const internDept = att.interns?.department || '';
+              const tanggal = new Date(att.timestamp).toLocaleString('id-ID', {
+                weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+              });
+              const isCheckIn = att.type === 'Check-In';
+              return (
+                <div key={att.id} className="bg-white rounded-lg p-3 border border-amber-200 flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    isCheckIn ? 'bg-bpjs-green/10' : 'bg-orange-100'
+                  }`}>
+                    <span className={`text-xs font-bold ${isCheckIn ? 'text-bpjs-green' : 'text-orange-600'}`}>
+                      {isCheckIn ? 'IN' : 'OUT'}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 text-sm truncate">{internName}</p>
+                    <div className="flex items-center gap-2 text-xs text-gray-500 flex-wrap">
+                      <span>{att.type}</span>
+                      <span>•</span>
+                      <span>{tanggal}</span>
+                      {internDept && <><span>•</span><span>{internDept}</span></>}
+                    </div>
+                    {att.notes && (
+                      <p className="text-[11px] text-gray-500 italic mt-0.5 truncate">"{att.notes}"</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button
+                      onClick={() => handleAttendanceAction(att.id, 'approve')}
+                      disabled={attActionLoading === att.id}
+                      title="Setujui — berikan EXP ke peserta"
+                      className="px-3 py-1.5 bg-bpjs-green hover:bg-bpjs-green-dark text-white text-xs font-semibold rounded-md disabled:opacity-50"
+                    >
+                      {attActionLoading === att.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '✓ Setujui'}
+                    </button>
+                    <button
+                      onClick={() => handleAttendanceAction(att.id, 'reject')}
+                      disabled={attActionLoading === att.id}
+                      title="Tolak — EXP tidak diberikan"
+                      className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-md disabled:opacity-50"
+                    >
+                      ✗ Tolak
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Peserta Saya — list peserta yang dibimbing */}
       {myInterns.length > 0 && (

@@ -1,11 +1,30 @@
 // ============================================================
 // /api/attendance/check-out — Check-out with optional photo
+//
+// Logic approval (sama dengan check-in):
+// - Weekday normal: langsung approved, EXP langsung
+// - Weekend/hari libur: pending approval pembina, EXP belum diberikan
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getInternToken } from '@/lib/auth';
 import { haversineDistance, EXP_REWARDS } from '@/lib/utils';
+import { getHolidayInfo } from '@/lib/holidays';
+import { ensureCustomHolidaysLoaded } from '@/lib/holidays-loader';
+
+function checkIfHolidayCheckin(): { isHoliday: boolean; reason: string } {
+  const now = new Date();
+  const day = now.getDay();
+  if (day === 0 || day === 6) {
+    return { isHoliday: true, reason: 'Weekend (Sabtu/Minggu)' };
+  }
+  const holidayInfo = getHolidayInfo(now);
+  if (holidayInfo) {
+    return { isHoliday: true, reason: `Hari libur: ${holidayInfo.name}` };
+  }
+  return { isHoliday: false, reason: '' };
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,6 +32,8 @@ export async function POST(req: NextRequest) {
     if (!intern) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    await ensureCustomHolidaysLoaded();
 
     const { latitude, longitude, photo_url, notes } = await req.json();
     const supabase = createServerClient();
@@ -22,7 +43,7 @@ export async function POST(req: NextRequest) {
     todayStart.setHours(0, 0, 0, 0);
     const { data: checkIn } = await supabase
       .from('attendance')
-      .select('id')
+      .select('id, approval_status')
       .eq('intern_id', intern.intern_id)
       .eq('type', 'Check-In')
       .gte('timestamp', todayStart.toISOString())
@@ -59,6 +80,9 @@ export async function POST(req: NextRequest) {
       latitude && longitude ? haversineDistance(latitude, longitude, officeLat, officeLng) : null;
     const isWithin = distance !== null ? distance <= radius : false;
 
+    // Cek holiday/weekend
+    const holidayCheck = checkIfHolidayCheckin();
+
     const { data: att, error } = await supabase
       .from('attendance')
       .insert({
@@ -69,7 +93,9 @@ export async function POST(req: NextRequest) {
         distance_meters: distance,
         photo_url: photo_url || null,
         is_within_geofence: isWithin,
-        notes: notes || null
+        notes: notes || null,
+        is_holiday_checkin: holidayCheck.isHoliday,
+        approval_status: holidayCheck.isHoliday ? 'pending' : 'approved'
       })
       .select()
       .single();
@@ -78,7 +104,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Grant EXP
+    // Kalau holiday → pending, EXP belum diberikan
+    if (holidayCheck.isHoliday) {
+      return NextResponse.json({
+        success: true,
+        attendance: att,
+        exp_gained: 0,
+        pending_approval: true,
+        approval_reason: holidayCheck.reason,
+        message: `Check-out berhasil, tapi ${holidayCheck.reason}. Menunggu persetujuan pembina. EXP akan diberikan setelah disetujui.`
+      });
+    }
+
+    // Weekday normal → Grant EXP
     const { data: internData } = await supabase
       .from('interns')
       .select('total_exp')

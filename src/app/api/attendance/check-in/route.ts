@@ -1,11 +1,38 @@
 // ============================================================
 // /api/attendance/check-in — Geofenced + camera check-in
+//
+// Logic approval:
+// - Weekday normal (Sen-Jum, bukan libur): langsung approved, EXP langsung
+// - Weekend (Sabtu/Minggu) ATAU hari libur: pending approval pembina
+//   * EXP BELUM diberikan sampai pembina approve
+//   * Peserta tetap bisa check-in (mungkin ditugaskan di hari libur)
+//   * Pembina approve → EXP diberikan + nudge ke peserta
+//   * Pembina reject → EXP tidak diberikan
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getInternToken } from '@/lib/auth';
 import { haversineDistance, EXP_REWARDS } from '@/lib/utils';
+import { isHoliday, getHolidayInfo } from '@/lib/holidays';
+import { ensureCustomHolidaysLoaded } from '@/lib/holidays-loader';
+
+// Cek apakah hari ini weekend atau hari libur
+function checkIfHolidayCheckin(): { isHoliday: boolean; reason: string } {
+  const now = new Date();
+  const day = now.getDay(); // 0=Minggu, 6=Sabtu
+
+  if (day === 0 || day === 6) {
+    return { isHoliday: true, reason: 'Weekend (Sabtu/Minggu)' };
+  }
+
+  const holidayInfo = getHolidayInfo(now);
+  if (holidayInfo) {
+    return { isHoliday: true, reason: `Hari libur: ${holidayInfo.name}` };
+  }
+
+  return { isHoliday: false, reason: '' };
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,6 +40,9 @@ export async function POST(req: NextRequest) {
     if (!intern) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Load custom holidays untuk deteksi hari libur BPJS-specific
+    await ensureCustomHolidaysLoaded();
 
     const { latitude, longitude, photo_url, notes } = await req.json();
     if (typeof latitude !== 'number' || typeof longitude !== 'number') {
@@ -79,6 +109,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Cek apakah check-in di hari libur/weekend (butuh approval pembina)
+    const holidayCheck = checkIfHolidayCheckin();
+
     // Insert attendance
     const { data: att, error } = await supabase
       .from('attendance')
@@ -90,7 +123,9 @@ export async function POST(req: NextRequest) {
         distance_meters: distance,
         photo_url,
         is_within_geofence: true,
-        notes: notes || null
+        notes: notes || null,
+        is_holiday_checkin: holidayCheck.isHoliday,
+        approval_status: holidayCheck.isHoliday ? 'pending' : 'approved'
       })
       .select()
       .single();
@@ -99,7 +134,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Grant EXP
+    // Kalau holiday/weekend → pending approval, EXP BELUM diberikan
+    if (holidayCheck.isHoliday) {
+      return NextResponse.json({
+        success: true,
+        attendance: att,
+        exp_gained: 0,
+        distance_meters: distance,
+        pending_approval: true,
+        approval_reason: holidayCheck.reason,
+        message: `Check-in berhasil, tapi ${holidayCheck.reason}. Check-in Anda menunggu persetujuan pembina. EXP akan diberikan setelah disetujui.`
+      });
+    }
+
+    // Weekday normal → Grant EXP langsung
     const { data: internData } = await supabase
       .from('interns')
       .select('total_exp, streak_count')

@@ -20,7 +20,8 @@ import {
   Trash2,
   AlertTriangle,
   CheckCircle2,
-  Package
+  Package,
+  Calendar
 } from 'lucide-react';
 import JSZip from 'jszip';
 import { LLM_PROVIDERS, LLMProvider } from '@/types';
@@ -35,7 +36,7 @@ interface Official {
 }
 
 export default function AdminSettingsPage() {
-  const [tab, setTab] = useState<'office' | 'llm' | 'security' | 'officials'>('office');
+  const [tab, setTab] = useState<'office' | 'llm' | 'security' | 'officials' | 'holidays'>('office');
   const [loading, setLoading] = useState(true);
   const [office, setOffice] = useState({
     office_name: 'BPJS Ketenagakerjaan Cabang Cirebon',
@@ -164,6 +165,14 @@ export default function AdminSettingsPage() {
           }`}
         >
           <Crown className="w-4 h-4" /> Kepala Cabang
+        </button>
+        <button
+          onClick={() => setTab('holidays')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium ${
+            tab === 'holidays' ? 'bg-bpjs-blue text-white' : 'text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          <Calendar className="w-4 h-4" /> Hari Libur
         </button>
       </div>
 
@@ -382,6 +391,11 @@ export default function AdminSettingsPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* HOLIDAYS TAB */}
+      {tab === 'holidays' && (
+        <HolidaysTab />
       )}
 
       {showOfficialForm && (
@@ -1016,6 +1030,192 @@ function StorageManagement() {
       <div className="mt-4 text-[10px] text-gray-400 text-center">
         💡 Backup = file ZIP tersimpan di komputer Anda. Clean = hapus dari server (data tetap di database).
         Semua manual, tidak ada auto-clean.
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// HolidaysTab — Manage hari libur (nasional read-only + BPJS custom)
+// ============================================================
+function HolidaysTab() {
+  const [nationalHolidays, setNationalHolidays] = useState<any[]>([]);
+  const [customHolidays, setCustomHolidays] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [newHoliday, setNewHoliday] = useState({ date: '', name: '', type: 'bpjs' });
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchHolidays = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [natRes, custRes] = await Promise.all([
+        fetch('/api/holidays').then(r => r.json()),
+        fetch('/api/admin/holidays').then(r => r.json())
+      ]);
+      if (natRes.success) {
+        const now = new Date();
+        const upcoming = (natRes.holidays || []).filter((h: any) => new Date(h.date) >= new Date(now.getFullYear(), now.getMonth() - 1, 1));
+        setNationalHolidays(upcoming);
+      }
+      if (custRes.success) setCustomHolidays(custRes.holidays || []);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchHolidays(); }, [fetchHolidays]);
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newHoliday.date || !newHoliday.name) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/admin/holidays', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newHoliday)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setNewHoliday({ date: '', name: '', type: 'bpjs' });
+      setShowForm(false);
+      fetchHolidays();
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Hapus libur ini?')) return;
+    const res = await fetch(`/api/admin/holidays?id=${id}`, { method: 'DELETE' });
+    if (res.ok) fetchHolidays();
+  };
+
+  if (loading) {
+    return <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-bpjs-blue" /></div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Info banner */}
+      <div className="bg-bpjs-blue/5 border border-bpjs-blue/20 rounded-xl p-4 flex items-start gap-3">
+        <Calendar className="w-5 h-5 text-bpjs-blue flex-shrink-0 mt-0.5" />
+        <div className="text-sm text-gray-700">
+          <p className="font-semibold text-bpjs-blue mb-1">Tentang Hari Libur</p>
+          <p className="text-gray-600">
+            Libur nasional & cuti bersama sudah hardcoded sesuai SKB 3 Menteri (auto-update tiap tahun di kode).
+            Anda bisa tambah libur khusus BPJS (HUT BPJS, pelatihan, dll) di bawah ini.
+            Sistem otomatis hitung max EXP berdasarkan hari kerja efektif (minus libur).
+          </p>
+        </div>
+      </div>
+
+      {/* National holidays (read-only) */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <Star className="w-4 h-4 text-bpjs-yellow" /> Libur Nasional & Cuti Bersama 2026
+          <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">Read-only</span>
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          {nationalHolidays.map((h, i) => {
+            const d = new Date(h.date);
+            const isCollective = h.type === 'collective';
+            return (
+              <div key={i} className={`p-2 rounded-lg border ${isCollective ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'}`}>
+                <div className="text-xs text-gray-500">
+                  {d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}
+                </div>
+                <div className="text-sm font-medium text-gray-900">{h.name}</div>
+                <div className={`text-[10px] mt-0.5 ${isCollective ? 'text-blue-600' : 'text-amber-700'}`}>
+                  {isCollective ? 'Cuti Bersama' : 'Libur Nasional'}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Custom BPJS holidays */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-bpjs-blue" /> Libur Khusus BPJS
+          </h3>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="inline-flex items-center gap-1 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white text-sm font-semibold px-3 py-1.5 rounded-lg"
+          >
+            <Plus className="w-4 h-4" /> Tambah Libur
+          </button>
+        </div>
+
+        {showForm && (
+          <form onSubmit={handleAdd} className="bg-gray-50 rounded-lg p-3 mb-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <input
+              type="date"
+              value={newHoliday.date}
+              onChange={e => setNewHoliday({ ...newHoliday, date: e.target.value })}
+              required
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+            />
+            <input
+              type="text"
+              placeholder="Nama libur (mis: HUT BPJS)"
+              value={newHoliday.name}
+              onChange={e => setNewHoliday({ ...newHoliday, name: e.target.value })}
+              required
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm sm:col-span-2"
+            />
+            <select
+              value={newHoliday.type}
+              onChange={e => setNewHoliday({ ...newHoliday, type: e.target.value })}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+            >
+              <option value="bpjs">BPJS</option>
+              <option value="custom">Custom</option>
+            </select>
+            <div className="sm:col-span-2 flex gap-2">
+              <button type="submit" disabled={submitting} className="flex-1 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white text-sm font-semibold px-3 py-2 rounded-md disabled:opacity-50">
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Simpan'}
+              </button>
+              <button type="button" onClick={() => setShowForm(false)} className="px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded-md">Batal</button>
+            </div>
+          </form>
+        )}
+
+        {customHolidays.length === 0 ? (
+          <div className="text-center py-6 text-gray-400 text-sm">
+            <Calendar className="w-8 h-8 mx-auto mb-1 opacity-30" />
+            Belum ada libur khusus BPJS
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {customHolidays.map(h => {
+              const d = new Date(h.date);
+              return (
+                <div key={h.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">{h.name}</div>
+                    <div className="text-xs text-gray-500">
+                      {d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                      <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-bpjs-blue/10 text-bpjs-blue rounded">{h.type || 'custom'}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDelete(h.id)}
+                    className="p-1.5 text-red-500 hover:bg-red-50 rounded"
+                    title="Hapus"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
