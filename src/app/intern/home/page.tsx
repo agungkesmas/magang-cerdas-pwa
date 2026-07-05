@@ -194,8 +194,8 @@ export default function InternHomePage() {
               <span className="text-xs text-bpjs-yellow ml-auto">Anda di peringkat #{myRank}</span>
             )}
           </div>
-          <div className="space-y-2">
-            {data.leaderboard.slice(0, 5).map((entry, idx) => (
+          <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1 -mr-1 leaderboard-scroll">
+            {data.leaderboard.map((entry, idx) => (
               <div
                 key={entry.id}
                 className={`flex items-center gap-3 p-2 rounded-lg ${
@@ -203,7 +203,7 @@ export default function InternHomePage() {
                 }`}
               >
                 <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
                     idx === 0
                       ? 'bg-bpjs-yellow text-bpjs-blue-dark'
                       : idx === 1
@@ -219,13 +219,18 @@ export default function InternHomePage() {
                   <div className="text-sm font-medium text-white truncate">{entry.name}</div>
                   <div className="text-xs text-white/40">{entry.department}</div>
                 </div>
-                <div className="text-right">
+                <div className="text-right flex-shrink-0">
                   <div className="text-sm font-bold text-bpjs-yellow">{entry.total_exp}</div>
                   <div className="text-xs text-white/40">EXP</div>
                 </div>
               </div>
             ))}
           </div>
+          {data.leaderboard.length > 5 && (
+            <div className="mt-2 text-center text-[10px] text-white/40 italic">
+              Gulir untuk lihat peringkat 6–{data.leaderboard.length}
+            </div>
+          )}
         </div>
       )}
 
