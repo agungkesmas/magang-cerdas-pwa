@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import {
   Users,
   Plus,
@@ -15,7 +16,8 @@ import {
   Building2,
   ArrowLeft,
   Archive,
-  RotateCcw
+  RotateCcw,
+  Send
 } from 'lucide-react';
 
 interface Group {
@@ -161,28 +163,40 @@ export default function AdminGroupsPage() {
                     <span>Dibuat oleh: {g.created_by_name}</span>
                   </div>
                 </div>
-                {/* Quick action buttons — hidden for system groups */}
-                {g.group_type !== 'system' && (
+                {/* Quick action buttons — chat (all active groups) + archive/restore (non-system only) */}
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  {g.is_active ? (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); if (confirm(`Arsipkan grup "${g.name}"? Chat tidak bisa dikirim, tapi riwayat tetap ada.`)) { handleQuickArchive(g.id, true); } }}
-                      className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md"
-                      title="Arsipkan grup"
+                  {g.is_active && (
+                    <Link
+                      href={`/admin/chat/${g.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="p-2 bg-bpjs-blue/10 hover:bg-bpjs-blue/20 text-bpjs-blue rounded-md"
+                      title={`Buka chat ${g.name}`}
                     >
-                      <Archive className="w-4 h-4" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); if (confirm(`Restore grup "${g.name}"? Grup akan aktif kembali.`)) { handleQuickArchive(g.id, false); } }}
-                      className="p-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-md"
-                      title="Restore grup"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                    </button>
+                      <Send className="w-4 h-4" />
+                    </Link>
+                  )}
+                  {g.group_type !== 'system' && (
+                  <>
+                    {g.is_active ? (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); if (confirm(`Arsipkan grup "${g.name}"? Chat tidak bisa dikirim, tapi riwayat tetap ada.`)) { handleQuickArchive(g.id, true); } }}
+                        className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md"
+                        title="Arsipkan grup"
+                      >
+                        <Archive className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); if (confirm(`Restore grup "${g.name}"? Grup akan aktif kembali.`)) { handleQuickArchive(g.id, false); } }}
+                        className="p-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-md"
+                        title="Restore grup"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                      </button>
+                    )}
+                  </>
                   )}
                 </div>
-                )}
               </div>
             </div>
           ))}

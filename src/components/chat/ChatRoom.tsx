@@ -330,6 +330,17 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
               </button>
             </div>
           )}
+          {userRole === 'admin' && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowClearFiles(true)}
+                className="inline-flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium px-3 py-2 rounded-lg"
+                title="Hapus semua file dari grup (hemat storage)"
+              >
+                <Trash2 className="w-4 h-4" /> Clear File
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -377,7 +388,9 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
                 );
               }
               // Regular message (text, image, or document)
-              const isOwn = (userRole === 'pembina' && msg.sender_type === 'pembina') || (userRole === 'peserta' && msg.sender_type === 'peserta');
+              const isOwn = (userRole === 'pembina' && msg.sender_type === 'pembina')
+                          || (userRole === 'peserta' && msg.sender_type === 'peserta')
+                          || (userRole === 'admin' && msg.sender_type === 'admin');
               return (
                 <div key={msg.id} className={`flex gap-2 ${isOwn ? 'flex-row-reverse' : ''}`}>
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
@@ -401,7 +414,9 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
                     {/* Image message */}
                     {msg.message_type === 'image' && msg.attachment_url && (
                       <div className={`rounded-2xl overflow-hidden ${isOwn ? 'rounded-tr-sm' : 'rounded-tl-sm'} ${
-                        isOwn ? 'bg-purple-600' : msg.sender_type === 'pembina' ? 'bg-purple-50' : 'bg-gray-100'
+                        isOwn
+                          ? (msg.sender_type === 'admin' ? 'bg-bpjs-blue' : msg.sender_type === 'pembina' ? 'bg-purple-600' : 'bg-bpjs-green')
+                          : msg.sender_type === 'pembina' ? 'bg-purple-50' : 'bg-gray-100'
                       }`}>
                         <img
                           src={msg.attachment_url}
@@ -421,7 +436,7 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
                         href={msg.attachment_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl ${isOwn ? 'rounded-tr-sm bg-purple-600' : 'rounded-tl-sm bg-gray-100'} hover:opacity-90 transition-opacity`}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl ${isOwn ? `rounded-tr-sm ${msg.sender_type === 'admin' ? 'bg-bpjs-blue' : msg.sender_type === 'pembina' ? 'bg-purple-600' : 'bg-bpjs-green'}` : 'rounded-tl-sm bg-gray-100'} hover:opacity-90 transition-opacity`}
                       >
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
                           isOwn ? 'bg-white/20' : 'bg-white'
@@ -443,7 +458,7 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
                     {(msg.message_type === 'text' || (!msg.attachment_url && msg.content)) && (
                       <div className={`px-3 py-2 rounded-2xl text-sm whitespace-pre-line ${
                         isOwn
-                          ? 'bg-purple-600 text-white rounded-tr-sm'
+                          ? `${msg.sender_type === 'admin' ? 'bg-bpjs-blue' : msg.sender_type === 'pembina' ? 'bg-purple-600' : 'bg-bpjs-green'} text-white rounded-tr-sm`
                           : msg.sender_type === 'pembina'
                           ? 'bg-purple-50 text-gray-800 rounded-tl-sm'
                           : 'bg-gray-100 text-gray-800 rounded-tl-sm'
@@ -527,7 +542,7 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
           <button
             type="submit"
             disabled={sending || uploading || (!input.trim() && !attachmentPreview)}
-            className="bg-purple-600 hover:bg-purple-700 text-white rounded-lg p-2 disabled:opacity-50 flex-shrink-0"
+            className={`${userRole === 'admin' ? 'bg-bpjs-blue hover:bg-bpjs-blue-dark' : userRole === 'peserta' ? 'bg-bpjs-green hover:bg-bpjs-green-dark' : 'bg-purple-600 hover:bg-purple-700'} text-white rounded-lg p-2 disabled:opacity-50 flex-shrink-0`}
           >
             {sending || uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </button>

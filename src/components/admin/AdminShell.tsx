@@ -25,8 +25,9 @@ const NAV = [
   { href: '/admin/attendance', label: 'Kehadiran', icon: MapPin },
   { href: '/admin/requests', label: 'Permintaan Magang', icon: Inbox, badge: true },
   { href: '/admin/interns', label: 'Peserta Magang', icon: Users },
-  { href: '/admin/activities', label: 'Aktivitas', icon: CheckSquare },
-  { href: '/admin/groups', label: 'Grup Chat', icon: MessageCircle },
+  { href: '/admin/activities', label: 'Riwayat Aktivitas', icon: CheckSquare },
+  { href: '/admin/chat', label: 'Chat Grup', icon: MessageCircle },
+  { href: '/admin/groups', label: 'Kelola Grup', icon: Users },
   { href: '/admin/certificate', label: 'Sertifikat', icon: Award },
   { href: '/admin/pembina', label: 'Pembina Magang', icon: UserCog },
   { href: '/admin/schools', label: 'Institusi & BKK', icon: School }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
   Users,
@@ -248,6 +249,13 @@ function InternDetail({ internId }: { internId: string }) {
       <a href="/bkk/interns" className="inline-flex items-center gap-1 text-gray-500 hover:text-bpjs-green text-sm">
         <ChevronLeft className="w-4 h-4" /> Kembali ke daftar
       </a>
+
+      <Link
+        href={`/bkk/interns/${internId}`}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-bpjs-green/10 hover:bg-bpjs-green/20 text-bpjs-green text-sm font-semibold rounded-lg"
+      >
+        <Clock className="w-4 h-4" /> Lihat Timeline Lengkap (Audit Trail)
+      </Link>
 
       {/* Profile header */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6">

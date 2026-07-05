@@ -14,7 +14,8 @@ import {
   ArrowRight,
   X,
   Send,
-  Mail
+  Mail,
+  Clock
 } from 'lucide-react';
 
 export default function PembinaHomePage() {
@@ -188,6 +189,13 @@ export default function PembinaHomePage() {
                 >
                   <Target className="w-4 h-4" />
                 </button>
+                <Link
+                  href={`/pembina/interns/${intern.id}`}
+                  title={`Lihat riwayat aktivitas ${intern.name}`}
+                  className="p-2 bg-blue-100 hover:bg-blue-200 text-bpjs-blue rounded-md flex-shrink-0"
+                >
+                  <Clock className="w-4 h-4" />
+                </Link>
                 <button
                   onClick={async () => {
                     setDmLoading(intern.id);
