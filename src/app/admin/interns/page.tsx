@@ -397,9 +397,12 @@ export default function AdminInternsPage() {
                       </button>
                     </div>
                     <div className="flex items-center gap-1 font-mono text-sm">
-                      <span className="text-gray-700">{showPasswords[intern.id] ? intern.raw_password : '••••••••'}</span>
-                      <button onClick={() => setShowPasswords((p) => ({ ...p, [intern.id]: !p[intern.id] }))} className="text-gray-400 hover:text-bpjs-blue">
+                      <span className="text-gray-700 flex-1 truncate">{showPasswords[intern.id] ? intern.raw_password : '••••••••'}</span>
+                      <button onClick={() => setShowPasswords((p) => ({ ...p, [intern.id]: !p[intern.id] }))} className="text-gray-400 hover:text-bpjs-blue flex-shrink-0" title="Show/Hide password">
                         {showPasswords[intern.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                      </button>
+                      <button onClick={() => handleCopy(intern.raw_password, `pwd-${intern.id}`)} className="text-gray-400 hover:text-bpjs-blue flex-shrink-0" title="Copy password">
+                        {copied === `pwd-${intern.id}` ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
                       </button>
                     </div>
                   </div>
