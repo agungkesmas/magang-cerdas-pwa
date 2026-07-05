@@ -721,8 +721,8 @@ function DeployQuestModal({ groupId, onClose, onSuccess, userRole = 'pembina' }:
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="flex items-center justify-between p-5 border-b border-gray-100 sticky top-0 bg-white">
+      <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl mx-auto">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-100 sticky top-0 bg-white">
           <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
             <Target className={`w-5 h-5 ${userRole === 'admin' ? 'text-bpjs-blue' : 'text-purple-600'}`} />
             Deploy Quest Baru
@@ -732,23 +732,23 @@ function DeployQuestModal({ groupId, onClose, onSuccess, userRole = 'pembina' }:
           </h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
         </div>
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Judul Quest *</label>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 required
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 placeholder="Verifikasi 10 Dokumen JHT"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+                className="flex-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
               />
               <button
                 type="button"
                 onClick={handleCompose}
                 disabled={composing || !form.title.trim()}
                 title="AI generate deskripsi dari judul"
-                className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-lg disabled:opacity-50 flex items-center gap-1 whitespace-nowrap"
+                className="px-3 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-lg disabled:opacity-50 flex items-center justify-center gap-1 whitespace-nowrap flex-shrink-0"
               >
                 {composing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
                 {composing ? '...' : 'Magic ✨'}
@@ -768,7 +768,7 @@ function DeployQuestModal({ groupId, onClose, onSuccess, userRole = 'pembina' }:
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">XP Reward (default)</label>
               <div className="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-gray-700 flex items-center gap-2">
@@ -796,7 +796,7 @@ function DeployQuestModal({ groupId, onClose, onSuccess, userRole = 'pembina' }:
           {/* Mode: Sekali Selesai vs Harian Berulang (gaya hotel) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Mode Quest</label>
-            <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
               <button type="button" onClick={() => setForm({ ...form, is_recurring: false })}
                 className={`p-3 rounded-lg border text-left ${!form.is_recurring ? 'border-purple-500 bg-purple-50' : 'border-gray-200'}`}>
                 <div className="font-semibold text-sm">📋 Sekali Selesai</div>
@@ -814,7 +814,7 @@ function DeployQuestModal({ groupId, onClose, onSuccess, userRole = 'pembina' }:
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">📅 Rentang Tanggal *</label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
                     <span className="text-[10px] text-gray-500">Mulai</span>
                     <input type="date" required={form.is_recurring} value={form.start_date}
@@ -849,9 +849,9 @@ function DeployQuestModal({ groupId, onClose, onSuccess, userRole = 'pembina' }:
           ) : (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Deadline (opsional)</label>
-              <div className="grid grid-cols-2 gap-2">
-                <input type="date" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white" />
-                <select value={form.deadline_time} onChange={(e) => setForm({ ...form, deadline_time: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input type="date" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white" />
+                <select value={form.deadline_time} onChange={(e) => setForm({ ...form, deadline_time: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white">
                   {['12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00'].map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
