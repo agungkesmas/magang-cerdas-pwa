@@ -4,10 +4,14 @@
 -- Libur nasional + cuti bersama TIDAK disimpan di sini (hardcoded
 -- di src/lib/holidays.ts karena sesuai SKB 3 Menteri).
 -- Tabel ini KHUSUS untuk libur BPJS-specific:
---   - HUT BPJS
 --   - Pelatihan internal
 --   - Libur lokal Cirebon
 --   - Acara kantor
+--
+-- CATATAN PENTING:
+--   HUT BPJS Ketenagakerjaan (5 Desember) BUKAN libur nasional.
+--   Jangan tambahkan ke tabel ini kecuali memang ada kebijakan libur
+--   khusus dari BPJS Cabang Cirebon.
 --
 -- Idempotent — aman di-run ulang
 -- CARA PAKAI: Run di Supabase SQL Editor
@@ -28,14 +32,17 @@ ALTER TABLE app_holidays ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS idx_app_holidays_date ON app_holidays(date);
 
 -- ============================================================
--- SEED CONTOH (opsional — HUT BPJS 28 Oktober)
--- Hapus kalau tidak relevan
+-- CLEANUP: Hapus data HUT BPJS yang ngawur (BUKAN libur nasional)
+-- Kalau sebelumnya sudah ter-insert dari migration versi lama, hapus di sini
 -- ============================================================
-INSERT INTO app_holidays (date, name, type) VALUES
-  ('2026-10-28', 'HUT BPJS Ketenagakerjaan ke-58', 'bpjs')
-ON CONFLICT (date) DO NOTHING;
+DELETE FROM app_holidays
+WHERE name ILIKE '%HUT BPJS%'
+   OR name ILIKE '%BPJS Ketenagakerjaan ke%';
+
+-- Tidak ada seed default — admin tambah sendiri via UI Pengaturan → Hari Libur
 
 -- Verifikasi
 SELECT 'MIGRATION APP_HOLIDAYS SELESAI' as info
 UNION ALL SELECT 'app_holidays table: ' || COUNT(*)::text FROM information_schema.tables WHERE table_name = 'app_holidays'
-UNION ALL SELECT 'total rows: ' || COUNT(*)::text FROM app_holidays;
+UNION ALL SELECT 'total rows: ' || COUNT(*)::text FROM app_holidays
+UNION ALL SELECT 'HUT BPJS (harus 0): ' || COUNT(*)::text FROM app_holidays WHERE name ILIKE '%HUT BPJS%';
