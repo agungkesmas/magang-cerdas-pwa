@@ -15,7 +15,8 @@ import {
   X,
   Send,
   Mail,
-  Clock
+  Clock,
+  Zap
 } from 'lucide-react';
 
 export default function PembinaHomePage() {
@@ -345,7 +346,9 @@ function StatCard({ icon: Icon, label, value, color, sub }: { icon: any; label: 
 function AssignTaskModal({ intern, onClose, onSuccess }: { intern: any; onClose: () => void; onSuccess: () => void }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [xp, setXp] = useState(20);
+  // XP default 20 — tidak bisa di-set pembina (konsisten dengan Quest deploy)
+  // Pembina bisa kasih Bonus XP setelah peserta submit (lihat QuestCard di chat grup)
+  const xp = 20;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -420,21 +423,15 @@ function AssignTaskModal({ intern, onClose, onSuccess }: { intern: any; onClose:
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">XP Reward</label>
-            <div className="flex gap-2">
-              {[10, 20, 30, 50].map(v => (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => setXp(v)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-semibold ${
-                    xp === v ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {v} XP
-                </button>
-              ))}
+            <label className="block text-sm font-medium text-gray-700 mb-1">XP Reward (default)</label>
+            <div className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-md text-gray-700 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-bpjs-yellow" />
+              <span className="font-semibold">20 XP</span>
+              <span className="text-xs text-gray-500 ml-auto">+ Bonus dari pembina setelah submit</span>
             </div>
+            <p className="text-[11px] text-gray-500 mt-1">
+              Setelah peserta menyelesaikan tugas, Anda bisa kasih Bonus XP (1-100) jika kerja luar biasa.
+            </p>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button

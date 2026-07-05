@@ -71,22 +71,38 @@ export async function GET(req: NextRequest) {
       (logs || []).forEach((l: any) => { myQuestLogs[l.quest_id] = l; });
     }
 
-    // Fetch all quest_logs untuk pembina/admin (monitoring)
+    // Fetch all quest_logs untuk pembina/admin (monitoring + Bonus XP)
     let allQuestLogs: Record<string, any[]> = {};
     if ((pembina || admin) && questIds.length > 0) {
       const { data: allLogs } = await supabase
         .from('quest_logs')
-        .select('quest_id, intern_id, status, started_at, submitted_at, xp_awarded, interns!inner(name)')
+        .select('id, quest_id, intern_id, status, started_at, submitted_at, xp_awarded, interns!inner(name)')
         .in('quest_id', questIds);
+      // Ambil bonus XP yang sudah diberikan (jika ada) untuk quest_log ini
+      const questLogIds = (allLogs || []).map((l: any) => l.id);
+      let bonusMap: Record<string, { bonus_xp: number; note: string | null }> = {};
+      if (questLogIds.length > 0) {
+        const { data: bonuses } = await supabase
+          .from('xp_bonus_logs')
+          .select('quest_log_id, bonus_xp, note')
+          .in('quest_log_id', questLogIds);
+        (bonuses || []).forEach((b: any) => {
+          bonusMap[b.quest_log_id] = { bonus_xp: b.bonus_xp, note: b.note };
+        });
+      }
       (allLogs || []).forEach((l: any) => {
         if (!allQuestLogs[l.quest_id]) allQuestLogs[l.quest_id] = [];
+        const bonus = bonusMap[l.id];
         allQuestLogs[l.quest_id].push({
+          id: l.id, // quest_log_id — dipakai untuk Bonus XP
           intern_id: l.intern_id,
           intern_name: l.interns?.name,
           status: l.status,
           started_at: l.started_at,
           submitted_at: l.submitted_at,
-          xp_awarded: l.xp_awarded
+          xp_awarded: l.xp_awarded,
+          bonus_xp: bonus?.bonus_xp || 0,
+          bonus_note: bonus?.note || null
         });
       });
     }

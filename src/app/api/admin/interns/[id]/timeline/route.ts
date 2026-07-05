@@ -61,7 +61,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }
 
     // 3. Parallel fetch semua sumber data
-    const [attendanceRes, completionsRes, dailyCompletionsRes, questLogsRes, leavesRes, certificatesRes, groupMembershipsRes] = await Promise.all([
+    const [attendanceRes, completionsRes, dailyCompletionsRes, questLogsRes, leavesRes, certificatesRes, groupMembershipsRes, bonusXpRes] = await Promise.all([
       // Attendance (Check-In/Out)
       supabase
         .from('attendance')
@@ -115,7 +115,15 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         .select('group_id, role, joined_at, groups(id, name, group_type, department)')
         .eq('user_type', 'peserta')
         .eq('user_id', internId)
-        .order('joined_at', { ascending: false })
+        .order('joined_at', { ascending: false }),
+
+      // Bonus XP logs (dari pembina)
+      supabase
+        .from('xp_bonus_logs')
+        .select('id, quest_log_id, bonus_xp, note, created_at, pembina_id, quest_id, activities(title), pembina_magang(name)')
+        .eq('intern_id', internId)
+        .order('created_at', { ascending: false })
+        .limit(200)
     ]);
 
     if (attendanceRes.error) console.error('[timeline] attendance err:', attendanceRes.error);
@@ -125,11 +133,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     if (leavesRes.error) console.error('[timeline] leave err:', leavesRes.error);
     if (certificatesRes.error) console.error('[timeline] cert err:', certificatesRes.error);
     if (groupMembershipsRes.error) console.error('[timeline] groups err:', groupMembershipsRes.error);
+    if (bonusXpRes.error) console.error('[timeline] bonus xp err:', bonusXpRes.error);
 
     // 4. Build unified timeline
     type TimelineItem = {
       timestamp: string;
-      type: 'check_in' | 'check_out' | 'task_complete' | 'task_daily_complete' | 'quest' | 'leave' | 'certificate' | 'group_join';
+      type: 'check_in' | 'check_out' | 'task_complete' | 'task_daily_complete' | 'quest' | 'leave' | 'certificate' | 'group_join' | 'bonus_xp';
       title: string;
       description?: string;
       metadata?: any;
@@ -249,6 +258,26 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       });
     });
 
+    // Bonus XP dari pembina
+    (bonusXpRes.data || []).forEach((b: any) => {
+      timeline.push({
+        id: `bonus-${b.id}`,
+        timestamp: b.created_at,
+        type: 'bonus_xp',
+        title: `Bonus XP: +${b.bonus_xp} dari ${b.pembina_magang?.name || 'Pembina'}`,
+        description: b.note || undefined,
+        metadata: {
+          bonus_xp: b.bonus_xp,
+          note: b.note,
+          quest_log_id: b.quest_log_id,
+          quest_id: b.quest_id,
+          quest_title: b.activities?.title,
+          pembina_id: b.pembina_id,
+          pembina_name: b.pembina_magang?.name
+        }
+      });
+    });
+
     // Group joins
     (groupMembershipsRes.data || []).forEach((g: any) => {
       timeline.push({
@@ -279,6 +308,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       total_leaves: (leavesRes.data || []).length,
       has_certificate: (certificatesRes.data || []).length > 0,
       certificate_count: (certificatesRes.data || []).length,
+      total_bonus_xp: (bonusXpRes.data || []).reduce((sum: number, b: any) => sum + (b.bonus_xp || 0), 0),
+      bonus_xp_count: (bonusXpRes.data || []).length,
       timeline_entries: timeline.length
     };
 

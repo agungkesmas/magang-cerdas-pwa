@@ -18,13 +18,14 @@ import {
   Download,
   Mail,
   Phone,
-  Filter
+  Filter,
+  Gift
 } from 'lucide-react';
 
 interface TimelineItem {
   id: string;
   timestamp: string;
-  type: 'check_in' | 'check_out' | 'task_complete' | 'task_daily_complete' | 'quest' | 'leave' | 'certificate' | 'group_join';
+  type: 'check_in' | 'check_out' | 'task_complete' | 'task_daily_complete' | 'quest' | 'leave' | 'certificate' | 'group_join' | 'bonus_xp';
   title: string;
   description?: string;
   metadata?: any;
@@ -103,7 +104,8 @@ const TYPE_META: Record<string, { label: string; icon: any; color: string; bg: s
   quest: { label: 'Quest', icon: Target, color: 'text-pink-600', bg: 'bg-pink-100' },
   leave: { label: 'Izin/Cuti', icon: FileText, color: 'text-yellow-700', bg: 'bg-yellow-100' },
   certificate: { label: 'Sertifikat', icon: Award, color: 'text-amber-700', bg: 'bg-amber-100' },
-  group_join: { label: 'Grup', icon: Users, color: 'text-gray-600', bg: 'bg-gray-100' }
+  group_join: { label: 'Grup', icon: Users, color: 'text-gray-600', bg: 'bg-gray-100' },
+  bonus_xp: { label: 'Bonus XP', icon: Gift, color: 'text-amber-600', bg: 'bg-amber-100' }
 };
 
 export default function InternTimelineView({ internId, backHref = '/admin/activities' }: { internId: string; backHref?: string }) {
@@ -450,6 +452,18 @@ export default function InternTimelineView({ internId, backHref = '/admin/activi
                           )}
                           {item.metadata?.official_position && (
                             <span>({item.metadata.official_position})</span>
+                          )}
+                        </div>
+                      ) : item.type === 'bonus_xp' ? (
+                        <div className="text-[10px] text-gray-500 mt-1 flex flex-wrap gap-2">
+                          {item.metadata?.bonus_xp > 0 && (
+                            <span className="text-amber-600 font-medium">+{item.metadata.bonus_xp} XP</span>
+                          )}
+                          {item.metadata?.pembina_name && (
+                            <span>Dari: {item.metadata.pembina_name}</span>
+                          )}
+                          {item.metadata?.quest_title && (
+                            <span>Quest: {item.metadata.quest_title}</span>
                           )}
                         </div>
                       ) : null}

@@ -11,24 +11,46 @@ import {
   AlertCircle,
   PlayCircle,
   StopCircle,
-  Lock
+  Gift,
+  X
 } from 'lucide-react';
+
+interface QuestLogEntry {
+  id?: string; // quest_log_id (UUID) — dipakai untuk Bonus XP
+  intern_id: string;
+  intern_name: string;
+  status: string;
+  started_at?: string;
+  submitted_at?: string;
+  xp_awarded?: number;
+  bonus_xp?: number; // sudah dapat bonus atau belum
+  bonus_note?: string | null;
+}
 
 interface QuestCardProps {
   quest: any;
   myQuestLog?: any;
-  questLogs?: any[]; // untuk pembina: list semua peserta
+  questLogs?: QuestLogEntry[]; // untuk pembina: list semua peserta
   userRole: 'pembina' | 'peserta' | 'admin';
   onStart?: () => Promise<void>;
   onSubmit?: (notes: string) => Promise<void>;
   loading?: boolean;
+  // Callback setelah bonus XP berhasil diberikan (untuk refresh chat)
+  onBonusXpGiven?: () => void;
 }
 
-export default function QuestCard({ quest, myQuestLog, questLogs, userRole, onStart, onSubmit, loading }: QuestCardProps) {
+export default function QuestCard({ quest, myQuestLog, questLogs, userRole, onStart, onSubmit, loading, onBonusXpGiven }: QuestCardProps) {
   const [showSubmitForm, setShowSubmitForm] = useState(false);
   const [submissionNotes, setSubmissionNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [starting, setStarting] = useState(false);
+
+  // Bonus XP modal state
+  const [bonusTarget, setBonusTarget] = useState<QuestLogEntry | null>(null);
+  const [bonusXp, setBonusXp] = useState(20);
+  const [bonusNote, setBonusNote] = useState('');
+  const [givingBonus, setGivingBonus] = useState(false);
+  const [bonusError, setBonusError] = useState('');
 
   if (!quest) return null;
 
@@ -49,8 +71,43 @@ export default function QuestCard({ quest, myQuestLog, questLogs, userRole, onSt
     } finally { setSubmitting(false); }
   };
 
+  const handleGiveBonus = async () => {
+    if (!bonusTarget?.id) {
+      setBonusError('Quest log ID tidak ditemukan');
+      return;
+    }
+    if (bonusXp < 1 || bonusXp > 100) {
+      setBonusError('Bonus XP harus antara 1 dan 100');
+      return;
+    }
+    setGivingBonus(true);
+    setBonusError('');
+    try {
+      const res = await fetch('/api/quests/bonus-xp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quest_log_id: bonusTarget.id,
+          bonus_xp: bonusXp,
+          note: bonusNote.trim() || undefined
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      // Success — tutup modal & refresh
+      setBonusTarget(null);
+      setBonusXp(20);
+      setBonusNote('');
+      onBonusXpGiven?.();
+    } catch (err: any) {
+      setBonusError(err.message);
+    } finally {
+      setGivingBonus(false);
+    }
+  };
+
   // Status peserta
-  const myStatus = myQuestLog?.status; // available | in_progress | completed | cancelled
+  const myStatus = myQuestLog?.status;
   const isInProgress = myStatus === 'in_progress';
   const isCompleted = myStatus === 'completed';
 
@@ -172,7 +229,7 @@ export default function QuestCard({ quest, myQuestLog, questLogs, userRole, onSt
         </>
       )}
 
-      {/* ===== PEMBINA VIEW: monitoring peserta ===== */}
+      {/* ===== PEMBINA/ADMIN VIEW: monitoring peserta + Bonus XP ===== */}
       {(userRole === 'pembina' || userRole === 'admin') && questLogs && (
         <div className="mt-3 border-t pt-3">
           <p className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1">
@@ -181,23 +238,165 @@ export default function QuestCard({ quest, myQuestLog, questLogs, userRole, onSt
           {questLogs.length === 0 ? (
             <p className="text-xs text-gray-400 italic">Belum ada peserta yang mengambil quest</p>
           ) : (
-            <div className="space-y-1 max-h-40 overflow-y-auto">
-              {questLogs.map((log: any, i: number) => (
-                <div key={i} className="flex items-center justify-between text-xs p-1.5 bg-gray-50 rounded">
-                  <span className="font-medium text-gray-700">{log.intern_name || 'Peserta'}</span>
-                  <span className={`px-2 py-0.5 rounded-full font-medium ${
-                    log.status === 'completed' ? 'bg-bpjs-green/10 text-bpjs-green' :
-                    log.status === 'in_progress' ? 'bg-bpjs-blue/10 text-bpjs-blue' :
-                    'bg-gray-200 text-gray-600'
-                  }`}>
-                    {log.status === 'completed' ? '✓ Selesai' :
-                     log.status === 'in_progress' ? '🔵 Proses' :
-                     log.status}
-                  </span>
-                </div>
-              ))}
+            <div className="space-y-1.5 max-h-48 overflow-y-auto">
+              {questLogs.map((log, i) => {
+                const isCompletedLog = log.status === 'completed';
+                const hasBonus = log.bonus_xp !== undefined && log.bonus_xp !== null && log.bonus_xp > 0;
+                // Hanya pembina yang bisa kasih bonus (bukan admin)
+                const canGiveBonus = userRole === 'pembina' && isCompletedLog && !hasBonus && !quest.is_recurring;
+                return (
+                  <div key={i} className="flex items-center justify-between text-xs p-2 bg-gray-50 rounded gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-medium text-gray-700 truncate">{log.intern_name || 'Peserta'}</span>
+                        <span className={`px-1.5 py-0.5 rounded-full font-medium ${
+                          log.status === 'completed' ? 'bg-bpjs-green/10 text-bpjs-green' :
+                          log.status === 'in_progress' ? 'bg-bpjs-blue/10 text-bpjs-blue' :
+                          'bg-gray-200 text-gray-600'
+                        }`}>
+                          {log.status === 'completed' ? '✓ Selesai' :
+                           log.status === 'in_progress' ? '🔵 Proses' :
+                           log.status}
+                        </span>
+                        {isCompletedLog && log.xp_awarded !== undefined && (
+                          <span className="text-bpjs-yellow font-semibold">+{log.xp_awarded} XP</span>
+                        )}
+                        {hasBonus && (
+                          <span className="text-amber-600 font-semibold flex items-center gap-0.5">
+                            <Gift className="w-3 h-3" /> +{log.bonus_xp} bonus
+                          </span>
+                        )}
+                      </div>
+                      {hasBonus && log.bonus_note && (
+                        <p className="text-[10px] text-gray-500 italic mt-0.5 truncate">"{log.bonus_note}"</p>
+                      )}
+                    </div>
+                    {/* Tombol Bonus XP — hanya untuk pembina, peserta completed, belum dapat bonus, quest non-recurring */}
+                    {canGiveBonus && (
+                      <button
+                        onClick={() => {
+                          setBonusTarget(log);
+                          setBonusXp(20);
+                          setBonusNote('');
+                          setBonusError('');
+                        }}
+                        className="flex items-center gap-1 px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded text-[11px] font-semibold flex-shrink-0"
+                        title={`Beri bonus XP ke ${log.intern_name}`}
+                      >
+                        <Gift className="w-3 h-3" /> +Bonus XP
+                      </button>
+                    )}
+                    {/* Badge sudah dapat bonus — disabled */}
+                    {userRole === 'pembina' && isCompletedLog && hasBonus && (
+                      <span className="text-[10px] text-amber-600 font-medium flex-shrink-0">
+                        ✓ Bonus diberikan
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
+          {quest.is_recurring && (
+            <p className="text-[10px] text-gray-400 italic mt-2">
+              💡 Quest berulang harian tidak bisa dikasih bonus XP (hanya untuk "Sekali Selesai").
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ===== BONUS XP MODAL ===== */}
+      {bonusTarget && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+                  <Gift className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900">Beri Bonus XP</h3>
+                  <p className="text-xs text-gray-500">Untuk {bonusTarget.intern_name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setBonusTarget(null)}
+                className="p-1 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Jumlah Bonus XP (1-100)
+                </label>
+                <div className="flex gap-1.5 mb-2">
+                  {[10, 20, 30, 50].map(v => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setBonusXp(v)}
+                      className={`flex-1 px-2 py-1.5 rounded-md text-xs font-semibold ${
+                        bonusXp === v ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      +{v}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={bonusXp}
+                  onChange={(e) => setBonusXp(parseInt(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+                />
+                <p className="text-[11px] text-gray-500 mt-1">
+                  Hanya bisa 1x per peserta per quest. Pesan otomatis akan dikirim ke chat grup.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Catatan untuk peserta (opsional)
+                </label>
+                <textarea
+                  rows={2}
+                  value={bonusNote}
+                  onChange={(e) => setBonusNote(e.target.value)}
+                  placeholder="Contoh: Laporan sangat detail, analisisnya mendalam. Semangat terus!"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+                />
+              </div>
+
+              {bonusError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-red-700 text-xs">
+                  {bonusError}
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setBonusTarget(null)}
+                  disabled={givingBonus}
+                  className="flex-1 px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleGiveBonus}
+                  disabled={givingBonus || bonusXp < 1 || bonusXp > 100}
+                  className="flex-1 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm rounded-lg disabled:opacity-50 flex items-center justify-center gap-1"
+                >
+                  {givingBonus ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gift className="w-4 h-4" />}
+                  Beri +{bonusXp} XP
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

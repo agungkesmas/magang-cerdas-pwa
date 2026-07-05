@@ -382,6 +382,7 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
                         userRole={userRole}
                         onStart={() => handleStartQuest(msg.quest_id!)}
                         onSubmit={(notes) => handleSubmitQuest(msg.quest_id!, notes)}
+                        onBonusXpGiven={fetchMessages}
                       />
                     </div>
                   </div>
@@ -635,7 +636,8 @@ function DeployQuestModal({ groupId, onClose, onSuccess }: { groupId: string; on
   const [form, setForm] = useState({
     title: '',
     description: '',
-    xp_reward: '20',
+    // xp_reward TIDAK lagi bisa di-set pembina — default 20 XP (medium)
+    // Pembina bisa kasih Bonus XP setelah peserta submit quest (lihat QuestCard)
     deadline: '',
     deadline_time: '17:00',
     max_slots: '',
@@ -686,7 +688,9 @@ function DeployQuestModal({ groupId, onClose, onSuccess }: { groupId: string; on
           title: form.title,
           description: form.description,
           group_id: groupId,
-          xp_reward: parseInt(form.xp_reward, 10) || 20,
+          // xp_reward default 20 XP — backend tetap terima param tapi default 20
+          // (jika dikirim null/undefined, backend akan pakai default 20)
+          xp_reward: 20,
           deadline: deadlineISO,
           max_slots: form.max_slots ? parseInt(form.max_slots, 10) : null,
           // Recurring fields
@@ -754,13 +758,15 @@ function DeployQuestModal({ groupId, onClose, onSuccess }: { groupId: string; on
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">XP Reward</label>
-              <select value={form.xp_reward} onChange={(e) => setForm({ ...form, xp_reward: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white">
-                <option value="10">10 XP (Easy)</option>
-                <option value="20">20 XP (Medium)</option>
-                <option value="30">30 XP (Hard)</option>
-                <option value="50">50 XP (Expert)</option>
-              </select>
+              <label className="block text-sm font-medium text-gray-700 mb-1">XP Reward (default)</label>
+              <div className="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-gray-700 flex items-center gap-2">
+                <Zap className="w-4 h-4 text-bpjs-yellow" />
+                <span className="font-semibold">20 XP</span>
+                <span className="text-xs text-gray-500 ml-auto">+ Bonus dari pembina</span>
+              </div>
+              <p className="text-[11px] text-gray-500 mt-1">
+                Setelah peserta submit, Anda bisa kasih Bonus XP (1-100) jika kerja luar biasa.
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Max Slots (opsional)</label>
