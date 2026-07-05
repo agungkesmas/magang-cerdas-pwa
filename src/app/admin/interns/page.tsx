@@ -302,9 +302,9 @@ export default function AdminInternsPage() {
                         }]);
                       }}
                       title="Print Kartu Kredensial"
-                      className="p-1.5 bg-bpjs-yellow/20 hover:bg-bpjs-yellow/30 text-bpjs-yellow-dark rounded-md"
+                      className="inline-flex items-center gap-1 bg-bpjs-yellow/20 hover:bg-bpjs-yellow/30 text-bpjs-yellow-dark text-xs font-semibold px-2.5 py-1.5 rounded-md"
                     >
-                      <Printer className="w-3.5 h-3.5" />
+                      <Printer className="w-3.5 h-3.5" /> Print
                     </button>
                     <button onClick={() => { setEditingIntern(intern); setShowForm(true); }} className="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md"><Edit className="w-3.5 h-3.5" /></button>
                     <button onClick={() => handleRegenPwd(intern.id)} className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md"><RefreshCw className="w-3.5 h-3.5" /></button>

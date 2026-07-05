@@ -304,9 +304,9 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
                     <button
                       onClick={() => handlePrintCreds(t)}
                       title="Print Kartu Kredensial"
-                      className="p-1.5 bg-bpjs-green/20 hover:bg-bpjs-green/30 text-bpjs-green-dark rounded-md"
+                      className="inline-flex items-center gap-1 bg-bpjs-green/20 hover:bg-bpjs-green/30 text-bpjs-green-dark text-xs font-semibold px-2.5 py-1.5 rounded-md"
                     >
-                      <Printer className="w-3.5 h-3.5" />
+                      <Printer className="w-3.5 h-3.5" /> Print
                     </button>
                     <button
                       onClick={() => {

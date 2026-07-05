@@ -146,7 +146,7 @@ export default function AdminPembinaPage() {
                     <button onClick={() => handleCopyShare(p)} className="flex-1 inline-flex items-center justify-center gap-1 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white text-xs font-semibold px-2 py-1.5 rounded-md">
                       {copied === `share-${p.id}` ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />} Copy
                     </button>
-                    <button onClick={() => handlePrintCreds(p)} title="Print Kartu Kredensial" className="p-1.5 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-md"><Printer className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => handlePrintCreds(p)} title="Print Kartu Kredensial" className="inline-flex items-center gap-1 bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs font-semibold px-2.5 py-1.5 rounded-md"><Printer className="w-3.5 h-3.5" /> Print</button>
                     <button onClick={() => handleResetPwd(p.id)} title="Reset Password" className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md"><RefreshCw className="w-3.5 h-3.5" /></button>
                     <button onClick={() => handleToggleActive(p)} className={`p-1.5 rounded-md ${p.is_active ? 'bg-orange-100 hover:bg-orange-200 text-orange-700' : 'bg-green-100 hover:bg-green-200 text-green-700'}`}>
                       {p.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
