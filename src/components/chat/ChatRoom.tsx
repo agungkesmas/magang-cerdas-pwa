@@ -299,52 +299,52 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
       </button>
 
       {/* Header grup */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-5">
-        <div className="flex items-start gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-100 to-purple-50 flex items-center justify-center flex-shrink-0">
-            <Users className="w-6 h-6 text-purple-700" />
+      <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5">
+        <div className="flex items-start gap-3 flex-wrap">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-purple-100 to-purple-50 flex items-center justify-center flex-shrink-0">
+            <Users className="w-5 h-5 sm:w-6 sm:h-6 text-purple-700" />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold text-gray-900" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+            <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
               {group.name}
             </h1>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
               {pembinaMembers.length} pembina • {pesertaMembers.length} peserta
               {group.department && ` • ${group.department}`}
             </p>
           </div>
           {userRole === 'pembina' && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
               <button
                 onClick={() => setShowDeployForm(true)}
                 className="inline-flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold px-3 py-2 rounded-lg"
               >
-                <Plus className="w-4 h-4" /> Deploy Quest
+                <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Deploy Quest</span><span className="sm:hidden">Quest</span>
               </button>
               <button
                 onClick={() => setShowClearFiles(true)}
                 className="inline-flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium px-3 py-2 rounded-lg"
                 title="Hapus semua file dari grup (hemat storage)"
               >
-                <Trash2 className="w-4 h-4" /> Clear File
+                <Trash2 className="w-4 h-4" /> <span className="hidden sm:inline">Clear File</span>
               </button>
             </div>
           )}
           {userRole === 'admin' && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
               <button
                 onClick={() => setShowDeployForm(true)}
                 className="inline-flex items-center gap-1 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white text-sm font-semibold px-3 py-2 rounded-lg"
                 title="Deploy quest ke grup ini (broadcast tugas dari admin)"
               >
-                <Plus className="w-4 h-4" /> Deploy Quest
+                <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Deploy Quest</span><span className="sm:hidden">Quest</span>
               </button>
               <button
                 onClick={() => setShowClearFiles(true)}
                 className="inline-flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium px-3 py-2 rounded-lg"
                 title="Hapus semua file dari grup (hemat storage)"
               >
-                <Trash2 className="w-4 h-4" /> Clear File
+                <Trash2 className="w-4 h-4" /> <span className="hidden sm:inline">Clear File</span>
               </button>
             </div>
           )}
