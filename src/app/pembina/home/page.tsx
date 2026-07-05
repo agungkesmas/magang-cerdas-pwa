@@ -32,7 +32,8 @@ export default function PembinaHomePage() {
   const [tagDropdownFor, setTagDropdownFor] = useState<string | null>(null);
   const [tagLoading, setTagLoading] = useState<string | null>(null); // intern_id yang sedang di-toggle
   const [pendingAttendances, setPendingAttendances] = useState<any[]>([]);
-  const [attActionLoading, setAttActionLoading] = useState<string | null>(null); // attendance_id yang sedang diproses
+  const [attActionLoading, setAttActionLoading] = useState<string | null>(null);
+  const [activeQuests, setActiveQuests] = useState<any[]>([]);
 
   // Predefined tags (harus sama dengan admin/interns/page.tsx + API pembina/interns/[id]/tags)
   const PREDEFINED_TAGS = [
@@ -71,8 +72,9 @@ export default function PembinaHomePage() {
       fetch('/api/leaderboard').then(r => r.json()),
       fetch('/api/pembina/my-interns').then(r => r.json()),
       fetch('/api/pembina/pending-attendances').then(r => r.json()),
+      fetch('/api/pembina/active-quests').then(r => r.json()),
     ])
-      .then(([groupData, lbData, internsData, pendingData]) => {
+      .then(([groupData, lbData, internsData, pendingData, questsData]) => {
         if (groupData.success) {
           setGroups(groupData.groups || []);
           setPembina({ name: 'Pembina' });
@@ -85,6 +87,9 @@ export default function PembinaHomePage() {
         }
         if (pendingData.success) {
           setPendingAttendances(pendingData.pending || []);
+        }
+        if (questsData.success) {
+          setActiveQuests(questsData.quests || []);
         }
       })
       .finally(() => setLoading(false));
@@ -169,13 +174,15 @@ export default function PembinaHomePage() {
           color="bg-bpjs-green/10 text-bpjs-green"
           sub="dalam grup saya"
         />
-        <StatCard
-          icon={Award}
-          label="Quest Aktif"
-          value="—"
-          color="bg-bpjs-yellow/20 text-amber-700"
-          sub="lihat chat grup"
-        />
+        <Link href="#quest-aktif" className="block">
+          <StatCard
+            icon={Award}
+            label="Quest Aktif"
+            value={activeQuests.length}
+            color="bg-bpjs-yellow/20 text-amber-700"
+            sub={`${activeQuests.filter(q => q.type === 'group').length} grup • ${activeQuests.filter(q => q.type === 'individual').length} pribadi`}
+          />
+        </Link>
       </div>
 
       {/* Quick Actions */}
@@ -205,6 +212,64 @@ export default function PembinaHomePage() {
           <p className="text-xs text-gray-500 mt-0.5">Buat tugas baru</p>
         </Link>
       </div>
+
+      {/* Quest Aktif — list quest grup + tugas individual yang masih aktif */}
+      {activeQuests.length > 0 && (
+        <div id="quest-aktif" className="bg-white rounded-2xl border border-gray-200 p-5 scroll-mt-20">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+              <Target className="w-5 h-5 text-amber-600" /> Quest & Tugas Aktif
+              <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">{activeQuests.length}</span>
+            </h2>
+          </div>
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1 -mr-1">
+            {activeQuests.map((quest) => {
+              const isGroup = quest.type === 'group';
+              const isRecurring = quest.is_recurring;
+              const dueDate = quest.due_date ? new Date(quest.due_date) : null;
+              const isOverdue = dueDate && dueDate < new Date();
+              const content = (
+                <div className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                  isGroup ? 'bg-purple-50/40 border-purple-200 hover:bg-purple-50' : 'bg-blue-50/40 border-blue-200 hover:bg-blue-50'
+                }`}>
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    isGroup ? 'bg-purple-100' : 'bg-blue-100'
+                  }`}>
+                    {isGroup ? <Target className="w-4 h-4 text-purple-600" /> : <Award className="w-4 h-4 text-bpjs-blue" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 text-sm truncate">{quest.title}</p>
+                    <div className="flex items-center gap-2 text-xs text-gray-500 flex-wrap mt-0.5">
+                      <span className={`px-1.5 py-0.5 rounded-full font-medium ${
+                        isGroup ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-bpjs-blue'
+                      }`}>
+                        {isGroup ? `🎯 ${quest.group_name}` : `👤 ${quest.intern_name}`}
+                      </span>
+                      {isRecurring && <span className="text-purple-600">🔁 Harian</span>}
+                      {dueDate && (
+                        <span className={isOverdue ? 'text-red-600 font-medium' : ''}>
+                          ⏰ {dueDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                          {isOverdue ? ' (lewat)' : ''}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {isGroup && (
+                    <ArrowRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  )}
+                </div>
+              );
+              return isGroup ? (
+                <Link key={quest.id} href={quest.href} className="block">
+                  {content}
+                </Link>
+              ) : (
+                <div key={quest.id}>{content}</div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Pending Approval — check-in/out di hari libur/weekend */}
       {pendingAttendances.length > 0 && (
