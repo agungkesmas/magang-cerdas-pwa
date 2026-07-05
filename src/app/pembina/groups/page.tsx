@@ -127,14 +127,14 @@ export default function PembinaGroupsPage() {
           {filtered.map((g) => (
             <div
               key={g.id}
-              className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-all"
+              className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-all relative"
             >
-              <div className="flex items-start gap-3 flex-wrap">
+              <div className="flex items-start gap-3">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-purple-100 to-purple-50 flex items-center justify-center flex-shrink-0">
                   <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6 text-purple-700" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-gray-900 leading-tight">{g.name}</h3>
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <h3 className="font-bold text-gray-900 leading-tight break-words">{g.name}</h3>
                   <div className="flex items-center gap-2 flex-wrap mt-1">
                     <span className={`text-xs px-2 py-0.5 rounded-full ${g.group_type === 'system' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{g.group_type === 'system' ? 'Sistem' : g.group_type}</span>
                     {g.department && <span className="text-xs px-2 py-0.5 bg-bpjs-blue/10 text-bpjs-blue rounded-full">{g.department}</span>}
@@ -147,16 +147,27 @@ export default function PembinaGroupsPage() {
                     <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {g.peserta_count} peserta</span>
                   </div>
                 </div>
-                <div className="flex flex-col gap-1 flex-shrink-0">
-                  {g.is_active && (
-                    <Link href={`/pembina/chat/${g.id}`} className="text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-2 py-1.5 rounded-md font-medium flex items-center gap-1">
-                      Chat <ArrowRight className="w-3 h-3" />
-                    </Link>
-                  )}
-                  <button onClick={() => setSelectedGroup(g.id)} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1.5 rounded-md font-medium">
-                    Detail
-                  </button>
-                </div>
+              </div>
+              {/* Buttons — full width row below content on mobile, inline on desktop */}
+              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100 sm:hidden">
+                {g.is_active && (
+                  <Link href={`/pembina/chat/${g.id}`} className="flex-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-2 rounded-md font-medium flex items-center justify-center gap-1">
+                    Chat <ArrowRight className="w-3 h-3" />
+                  </Link>
+                )}
+                <button onClick={() => setSelectedGroup(g.id)} className="flex-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-md font-medium">
+                  Detail
+                </button>
+              </div>
+              <div className="hidden sm:flex sm:flex-col sm:gap-1 sm:flex-shrink-0 sm:absolute sm:top-4 sm:right-4">
+                {g.is_active && (
+                  <Link href={`/pembina/chat/${g.id}`} className="text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1.5 rounded-md font-medium flex items-center gap-1">
+                    Chat <ArrowRight className="w-3 h-3" />
+                  </Link>
+                )}
+                <button onClick={() => setSelectedGroup(g.id)} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-md font-medium">
+                  Detail
+                </button>
               </div>
             </div>
           ))}
