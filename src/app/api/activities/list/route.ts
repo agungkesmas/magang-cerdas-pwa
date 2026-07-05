@@ -162,7 +162,7 @@ export async function GET(req: NextRequest) {
       .from('activities')
       .select('*')
       .eq('is_active', true)
-      .or(`intern_id.eq.${intern!.intern_id},and(intern_id.is.null,department.eq.${internData.department})`)
+      .or(`intern_id.eq.${intern!.intern_id},and(intern_id.is.null,department.eq.${internData.department}),and(intern_id.is.null,department.is.null,is_broadcast.eq.true)`)
       .order('created_at', { ascending: false });
     if (aErr) return NextResponse.json({ error: aErr.message }, { status: 500 });
 

@@ -16,7 +16,9 @@ import {
   Wand2,
   Archive,
   RotateCcw,
-  Edit
+  Edit,
+  Send,
+  Megaphone
 } from 'lucide-react';
 
 interface Activity {
@@ -357,22 +359,23 @@ function ActivityFormModal({
   const [form, setForm] = useState({
     title: '',
     description: '',
-    assignMode: 'department' as 'department' | 'intern',
-    department: 'Pelayanan',
-    intern_id: '',
+    activity_type: 'task' as 'task' | 'announcement',
+    target: 'all' as 'all' | 'Pelayanan' | 'Pemasaran' | 'Keuangan',
+    xp_reward: 20,
     due_date: '',
     due_time: '16:00',
-    // Recurring fields
     is_recurring: false,
     start_date: '',
     end_date: '',
     skip_weekend: true,
-    daily_deadline_hour: 17
+    daily_deadline_hour: 17,
+    scheduled_date: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [composing, setComposing] = useState(false);
   const [composeSource, setComposeSource] = useState<'llm' | 'stub' | null>(null);
+  const isAnnouncement = form.activity_type === 'announcement';
 
   const handleCompose = async () => {
     if (!form.title.trim()) { setError('Isi judul dulu'); return; }
@@ -395,34 +398,32 @@ function ActivityFormModal({
     }
   };
 
-  const filteredInterns = form.department ? interns.filter((i) => i.department === form.department) : interns;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
       let dueDateISO: string | undefined;
-      if (form.due_date) {
+      if (!isAnnouncement && form.due_date) {
         dueDateISO = new Date(`${form.due_date}T${form.due_time}:00`).toISOString();
       }
-      const body: any = { title: form.title, description: form.description, due_date: dueDateISO };
-
-      // Recurring fields
-      if (form.is_recurring) {
-        body.is_recurring = true;
-        body.start_date = form.start_date;
-        body.end_date = form.end_date;
-        body.skip_weekend = form.skip_weekend;
-        body.daily_deadline_hour = Number(form.daily_deadline_hour);
-      } else {
-        body.is_recurring = false;
-      }
-      if (form.assignMode === 'department') {
-        body.department = form.department;
-      } else {
-        if (!form.intern_id) { setError('Pilih peserta'); setLoading(false); return; }
-        body.intern_id = form.intern_id;
+      const body: any = {
+        title: form.title,
+        description: form.description,
+        target: form.target,
+        activity_type: form.activity_type,
+        scheduled_date: form.scheduled_date || undefined,
+      };
+      if (!isAnnouncement) {
+        body.xp_reward = form.xp_reward;
+        body.due_date = dueDateISO;
+        if (form.is_recurring) {
+          body.is_recurring = true;
+          body.start_date = form.start_date;
+          body.end_date = form.end_date;
+          body.skip_weekend = form.skip_weekend;
+          body.daily_deadline_hour = Number(form.daily_deadline_hour);
+        }
       }
       const res = await fetch('/api/activities/create', {
         method: 'POST',
@@ -443,175 +444,143 @@ function ActivityFormModal({
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="flex items-center justify-between p-5 border-b border-gray-100 sticky top-0 bg-white">
-          <h3 className="text-lg font-bold text-gray-900">Assign Aktivitas Baru</h3>
+          <h3 className="text-lg font-bold text-gray-900">Broadcast Center</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {/* Jenis */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Judul Aktivitas *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Jenis *</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setForm({ ...form, activity_type: 'task' })}
+                className={`p-3 rounded-lg border text-left ${form.activity_type === 'task' ? 'border-bpjs-blue bg-bpjs-blue/5' : 'border-gray-200'}`}>
+                <CheckSquare className="w-5 h-5 mb-1 text-bpjs-blue" />
+                <div className="font-semibold text-sm">Tugas</div>
+                <div className="text-xs text-gray-500 mt-0.5">Dengan XP + deadline</div>
+              </button>
+              <button type="button" onClick={() => setForm({ ...form, activity_type: 'announcement', is_recurring: false })}
+                className={`p-3 rounded-lg border text-left ${form.activity_type === 'announcement' ? 'border-bpjs-yellow bg-bpjs-yellow/5' : 'border-gray-200'}`}>
+                <Megaphone className="w-5 h-5 mb-1 text-bpjs-yellow" />
+                <div className="font-semibold text-sm">Pengumuman</div>
+                <div className="text-xs text-gray-500 mt-0.5">Info saja, tanpa XP</div>
+              </button>
+            </div>
+          </div>
+          {/* Target */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Target *</label>
+            <select value={form.target} onChange={(e) => setForm({ ...form, target: e.target.value as any })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white">
+              <option value="all">Semua Peserta Magang</option>
+              <option value="Pelayanan">Departemen Pelayanan</option>
+              <option value="Pemasaran">Departemen Pemasaran</option>
+              <option value="Keuangan">Departemen Keuangan</option>
+            </select>
+          </div>
+          {/* Judul + AI */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Judul *</label>
             <div className="flex gap-2">
-              <input
-                required
-                value={form.title}
+              <input required value={form.title}
                 onChange={(e) => { setForm({ ...form, title: e.target.value }); setComposeSource(null); }}
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
-                placeholder="Verifikasi 10 dokumen JHT"
-              />
-              <button
-                type="button"
-                onClick={handleCompose}
-                disabled={composing || !form.title.trim()}
-                title="AI generate langkah-langkah dari judul"
-                className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-lg disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
-              >
+                placeholder={isAnnouncement ? "Rapat wajib bagi semua peserta" : "Verifikasi 10 dokumen JHT"} />
+              <button type="button" onClick={handleCompose} disabled={composing || !form.title.trim()}
+                className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold rounded-lg disabled:opacity-50 flex items-center gap-2 whitespace-nowrap">
                 {composing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-                {composing ? '...' : 'Magic ✨'}
+                {composing ? '...' : 'Magic'}
               </button>
             </div>
           </div>
-
+          {/* Deskripsi */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-              Deskripsi *
-              {composeSource && (
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${composeSource === 'llm' ? 'bg-bpjs-green/10 text-bpjs-green' : 'bg-orange-100 text-orange-700'}`}>
-                  {composeSource === 'llm' ? '✨ AI' : '📋 Template'}
-                </span>
-              )}
-            </label>
-            <textarea
-              required
-              rows={6}
-              value={form.description}
+            <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi *</label>
+            <textarea required rows={4} value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
-            />
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40" />
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Assign ke *</label>
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              <button type="button" onClick={() => setForm({ ...form, assignMode: 'department', intern_id: '' })}
-                className={`p-3 rounded-lg border text-left ${form.assignMode === 'department' ? 'border-bpjs-blue bg-bpjs-blue/5' : 'border-gray-200'}`}>
-                <Users className="w-5 h-5 mb-1 text-purple-600" />
-                <div className="font-semibold text-sm">Departemen</div>
-              </button>
-              <button type="button" onClick={() => setForm({ ...form, assignMode: 'intern' })}
-                className={`p-3 rounded-lg border text-left ${form.assignMode === 'intern' ? 'border-bpjs-blue bg-bpjs-blue/5' : 'border-gray-200'}`}>
-                <User className="w-5 h-5 mb-1 text-blue-600" />
-                <div className="font-semibold text-sm">Peserta Spesifik</div>
-              </button>
-            </div>
-            {form.assignMode === 'department' ? (
-              <select value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white">
-                <option value="Pelayanan">Pelayanan</option>
-                <option value="Pemasaran">Pemasaran</option>
-                <option value="Keuangan">Keuangan</option>
-              </select>
-            ) : (
-              <>
-                <select value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value, intern_id: '' })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white mb-2">
-                  <option value="Pelayanan">Pelayanan</option>
-                  <option value="Pemasaran">Pemasaran</option>
-                  <option value="Keuangan">Keuangan</option>
-                </select>
-                <select required={form.assignMode === 'intern'} value={form.intern_id}
-                  onChange={(e) => setForm({ ...form, intern_id: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white">
-                  <option value="" disabled>-- Pilih Peserta --</option>
-                  {filteredInterns.map((i) => <option key={i.id} value={i.id}>{i.name} ({i.major})</option>)}
-                </select>
-              </>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Mode Aktivitas</label>
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              <button type="button" onClick={() => setForm({ ...form, is_recurring: false })}
-                className={`p-3 rounded-lg border text-left ${!form.is_recurring ? 'border-bpjs-blue bg-bpjs-blue/5' : 'border-gray-200'}`}>
-                <div className="font-semibold text-sm flex items-center gap-1">📋 Sekali Selesai</div>
-                <div className="text-xs text-gray-500 mt-0.5">Intern kerjakan 1x, dapat +20 EXP</div>
-              </button>
-              <button type="button" onClick={() => setForm({ ...form, is_recurring: true })}
-                className={`p-3 rounded-lg border text-left ${form.is_recurring ? 'border-bpjs-green bg-bpjs-green/5' : 'border-gray-200'}`}>
-                <div className="font-semibold text-sm flex items-center gap-1">🔁 Harian Berulang</div>
-                <div className="text-xs text-gray-500 mt-0.5">Muncul tiap hari di rentang, +20 EXP/hari</div>
-              </button>
-            </div>
-          </div>
-
-          {form.is_recurring ? (
-            <div className="bg-bpjs-green/5 border border-bpjs-green/30 rounded-lg p-4 space-y-3">
+          {/* Task-only fields */}
+          {!isAnnouncement && (
+            <>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">📅 Rentang Tanggal *</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <span className="text-[10px] text-gray-500">Mulai</span>
-                    <input type="date" required={form.is_recurring} value={form.start_date}
-                      onChange={(e) => setForm({ ...form, start_date: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-gray-500">Selesai</span>
-                    <input type="date" required={form.is_recurring} value={form.end_date}
-                      onChange={(e) => setForm({ ...form, end_date: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white" />
-                  </div>
-                </div>
-                {form.start_date && form.end_date && (
-                  <p className="text-[10px] text-bpjs-green mt-1">
-                    Durasi: {Math.ceil((new Date(form.end_date).getTime() - new Date(form.start_date).getTime()) / (1000*60*60*24)) + 1} hari kalender
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="skip_weekend" checked={form.skip_weekend}
-                  onChange={(e) => setForm({ ...form, skip_weekend: e.target.checked })}
-                  className="w-4 h-4 rounded border-gray-300 text-bpjs-green focus:ring-bpjs-green" />
-                <label htmlFor="skip_weekend" className="text-xs text-gray-700">Skip weekend (Sabtu & Minggu tidak muncul)</label>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">⏰ Deadline Harian (WIB)</label>
-                <select value={form.daily_deadline_hour} onChange={(e) => setForm({ ...form, daily_deadline_hour: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white">
-                  {[15, 16, 17, 18, 19, 20].map(h => (
-                    <option key={h} value={h}>{h}:00 WIB</option>
+                <label className="block text-sm font-medium text-gray-700 mb-2">XP Reward</label>
+                <div className="flex gap-2">
+                  {[10, 20, 30, 50].map(v => (
+                    <button key={v} type="button" onClick={() => setForm({ ...form, xp_reward: v })}
+                      className={`px-3 py-1.5 rounded-md text-sm font-semibold ${form.xp_reward === v ? 'bg-bpjs-blue text-white' : 'bg-gray-100 text-gray-600'}`}>
+                      {v} XP
+                    </button>
                   ))}
-                </select>
-                <p className="text-[10px] text-gray-500 mt-0.5">Intern harus complete sebelum jam ini setiap hari</p>
+                </div>
               </div>
-            </div>
-          ) : (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Deadline (opsional)</label>
-              <div className="grid grid-cols-2 gap-2">
-                <input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white" />
-                <select value={form.due_time} onChange={(e) => setForm({ ...form, due_time: e.target.value })}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white">
-                  {['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'].map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Mode</label>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <button type="button" onClick={() => setForm({ ...form, is_recurring: false })}
+                    className={`p-3 rounded-lg border text-left ${!form.is_recurring ? 'border-bpjs-blue bg-bpjs-blue/5' : 'border-gray-200'}`}>
+                    <div className="font-semibold text-sm">Sekali Selesai</div>
+                  </button>
+                  <button type="button" onClick={() => setForm({ ...form, is_recurring: true })}
+                    className={`p-3 rounded-lg border text-left ${form.is_recurring ? 'border-bpjs-green bg-bpjs-green/5' : 'border-gray-200'}`}>
+                    <div className="font-semibold text-sm">Harian Berulang</div>
+                  </button>
+                </div>
               </div>
-            </div>
+              {form.is_recurring ? (
+                <div className="bg-bpjs-green/5 border border-bpjs-green/30 rounded-lg p-4 space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <span className="text-[10px] text-gray-500">Mulai</span>
+                      <input type="date" required={form.is_recurring} value={form.start_date}
+                        onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-gray-500">Selesai</span>
+                      <input type="date" required={form.is_recurring} value={form.end_date}
+                        onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" id="skip_weekend2" checked={form.skip_weekend}
+                      onChange={(e) => setForm({ ...form, skip_weekend: e.target.checked })}
+                      className="w-4 h-4 rounded border-gray-300 text-bpjs-blue" />
+                    <label htmlFor="skip_weekend2" className="text-xs text-gray-700">Skip weekend</label>
+                  </div>
+                  <select value={form.daily_deadline_hour} onChange={(e) => setForm({ ...form, daily_deadline_hour: Number(e.target.value) })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white">
+                    {[15, 16, 17, 18, 19, 20].map(h => <option key={h} value={h}>{h}:00 WIB</option>)}
+                  </select>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white" />
+                  <input type="time" value={form.due_time} onChange={(e) => setForm({ ...form, due_time: e.target.value })}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white" />
+                </div>
+              )}
+            </>
           )}
-
-          {error && <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm flex items-start gap-2"><AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />{error}</div>}
-
-          <div className="flex gap-2 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50">Batal</button>
-            <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white font-semibold rounded-lg disabled:opacity-50 flex items-center justify-center gap-2">
-              {loading && <Loader2 className="w-4 h-4 animate-spin" />} Assign
-            </button>
+          {/* Scheduled date */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Jadwalkan (opsional)</label>
+            <input type="date" value={form.scheduled_date} onChange={(e) => setForm({ ...form, scheduled_date: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white" />
+            <p className="text-[10px] text-gray-400 mt-1">Kosongkan untuk langsung aktif.</p>
           </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <button type="submit" disabled={loading}
+            className={`w-full text-white font-semibold py-2.5 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 ${isAnnouncement ? 'bg-bpjs-yellow hover:bg-bpjs-yellow-dark text-bpjs-blue-dark' : 'bg-bpjs-blue hover:bg-bpjs-blue-dark'}`}>
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            {isAnnouncement ? `Kirim Pengumuman` : `Berikan Tugas`}
+          </button>
         </form>
       </div>
     </div>
   );
 }
-
 // ============================================================
 // EditActivityModal — Edit aktivitas (aktif atau arsip)
 // ============================================================
