@@ -22,13 +22,13 @@ import {
 } from 'lucide-react';
 
 const NAV = [
-  { href: '/admin/interns', label: 'Peserta Magang', icon: Users },
-  { href: '/admin/requests', label: 'Permintaan Magang', icon: Inbox, badge: true },
-  { href: '/admin/activities', label: 'Aktivitas', icon: CheckSquare },
   { href: '/admin/attendance', label: 'Kehadiran', icon: MapPin },
+  { href: '/admin/requests', label: 'Permintaan Magang', icon: Inbox, badge: true },
+  { href: '/admin/interns', label: 'Peserta Magang', icon: Users },
+  { href: '/admin/activities', label: 'Aktivitas', icon: CheckSquare },
+  { href: '/admin/groups', label: 'Grup Chat', icon: MessageCircle },
   { href: '/admin/certificate', label: 'Sertifikat', icon: Award },
   { href: '/admin/pembina', label: 'Pembina Magang', icon: UserCog },
-  { href: '/admin/groups', label: 'Grup Chat', icon: MessageCircle },
   { href: '/admin/schools', label: 'Institusi & BKK', icon: School }
 ];
 

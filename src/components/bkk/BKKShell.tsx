@@ -8,8 +8,8 @@ import { Home, Users, LogOut, GraduationCap, Menu, X, UserCircle, Award, Send } 
 
 const NAV = [
   { href: '/bkk/home', label: 'Beranda', icon: Home },
-  { href: '/bkk/requests', label: 'Permintaan Magang', icon: Send, badge: true },
   { href: '/bkk/interns', label: 'Peserta Magang', icon: Users },
+  { href: '/bkk/requests', label: 'Permintaan Magang', icon: Send, badge: true },
   { href: '/bkk/certificates', label: 'Sertifikat', icon: Award },
   { href: '/bkk/profile', label: 'Profil', icon: UserCircle }
 ];

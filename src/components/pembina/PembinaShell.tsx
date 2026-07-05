@@ -18,8 +18,8 @@ import AIResepsionist from '@/components/shared/AIResepsionist';
 
 const NAV = [
   { href: '/pembina/home', label: 'Beranda', icon: Home },
-  { href: '/pembina/groups', label: 'Grup Saya', icon: Users },
   { href: '/pembina/chat', label: 'Chat Grup', icon: MessageCircle },
+  { href: '/pembina/groups', label: 'Grup Saya', icon: Users },
   { href: '/pembina/profile', label: 'Profil', icon: UserCircle }
 ];
 
