@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/autocreate-certificates",
-      "schedule": "0 * * * *"
+      "schedule": "0 1 * * *"
     }
   ]
 }
