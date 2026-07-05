@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getBKKToken } from '@/lib/auth';
-import { calculateTimeProgress, daysRemaining, internshipDuration, calculateLevel } from '@/lib/utils';
+import { calculateTimeProgress, daysRemaining, internshipDuration, calculateLevel, calculateTier } from '@/lib/utils';
 
 export async function GET(req: NextRequest) {
   try {
@@ -128,7 +128,7 @@ export async function GET(req: NextRequest) {
       intern: {
         ...intern,
         level_info: calculateLevel(intern.total_exp || 0),
-        tier: (intern.total_exp || 0) >= 1000 ? 'Excellence' : (intern.total_exp || 0) >= 500 ? 'Competent' : 'Participation',
+        tier: calculateTier(intern.total_exp || 0, intern.start_date, intern.end_date),
         time_progress: calculateTimeProgress(intern.start_date, intern.end_date),
         days_remaining: daysRemaining(intern.end_date),
         duration_days: durationDays

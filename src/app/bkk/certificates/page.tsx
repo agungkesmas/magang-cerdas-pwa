@@ -9,6 +9,7 @@ import {
   Star,
   FileText
 } from 'lucide-react';
+import { calculateTier } from '@/lib/utils';
 
 interface Intern {
   id: string;
@@ -16,11 +17,14 @@ interface Intern {
   major: string;
   department: string;
   school_origin: string;
+  start_date?: string;
+  end_date?: string;
   total_exp: number;
   certificate_unlocked: boolean;
   certificate_id: string | null;
   time_progress: number;
   days_remaining: number;
+  tier?: string;
 }
 
 export default function BKKCertsPage() {
@@ -43,18 +47,28 @@ function BKKCertsContent() {
   }, []);
 
   const certified = interns.filter((i) => i.certificate_unlocked);
-  const pending = interns.filter((i) => !i.certificate_unlocked && i.total_exp >= 500);
+  // "Siap diterbitkan" = tier Competent atau Excellence (>= 25% max_exp)
+  const pending = interns.filter((i) => {
+    if (i.certificate_unlocked) return false;
+    const tier = calculateTier(i.total_exp, i.start_date, i.end_date);
+    return tier === 'Competent' || tier === 'Excellence';
+  });
 
   const filtered = interns.filter((i) => {
     if (filter === 'certified' && !i.certificate_unlocked) return false;
-    if (filter === 'pending' && (i.certificate_unlocked || i.total_exp < 500)) return false;
+    if (filter === 'pending') {
+      if (i.certificate_unlocked) return false;
+      const tier = calculateTier(i.total_exp, i.start_date, i.end_date);
+      if (tier === 'Participation') return false;
+    }
     if (!i.name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
-  const tierLabel = (exp: number) => {
-    if (exp >= 1000) return { label: 'Excellence', color: 'bg-bpjs-yellow text-bpjs-blue-dark', icon: '🏆' };
-    if (exp >= 500) return { label: 'Competent', color: 'bg-bpjs-green text-white', icon: '✅' };
+  const tierLabel = (exp: number, startDate?: string, endDate?: string) => {
+    const tier = calculateTier(exp, startDate, endDate);
+    if (tier === 'Excellence') return { label: 'Excellence', color: 'bg-bpjs-yellow text-bpjs-blue-dark', icon: '🏆' };
+    if (tier === 'Competent') return { label: 'Competent', color: 'bg-bpjs-green text-white', icon: '✅' };
     return { label: 'Participation', color: 'bg-gray-200 text-gray-700', icon: '📋' };
   };
 
@@ -150,7 +164,7 @@ function BKKCertsContent() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filtered.map((intern) => {
-                  const tier = tierLabel(intern.total_exp);
+                  const tier = tierLabel(intern.total_exp, intern.start_date, intern.end_date);
                   return (
                     <tr key={intern.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3">
@@ -170,15 +184,18 @@ function BKKCertsContent() {
                           <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-bpjs-green/10 text-bpjs-green rounded-full font-medium">
                             <Award className="w-3 h-3" /> Terbit
                           </span>
-                        ) : intern.total_exp >= 500 ? (
-                          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-medium">
-                            ⏳ Siap Diterbitkan
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full font-medium">
-                            Belum Memenuhi
-                          </span>
-                        )}
+                        ) : (() => {
+                          const t = calculateTier(intern.total_exp, intern.start_date, intern.end_date);
+                          return t === 'Competent' || t === 'Excellence' ? (
+                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-medium">
+                              ⏳ Siap Diterbitkan
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full font-medium">
+                              Belum Memenuhi
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-3">
                         {intern.certificate_unlocked ? (

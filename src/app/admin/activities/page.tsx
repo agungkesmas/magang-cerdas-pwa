@@ -15,6 +15,7 @@ import {
   Filter,
   ShieldCheck
 } from 'lucide-react';
+import { calculateTier } from '@/lib/utils';
 
 interface Intern {
   id: string;
@@ -38,9 +39,10 @@ interface Intern {
   time_progress: number;
 }
 
-function tierForExp(exp: number): { tier: string; color: string; bg: string } {
-  if (exp >= 1000) return { tier: 'Excellence', color: 'text-amber-700', bg: 'bg-amber-100' };
-  if (exp >= 500) return { tier: 'Competent', color: 'text-blue-700', bg: 'bg-blue-100' };
+function tierForExp(exp: number, startDate?: string | null, endDate?: string | null): { tier: string; color: string; bg: string } {
+  const tier = calculateTier(exp, startDate, endDate);
+  if (tier === 'Excellence') return { tier: 'Excellence', color: 'text-amber-700', bg: 'bg-amber-100' };
+  if (tier === 'Competent') return { tier: 'Competent', color: 'text-blue-700', bg: 'bg-blue-100' };
   return { tier: 'Participation', color: 'text-gray-700', bg: 'bg-gray-100' };
 }
 
@@ -234,7 +236,7 @@ export default function AdminActivitiesPage() {
       ) : (
         <div className="grid gap-3">
           {filtered.map((i) => {
-            const tier = tierForExp(i.total_exp || 0);
+            const tier = tierForExp(i.total_exp || 0, i.start_date, i.end_date);
             return (
               <Link
                 key={i.id}

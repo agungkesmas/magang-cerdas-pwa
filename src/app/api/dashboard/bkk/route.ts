@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getBKKToken } from '@/lib/auth';
-import { calculateTimeProgress, daysRemaining, internshipDuration } from '@/lib/utils';
+import { calculateTimeProgress, daysRemaining, internshipDuration, calculateTier } from '@/lib/utils';
 
 export async function GET() {
   try {
@@ -94,7 +94,7 @@ export async function GET() {
       duration_days: internshipDuration(i.start_date, i.end_date),
       attendance: attendanceSummary[i.id] || { check_in_count: 0, check_out_count: 0, last_attendance: null },
       logbook_count: activityCounts[i.id] || 0, // keep field name for backward compat, but now counts activities
-      tier: (i.total_exp || 0) >= 1000 ? 'Excellence' : (i.total_exp || 0) >= 500 ? 'Competent' : 'Participation'
+      tier: calculateTier(i.total_exp || 0, i.start_date, i.end_date)
     }));
 
     const totalInterns = internsEnriched.length;

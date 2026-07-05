@@ -61,12 +61,141 @@ export function internshipDuration(startDate: string, endDate: string): number {
 }
 
 // ============================================================
-// Tier calculation based on EXP
+// Hitung jumlah hari kerja (Senin-Jumat) antara 2 tanggal (inklusif)
 // ============================================================
-export function calculateTier(exp: number): 'Excellence' | 'Competent' | 'Participation' {
-  if (exp >= 1000) return 'Excellence';
-  if (exp >= 500) return 'Competent';
+export function countWorkingDays(startDate: string, endDate: string): number {
+  if (!startDate || !endDate) return 0;
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  if (start > end) return 0;
+  // Set jam ke 00:00 untuk konsistensi
+  start.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+  let count = 0;
+  const cur = new Date(start);
+  while (cur <= end) {
+    const day = cur.getDay(); // 0=Minggu, 6=Sabtu
+    if (day !== 0 && day !== 6) count++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return Math.max(1, count); // minimal 1 untuk hindari div-by-zero
+}
+
+// ============================================================
+// Hitung Maksimal EXP Teoritis untuk durasi magang tertentu
+//
+// Asumsi standar BPJS (rajin absen + 1 tugas/hari + quest mingguan + bonus pembina):
+//   - Check-In: 20 EXP per hari kerja
+//   - Check-Out: 10 EXP per hari kerja
+//   - Tugas standar (1 per hari): 20 EXP per hari kerja
+//   - Quest dari chat grup: 20 EXP per minggu (= working_days / 5)
+//   - Bonus XP dari pembina (rata-rata): 30 EXP per minggu
+//   - Survival Kit quiz (8 modul × 25 EXP): 200 EXP sekali saja
+// ============================================================
+export function calculateMaxExp(startDate: string, endDate: string): number {
+  if (!startDate || !endDate) return 0;
+  const workingDays = countWorkingDays(startDate, endDate);
+  const weeks = Math.max(1, Math.floor(workingDays / 5));
+  const maxExp =
+    workingDays * 50 +        // CI (20) + CO (10) + 1 tugas/hari (20) = 50/hari
+    weeks * 20 +              // quest mingguan
+    weeks * 30 +              // bonus pembina mingguan (rata-rata)
+    200;                      // survival kit (8 modul × 25)
+  return maxExp;
+}
+
+// ============================================================
+// Tier calculation — DINAMIS berdasarkan durasi magang per peserta
+//
+// Threshold (persentase dari max_exp):
+//   - Participation: < 25% max_exp
+//   - Competent:     25% - 50% max_exp
+//   - Excellence:    >= 50% max_exp
+//
+// Fallback ke threshold lama (1000/500) kalau start_date/end_date NULL
+// (untuk backward compatibility dengan data lama yang belum punya tanggal)
+// ============================================================
+export function calculateTier(
+  exp: number,
+  startDate?: string | null,
+  endDate?: string | null
+): 'Excellence' | 'Competent' | 'Participation' {
+  // Fallback: kalau tidak ada tanggal, pakai threshold statis lama
+  if (!startDate || !endDate) {
+    if (exp >= 1000) return 'Excellence';
+    if (exp >= 500) return 'Competent';
+    return 'Participation';
+  }
+  const maxExp = calculateMaxExp(startDate, endDate);
+  const pct = maxExp > 0 ? exp / maxExp : 0;
+  if (pct >= 0.5) return 'Excellence';
+  if (pct >= 0.25) return 'Competent';
   return 'Participation';
+}
+
+// ============================================================
+// Hitung progress ke tier berikutnya (untuk UI progress bar)
+// Returns: { current_tier, next_tier, current_exp, next_tier_exp, max_exp, percentage }
+// ============================================================
+export function calculateTierProgress(
+  exp: number,
+  startDate?: string | null,
+  endDate?: string | null
+): {
+  current_tier: 'Excellence' | 'Competent' | 'Participation';
+  next_tier: 'Excellence' | 'Competent' | null;
+  current_exp: number;
+  next_tier_exp: number | null;
+  max_exp: number;
+  percentage: number;
+} {
+  const currentTier = calculateTier(exp, startDate, endDate);
+
+  // Fallback statis kalau tidak ada tanggal
+  if (!startDate || !endDate) {
+    const tiers = [
+      { name: 'Participation' as const, min: 0 },
+      { name: 'Competent' as const, min: 500 },
+      { name: 'Excellence' as const, min: 1000 }
+    ];
+    const currentIdx = tiers.findIndex(t => t.name === currentTier);
+    const nextIdx = currentIdx + 1;
+    const nextTier: 'Excellence' | 'Competent' | null = nextIdx < tiers.length ? tiers[nextIdx].name as 'Excellence' | 'Competent' : null;
+    return {
+      current_tier: currentTier,
+      next_tier: nextTier,
+      current_exp: exp,
+      next_tier_exp: nextTier ? tiers[nextIdx].min : null,
+      max_exp: 1000,
+      percentage: Math.min(100, Math.round((exp / 1000) * 100))
+    };
+  }
+
+  // Dinamis berdasarkan max_exp
+  const maxExp = calculateMaxExp(startDate, endDate);
+  const competentThreshold = Math.round(maxExp * 0.25);
+  const excellenceThreshold = Math.round(maxExp * 0.50);
+
+  let nextTier: 'Competent' | 'Excellence' | null = null;
+  let nextTierExp: number | null = null;
+
+  if (currentTier === 'Participation') {
+    nextTier = 'Competent';
+    nextTierExp = competentThreshold;
+  } else if (currentTier === 'Competent') {
+    nextTier = 'Excellence';
+    nextTierExp = excellenceThreshold;
+  }
+  // Excellence = tier maksimal, tidak ada next
+
+  return {
+    current_tier: currentTier,
+    next_tier: nextTier,
+    current_exp: exp,
+    next_tier_exp: nextTierExp,
+    max_exp: maxExp,
+    percentage: maxExp > 0 ? Math.min(100, Math.round((exp / maxExp) * 100)) : 0
+  };
 }
 
 // ============================================================

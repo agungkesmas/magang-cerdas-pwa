@@ -14,6 +14,7 @@ import {
   BookOpen,
   ArrowRight
 } from 'lucide-react';
+import { calculateTierProgress } from '@/lib/utils';
 
 interface DashboardData {
   profile: {
@@ -127,17 +128,25 @@ export default function InternHomePage() {
             <span className="text-xs text-white/60 font-medium">Tier saat ini</span>
           </div>
           <div className="text-2xl font-bold text-bpjs-yellow">{profile.tier}</div>
-          <div className="text-xs text-white/50 mt-0.5">
-            {profile.total_exp >= 1000
-              ? 'Tier Excellence tercapai!'
-              : `${1000 - profile.total_exp} EXP lagi ke Excellence`}
-          </div>
-          <div className="mt-auto pt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-bpjs-yellow"
-              style={{ width: `${Math.min(100, (profile.total_exp / 1000) * 100)}%` }}
-            />
-          </div>
+          {(() => {
+            const tp = calculateTierProgress(profile.total_exp, profile.start_date, profile.end_date);
+            return (
+              <>
+                <div className="text-xs text-white/50 mt-0.5">
+                  {tp.next_tier
+                    ? `${(tp.next_tier_exp || 0) - profile.total_exp} EXP lagi ke ${tp.next_tier} (${tp.percentage}% dari maksimal)`
+                    : `Tier Excellence tercapai! (${tp.percentage}% dari maksimal)`
+                  }
+                </div>
+                <div className="mt-auto pt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-bpjs-yellow"
+                    style={{ width: `${tp.percentage}%` }}
+                  />
+                </div>
+              </>
+            );
+          })()}
         </div>
       </div>
 

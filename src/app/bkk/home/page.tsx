@@ -21,6 +21,7 @@ import {
   TrendingUp,
   PartyPopper
 } from 'lucide-react';
+import { calculateTier } from '@/lib/utils';
 
 interface DashboardData {
   teacher: { name: string; email: string; schools: string[] };
@@ -322,7 +323,7 @@ export default function BKKHomePage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {certifiedInterns.map((intern) => {
-              const tier = (intern.total_exp || 0) >= 1000 ? 'Excellence' : (intern.total_exp || 0) >= 500 ? 'Competent' : 'Participation';
+              const tier = calculateTier(intern.total_exp || 0, intern.start_date, intern.end_date);
               return (
                 <Link
                   key={intern.id}

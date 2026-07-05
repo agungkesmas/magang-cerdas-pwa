@@ -44,8 +44,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Belum ada Kepala Cabang aktif. Set di Settings dulu.' }, { status: 400 });
     }
 
-    // Calculate tier
-    const tier = tier_override || calculateTier(intern.total_exp || 0);
+    // Calculate tier (dinamis berdasarkan durasi magang per peserta)
+    const tier = tier_override || calculateTier(intern.total_exp || 0, intern.start_date, intern.end_date);
 
     // Generate verification ID
     const verificationId = generateVerificationId();

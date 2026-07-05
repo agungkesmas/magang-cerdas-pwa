@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Award, Loader2, Zap, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { calculateTier } from '@/lib/utils';
 
 interface Intern {
   id: string;
   name: string;
   major: string;
   department: string;
+  start_date?: string;
   end_date: string;
   total_exp: number;
   days_remaining: number;
@@ -70,9 +72,11 @@ export default function AdminCertificatePage() {
     }
   };
 
-  const tierInfo = (exp: number) => {
-    if (exp >= 1000) return { tier: 'Excellence', color: 'bg-bpjs-yellow text-bpjs-blue-dark', icon: '🏆' };
-    if (exp >= 500) return { tier: 'Competent', color: 'bg-bpjs-green text-white', icon: '✅' };
+  // Tier dinamis berdasarkan durasi magang per peserta (calculateTier dari utils)
+  const tierInfo = (exp: number, startDate?: string | null, endDate?: string | null) => {
+    const tier = calculateTier(exp, startDate, endDate);
+    if (tier === 'Excellence') return { tier: 'Excellence', color: 'bg-bpjs-yellow text-bpjs-blue-dark', icon: '🏆' };
+    if (tier === 'Competent') return { tier: 'Competent', color: 'bg-bpjs-green text-white', icon: '✅' };
     return { tier: 'Participation', color: 'bg-gray-300 text-gray-700', icon: '📋' };
   };
 
@@ -112,7 +116,7 @@ export default function AdminCertificatePage() {
       ) : (
         <div className="grid gap-3">
           {interns.map((intern) => {
-            const info = tierInfo(intern.total_exp);
+            const info = tierInfo(intern.total_exp, intern.start_date, intern.end_date);
             return (
               <div
                 key={intern.id}

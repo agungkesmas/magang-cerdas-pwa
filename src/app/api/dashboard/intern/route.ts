@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getInternToken } from '@/lib/auth';
-import { calculateLevel, calculateTimeProgress, daysRemaining, internshipDuration } from '@/lib/utils';
+import { calculateLevel, calculateTimeProgress, daysRemaining, internshipDuration, calculateTier } from '@/lib/utils';
 
 export async function GET() {
   try {
@@ -80,7 +80,7 @@ export async function GET() {
       profile: {
         ...profile,
         level_info: calculateLevel(profile.total_exp || 0),
-        tier: (profile.total_exp || 0) >= 1000 ? 'Excellence' : (profile.total_exp || 0) >= 500 ? 'Competent' : 'Participation',
+        tier: calculateTier(profile.total_exp || 0, profile.start_date, profile.end_date),
         time_progress: calculateTimeProgress(profile.start_date, profile.end_date),
         days_remaining: daysRemaining(profile.end_date),
         duration_days: internshipDuration(profile.start_date, profile.end_date)
