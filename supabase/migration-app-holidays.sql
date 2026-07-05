@@ -14,35 +14,31 @@
 --   khusus dari BPJS Cabang Cirebon.
 --
 -- Idempotent — aman di-run ulang
--- CARA PAKAI: Run di Supabase SQL Editor
+-- CARA PAKAI: Run di Supabase SQL Editor (copy SELURUH isi file ini)
 -- ============================================================
 
+-- Step 1: Buat tabel kalau belum ada
 CREATE TABLE IF NOT EXISTS app_holidays (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   date DATE NOT NULL UNIQUE,
   name VARCHAR(150) NOT NULL,
-  type VARCHAR(20) DEFAULT 'custom', -- 'national' | 'bpjs' | 'custom' (hanya untuk display)
+  type VARCHAR(20) DEFAULT 'custom',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Step 2: Enable RLS
 ALTER TABLE app_holidays ENABLE ROW LEVEL SECURITY;
--- No public policy — all access via service role in API routes
 
--- Index untuk performance
+-- Step 3: Index
 CREATE INDEX IF NOT EXISTS idx_app_holidays_date ON app_holidays(date);
 
--- ============================================================
--- CLEANUP: Hapus data HUT BPJS yang ngawur (BUKAN libur nasional)
--- Kalau sebelumnya sudah ter-insert dari migration versi lama, hapus di sini
--- ============================================================
+-- Step 4: Hapus data HUT BPJS yang ngawur (BUKAN libur nasional)
 DELETE FROM app_holidays
 WHERE name ILIKE '%HUT BPJS%'
    OR name ILIKE '%BPJS Ketenagakerjaan ke%';
 
--- Tidak ada seed default — admin tambah sendiri via UI Pengaturan → Hari Libur
+-- Step 5: Verifikasi (query sederhana, tanpa UNION)
+SELECT COUNT(*) AS total_custom_holidays FROM app_holidays;
 
--- Verifikasi
-SELECT 'MIGRATION APP_HOLIDAYS SELESAI' as info
-UNION ALL SELECT 'app_holidays table: ' || COUNT(*)::text FROM information_schema.tables WHERE table_name = 'app_holidays'
-UNION ALL SELECT 'total rows: ' || COUNT(*)::text FROM app_holidays
-UNION ALL SELECT 'HUT BPJS (harus 0): ' || COUNT(*)::text FROM app_holidays WHERE name ILIKE '%HUT BPJS%';
+SELECT COUNT(*) AS hut_bpjs_remaining FROM app_holidays
+WHERE name ILIKE '%HUT BPJS%';

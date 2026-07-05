@@ -25,6 +25,7 @@ ALTER TABLE certificate_autocreate_logs ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS idx_autocreate_logs_intern ON certificate_autocreate_logs(intern_id);
 CREATE INDEX IF NOT EXISTS idx_autocreate_logs_created ON certificate_autocreate_logs(created_at DESC);
 
--- Verifikasi
-SELECT 'MIGRATION AUTOCREATE LOGS SELESAI' as info
-UNION ALL SELECT 'certificate_autocreate_logs table: ' || COUNT(*)::text FROM information_schema.tables WHERE table_name = 'certificate_autocreate_logs';
+-- Verifikasi (query sederhana)
+SELECT COUNT(*) AS autocreate_logs_table_exists
+FROM information_schema.tables
+WHERE table_name = 'certificate_autocreate_logs';

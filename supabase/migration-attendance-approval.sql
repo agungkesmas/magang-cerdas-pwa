@@ -45,10 +45,10 @@ CREATE INDEX IF NOT EXISTS idx_attendance_pending_approval
   ON attendance(approval_status, is_holiday_checkin)
   WHERE approval_status = 'pending';
 
--- Step 4: Verifikasi
-SELECT 'MIGRATION APPROVAL SELESAI' as info
-UNION ALL SELECT 'approval_status column: ' || COUNT(*)::text FROM information_schema.columns WHERE table_name = 'attendance' AND column_name = 'approval_status'
-UNION ALL SELECT 'approved_by column: ' || COUNT(*)::text FROM information_schema.columns WHERE table_name = 'attendance' AND column_name = 'approved_by'
-UNION ALL SELECT 'approved_at column: ' || COUNT(*)::text FROM information_schema.columns WHERE table_name = 'attendance' AND column_name = 'approved_at'
-UNION ALL SELECT 'is_holiday_checkin column: ' || COUNT(*)::text FROM information_schema.columns WHERE table_name = 'attendance' AND column_name = 'is_holiday_checkin'
-UNION ALL SELECT 'existing rows marked approved: ' || COUNT(*)::text FROM attendance WHERE approval_status = 'approved';
+-- Step 4: Verifikasi (query sederhana, tanpa UNION)
+SELECT COUNT(*) AS new_columns_added
+FROM information_schema.columns
+WHERE table_name = 'attendance'
+  AND column_name IN ('approval_status', 'approved_by', 'approved_at', 'is_holiday_checkin');
+
+SELECT COUNT(*) AS rows_marked_approved FROM attendance WHERE approval_status = 'approved';

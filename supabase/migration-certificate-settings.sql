@@ -59,9 +59,7 @@ CREATE POLICY "Authenticated delete certificate-assets" ON storage.objects
   FOR DELETE
   USING (bucket_id = 'certificate-assets');
 
--- === 4. Verifikasi ===
-SELECT 'MIGRATION CERTIFICATE SETTINGS SELESAI' as info
-UNION ALL SELECT 'certificate_settings table: ' || COUNT(*)::text FROM information_schema.tables WHERE table_name = 'certificate_settings'
-UNION ALL SELECT 'certificate_settings row count: ' || COUNT(*)::text FROM certificate_settings
-UNION ALL SELECT 'HUT BPJS di app_holidays (harus 0): ' || COUNT(*)::text FROM app_holidays WHERE name ILIKE '%HUT BPJS%'
-UNION ALL SELECT 'storage bucket: ' || COUNT(*)::text FROM storage.buckets WHERE id = 'certificate-assets';
+-- === 4. Verifikasi (query sederhana, tanpa UNION) ===
+SELECT COUNT(*) AS cert_settings_rows FROM certificate_settings;
+
+SELECT COUNT(*) AS storage_bucket_exists FROM storage.buckets WHERE id = 'certificate-assets';
