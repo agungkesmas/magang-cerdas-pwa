@@ -25,6 +25,16 @@ import {
 } from 'lucide-react';
 import PrintCredentialsModal, { PrintableCredential } from '@/components/admin/PrintCredentialsModal';
 
+// Predefined tags with colors
+const PREDEFINED_TAGS = [
+  { label: 'Unggul', color: 'bg-green-100 text-green-700 border-green-300' },
+  { label: 'Perlu Perhatian', color: 'bg-amber-100 text-amber-700 border-amber-300' },
+  { label: 'Leadership', color: 'bg-blue-100 text-blue-700 border-blue-300' },
+  { label: 'Fast Learner', color: 'bg-purple-100 text-purple-700 border-purple-300' },
+  { label: 'Bermasalah', color: 'bg-red-100 text-red-700 border-red-300' },
+];
+const TAG_COLORS: Record<string, string> = Object.fromEntries(PREDEFINED_TAGS.map(t => [t.label, t.color]));
+
 interface Intern {
   id: string;
   name: string;
@@ -39,13 +49,14 @@ interface Intern {
   username: string;
   raw_password: string;
   is_active: boolean;
-  logbook_enabled?: boolean; // deprecated
+  logbook_enabled?: boolean;
   certificate_unlocked: boolean;
   created_at: string;
   time_progress: number;
   days_remaining: number;
   email?: string | null;
   whatsapp?: string | null;
+  tags?: string[];
 }
 
 interface CreatedIntern {
@@ -85,6 +96,7 @@ export default function AdminInternsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [printItems, setPrintItems] = useState<PrintableCredential[] | null>(null);
   const [tab, setTab] = useState<'active' | 'archived'>('active');
+  const [tagFilter, setTagFilter] = useState<string>('all');
 
   const fetchInterns = useCallback(async () => {
     setLoading(true);
@@ -139,8 +151,8 @@ export default function AdminInternsPage() {
         />
       </div>
 
-      {/* Tab Aktif / Arsip */}
-      <div className="flex gap-2">
+      {/* Tab Aktif / Arsip + Tag Filter */}
+      <div className="flex gap-2 items-center flex-wrap">
         <button
           onClick={() => { setTab('active'); setSelectedIds(new Set()); }}
           className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'active' ? 'bg-bpjs-blue text-white shadow-sm' : 'text-gray-600 bg-white border border-gray-200'}`}
@@ -153,6 +165,16 @@ export default function AdminInternsPage() {
         >
           Arsip ({interns.filter(i => !i.is_active).length})
         </button>
+        <select
+          value={tagFilter}
+          onChange={(e) => setTagFilter(e.target.value)}
+          className="px-3 py-1.5 rounded-md text-sm border border-gray-200 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
+        >
+          <option value="all">Semua Tag</option>
+          {PREDEFINED_TAGS.map(t => (
+            <option key={t.label} value={t.label}>{t.label}</option>
+          ))}
+        </select>
       </div>
 
       {loading ? (
@@ -165,7 +187,8 @@ export default function AdminInternsPage() {
               const s = search.toLowerCase();
               const matchSearch = !s || i.name.toLowerCase().includes(s) || i.major.toLowerCase().includes(s) || i.username.toLowerCase().includes(s);
               const matchTab = tab === 'active' ? i.is_active : !i.is_active;
-              return matchSearch && matchTab;
+              const matchTag = tagFilter === 'all' || (i.tags || []).includes(tagFilter);
+              return matchSearch && matchTab && matchTag;
             });
             const selectedCount = filteredList.filter((i) => selectedIds.has(i.id)).length;
             const allSelected = filteredList.length > 0 && selectedCount === filteredList.length;
@@ -280,7 +303,8 @@ export default function AdminInternsPage() {
               const s = search.toLowerCase();
               const matchSearch = !s || i.name.toLowerCase().includes(s) || i.major.toLowerCase().includes(s) || i.username.toLowerCase().includes(s);
               const matchTab = tab === 'active' ? i.is_active : !i.is_active;
-              return matchSearch && matchTab;
+              const matchTag = tagFilter === 'all' || (i.tags || []).includes(tagFilter);
+              return matchSearch && matchTab && matchTag;
             }).map((intern) => (
             <div key={intern.id} className={`bg-white rounded-xl border p-4 ${intern.is_active ? 'border-gray-200' : 'border-gray-300 bg-gray-50/50'} ${selectedIds.has(intern.id) ? 'ring-2 ring-bpjs-blue/40' : ''}`}>
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -307,6 +331,26 @@ export default function AdminInternsPage() {
                       <span className="text-xs px-2 py-0.5 bg-bpjs-blue/10 text-bpjs-blue rounded-full">{intern.department}</span>
                       <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">{intern.major}</span>
                       {!intern.is_active && <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full font-medium">Arsip</span>}
+                      {(intern.tags || []).map(tag => (
+                        <span key={tag} className={`text-xs px-2 py-0.5 rounded-full border ${TAG_COLORS[tag] || 'bg-gray-100 text-gray-600 border-gray-300'}`}>{tag}</span>
+                      ))}
+                      {/* Tag dropdown */}
+                      <div className="relative inline-block group">
+                        <button className="text-xs px-2 py-0.5 bg-bpjs-blue/10 text-bpjs-blue rounded-full hover:bg-bpjs-blue/20 font-medium">+ Tag</button>
+                        <div className="hidden group-hover:block absolute z-20 top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-2 min-w-[160px]">
+                          {PREDEFINED_TAGS.map(t => (
+                            <button
+                              key={t.label}
+                              onClick={() => handleToggleTag(intern.id, t.label, intern.tags || [])}
+                              className={`flex items-center gap-2 w-full text-left px-2 py-1 rounded text-xs hover:bg-gray-50 ${(intern.tags || []).includes(t.label) ? 'font-bold' : ''}`}
+                            >
+                              <span className={`w-2 h-2 rounded-full ${t.color.split(' ')[0]}`}></span>
+                              {t.label}
+                              {(intern.tags || []).includes(t.label) && <span className="ml-auto text-green-600">✓</span>}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                     <div className="flex items-center gap-4 mt-1 text-xs text-gray-500 flex-wrap">
                       <span className={`flex items-center gap-1 font-medium ${
@@ -447,6 +491,12 @@ export default function AdminInternsPage() {
 
   async function handleToggleActive(id: string) {
     await fetch('/api/interns/update', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, action: 'toggle_active' }) });
+    fetchInterns();
+  }
+
+  async function handleToggleTag(internId: string, tag: string, currentTags: string[] = []) {
+    const newTags = currentTags.includes(tag) ? currentTags.filter(t => t !== tag) : [...currentTags, tag];
+    await fetch('/api/interns/update', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: internId, tags: newTags }) });
     fetchInterns();
   }
 
