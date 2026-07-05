@@ -70,7 +70,7 @@ SELECT 'interns (active)', COUNT(*)::text FROM interns WHERE is_active = true
 UNION ALL
 SELECT 'interns (archived)', COUNT(*)::text FROM interns WHERE is_active = false
 UNION ALL
-SELECT 'certificates total', COUNT(*)::text FROM "Certificates"
+SELECT 'certificates total', COUNT(*)::text FROM certificates
 UNION ALL
 SELECT 'quest_logs total', COUNT(*)::text FROM quest_logs
 UNION ALL

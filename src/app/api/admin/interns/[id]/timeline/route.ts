@@ -102,10 +102,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         .order('created_at', { ascending: false })
         .limit(100),
 
-      // Certificates
+      // Certificates (nama tabel aktual lowercase 'certificates' & 'officials' di DB)
       supabase
-        .from('Certificates')
-        .select('id, tier, issue_date, verification_id, pdf_url, created_at, Officials(name, position, branch)')
+        .from('certificates')
+        .select('id, tier, issue_date, verification_id, pdf_url, created_at, officials(name, position, branch)')
         .eq('intern_id', internId)
         .order('created_at', { ascending: false }),
 
@@ -242,9 +242,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           issue_date: c.issue_date,
           verification_id: c.verification_id,
           pdf_url: c.pdf_url,
-          official_name: c.Officials?.name,
-          official_position: c.Officials?.position,
-          official_branch: c.Officials?.branch
+          official_name: c.officials?.name,
+          official_position: c.officials?.position,
+          official_branch: c.officials?.branch
         }
       });
     });

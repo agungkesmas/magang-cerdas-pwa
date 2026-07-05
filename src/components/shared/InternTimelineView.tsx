@@ -54,7 +54,7 @@ interface CertRow {
   issue_date: string;
   verification_id: string;
   pdf_url: string | null;
-  Officials?: any;
+  officials?: any;
 }
 
 interface TimelineResponse {
@@ -294,8 +294,8 @@ export default function InternTimelineView({ internId, backHref = '/admin/activi
                       </div>
                       <div className="text-xs text-gray-600 space-y-0.5">
                         <p>Tanggal Terbit: {formatDate(c.issue_date)}</p>
-                        {c.Officials && (
-                          <p>Diterbitkan oleh: {c.Officials.name} — {c.Officials.position} {c.Officials.branch ? `(${c.Officials.branch})` : ''}</p>
+                        {c.officials && (
+                          <p>Diterbitkan oleh: {c.officials.name} — {c.officials.position} {c.officials.branch ? `(${c.officials.branch})` : ''}</p>
                         )}
                       </div>
                     </div>
