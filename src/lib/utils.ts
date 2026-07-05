@@ -62,6 +62,9 @@ export function internshipDuration(startDate: string, endDate: string): number {
 
 // ============================================================
 // Hitung jumlah hari kerja (Senin-Jumat) antara 2 tanggal (inklusif)
+// CATATAN: ini adalah working days MENTAH — belum dikurangi libur nasional.
+// Untuk effective working days (sudah dikurangi libur), pakai
+// countEffectiveWorkingDays() dari lib/holidays.ts
 // ============================================================
 export function countWorkingDays(startDate: string, endDate: string): number {
   if (!startDate || !endDate) return 0;
@@ -84,20 +87,44 @@ export function countWorkingDays(startDate: string, endDate: string): number {
 // ============================================================
 // Hitung Maksimal EXP Teoritis untuk durasi magang tertentu
 //
+// RUMUS BARU (post-libur resmi + spare 10%):
+//
+//   effective_working_days = working_days − libur_nasional_di_weekday − cuti_bersama_di_weekday
+//   max_exp_basis = round(effective_working_days × 0.90)  // spare 10% untuk sakit/izin/darurat
+//
 // Asumsi standar BPJS (rajin absen + 1 tugas/hari + quest mingguan + bonus pembina):
-//   - Check-In: 20 EXP per hari kerja
-//   - Check-Out: 10 EXP per hari kerja
-//   - Tugas standar (1 per hari): 20 EXP per hari kerja
-//   - Quest dari chat grup: 20 EXP per minggu (= working_days / 5)
+//   - Check-In: 20 EXP per hari kerja efektif
+//   - Check-Out: 10 EXP per hari kerja efektif
+//   - Tugas standar (1 per hari): 20 EXP per hari kerja efektif
+//   - Quest dari chat grup: 20 EXP per minggu (= effective_working_days / 5)
 //   - Bonus XP dari pembina (rata-rata): 30 EXP per minggu
 //   - Survival Kit quiz (8 modul × 25 EXP): 200 EXP sekali saja
+//
+// SPARE 10% (justifikasi — berdasarkan riset standar industri):
+//   - Pro-rata cuti tahunan (UU 13/2003 Ps.79): 6 hari = 4,7%
+//   - Sakit wajar: 3 hari = 2,3%
+//   - Izin/darurat keluarga: 2 hari = 1,6%
+//   - Buffer tak terduga: 2 hari = 1,6%
+//   - Total: ~10% (selaras benchmark EU 7-8% + margin Indonesia)
+//
+// Sumber: SKB 3 Menteri 2026, EU Directive 2003/88/EC, UU 13/2003
 // ============================================================
 export function calculateMaxExp(startDate: string, endDate: string): number {
   if (!startDate || !endDate) return 0;
-  const workingDays = countWorkingDays(startDate, endDate);
-  const weeks = Math.max(1, Math.floor(workingDays / 5));
+  // Lazy import untuk hindari circular dependency
+  const { countEffectiveWorkingDays } = require('./holidays');
+  const effectiveWorkingDays = countEffectiveWorkingDays(startDate, endDate);
+  if (effectiveWorkingDays <= 0) return 0;
+
+  // Spare 10% untuk sakit/izin/darurat/cuti pribadi
+  const maxExpBasis = Math.round(effectiveWorkingDays * 0.90);
+
+  // Quest & bonus dihitung per minggu (pakai effective, bukan post-spare —
+  // karena quest/bonus tetap per minggu kalender kerja, bukan per hari spare)
+  const weeks = Math.max(1, Math.floor(effectiveWorkingDays / 5));
+
   const maxExp =
-    workingDays * 50 +        // CI (20) + CO (10) + 1 tugas/hari (20) = 50/hari
+    maxExpBasis * 50 +        // CI (20) + CO (10) + 1 tugas/hari (20) = 50/hari
     weeks * 20 +              // quest mingguan
     weeks * 30 +              // bonus pembina mingguan (rata-rata)
     200;                      // survival kit (8 modul × 25)

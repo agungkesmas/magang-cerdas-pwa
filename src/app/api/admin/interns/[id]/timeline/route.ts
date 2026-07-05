@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getAdminToken, getPembinaToken, getBKKToken } from '@/lib/auth';
+import { ensureCustomHolidaysLoaded } from '@/lib/holidays-loader';
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -18,6 +19,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     if (!admin && !pembina && !bkk) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Load custom holidays untuk tier calculation dinamis (jika ditampilkan)
+    await ensureCustomHolidaysLoaded();
 
     const supabase = createServerClient();
 

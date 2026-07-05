@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getAdminToken } from '@/lib/auth';
 import { generateVerificationId, calculateTier, formatDateID } from '@/lib/utils';
+import { ensureCustomHolidaysLoaded } from '@/lib/holidays-loader';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(req: NextRequest) {
@@ -16,6 +17,9 @@ export async function POST(req: NextRequest) {
     if (!admin) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Load custom holidays untuk calculateTier dinamis
+    await ensureCustomHolidaysLoaded();
 
     const { intern_id, tier_override } = await req.json();
     if (!intern_id) {

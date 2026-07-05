@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getBKKToken } from '@/lib/auth';
 import { calculateTimeProgress, daysRemaining, internshipDuration, calculateTier } from '@/lib/utils';
+import { ensureCustomHolidaysLoaded } from '@/lib/holidays-loader';
 
 export async function GET() {
   try {
@@ -14,6 +15,9 @@ export async function GET() {
     if (!teacher) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Load custom holidays untuk calculateTier dinamis
+    await ensureCustomHolidaysLoaded();
 
     if (!teacher.schools || teacher.schools.length === 0) {
       return NextResponse.json({

@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getInternToken } from '@/lib/auth';
 import { calculateLevel, calculateTimeProgress, daysRemaining, internshipDuration, calculateTier } from '@/lib/utils';
+import { ensureCustomHolidaysLoaded } from '@/lib/holidays-loader';
 
 export async function GET() {
   try {
@@ -14,6 +15,9 @@ export async function GET() {
     if (!intern) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Load custom holidays (BPJS-specific) ke cache untuk calculateTier dinamis
+    await ensureCustomHolidaysLoaded();
 
     const supabase = createServerClient();
 
