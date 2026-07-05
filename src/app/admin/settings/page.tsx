@@ -1416,11 +1416,21 @@ function CertificateTab() {
   // Preset warna border
   const borderPresets = [
     { name: 'BPJS Blue', color: '#0F4C81' },
-    { name: 'Gold', color: '#D4AF37' },
+    { name: 'Navy', color: '#1E3A8A' },
+    { name: 'Royal Blue', color: '#1E40AF' },
+    { name: 'Teal', color: '#0F766E' },
     { name: 'BPJS Green', color: '#00A859' },
+    { name: 'Forest', color: '#166534' },
+    { name: 'Gold', color: '#D4AF37' },
+    { name: 'Amber', color: '#B45309' },
+    { name: 'Orange', color: '#C2410C' },
     { name: 'Maroon', color: '#800020' },
+    { name: 'Crimson', color: '#9F1239' },
+    { name: 'Rose', color: '#BE123C' },
+    { name: 'Purple', color: '#6B21A8' },
+    { name: 'Indigo', color: '#3730A3' },
     { name: 'Dark Gray', color: '#374151' },
-    { name: 'Navy', color: '#1E3A8A' }
+    { name: 'Slate', color: '#334155' }
   ];
 
   return (
@@ -1549,7 +1559,7 @@ function CertificateTab() {
                   key={p.color}
                   onClick={() => setBorderColor(p.color)}
                   title={p.name}
-                  className={`w-6 h-6 rounded border-2 ${borderColor === p.color ? 'border-gray-900' : 'border-gray-200'}`}
+                  className={`w-7 h-7 rounded-full border-2 transition-transform hover:scale-110 ${borderColor === p.color ? 'border-gray-900 ring-2 ring-offset-1 ring-gray-400' : 'border-gray-200'}`}
                   style={{ backgroundColor: p.color }}
                 />
               ))}

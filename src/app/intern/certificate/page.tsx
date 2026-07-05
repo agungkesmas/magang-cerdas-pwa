@@ -28,9 +28,22 @@ export default function InternCertificatePage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/dashboard/intern');
+      const [res, certRes] = await Promise.all([
+        fetch('/api/dashboard/intern'),
+        fetch('/api/certificate/settings')
+      ]);
       const d = await res.json();
-      if (d.success) setData(d);
+      const cs = await certRes.json();
+      if (d.success) {
+        // Merge certificate settings ke data
+        const certSettings = cs.success ? cs.settings : {
+          logo_url: null,
+          border_color: '#0F4C81',
+          accent_color: '#D4AF37',
+          logo_size: 64
+        };
+        setData({ ...d, certSettings });
+      }
     } finally {
       setLoading(false);
     }
@@ -73,8 +86,20 @@ export default function InternCertificatePage() {
     );
   }
 
-  const { profile, certificate, official, leaderboard } = data;
+  const { profile, certificate, official, leaderboard, certSettings } = data;
   const isUnlocked = profile.certificate_unlocked && certificate;
+
+  // Certificate settings (dari DB, fallback ke default)
+  const cs = certSettings || {
+    logo_url: null,
+    border_color: '#0F4C81',
+    accent_color: '#D4AF37',
+    logo_size: 64
+  };
+  const borderColor = cs.border_color || '#0F4C81';
+  const accentColor = cs.accent_color || '#D4AF37';
+  const logoUrl = cs.logo_url;
+  const logoSize = cs.logo_size || 64;
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -131,7 +156,7 @@ export default function InternCertificatePage() {
       )}
 
       {/* Preview Sertifikat Prestisius — motivasi peserta */}
-      {!isUnlocked && <CertificatePreview profile={profile} />}
+      {!isUnlocked && <CertificatePreview profile={profile} certSettings={{ logoUrl, borderColor, accentColor, logoSize }} />}
 
       {/* Leaderboard */}
       <div className="glass-card p-4">
@@ -312,7 +337,7 @@ export default function InternCertificatePage() {
 // CertificatePreview — Preview sertifikat prestisius saat vault terkunci
 // Tujuan: motivasi peserta supaya berusaha capai tier Competent+ untuk dapatkan sertifikat
 // ============================================================
-function CertificatePreview({ profile }: { profile: any }) {
+function CertificatePreview({ profile, certSettings }: { profile: any; certSettings: { logoUrl: string | null; borderColor: string; accentColor: string; logoSize: number } }) {
   const { calculateTierProgress, calculateMaxExp, countWorkingDays } = require('@/lib/utils');
 
   const tp = calculateTierProgress(profile.total_exp, profile.start_date, profile.end_date);
@@ -320,28 +345,17 @@ function CertificatePreview({ profile }: { profile: any }) {
   const workingDays = countWorkingDays(profile.start_date, profile.end_date);
   const totalHours = workingDays * 8;
 
-  const tierConfig = {
-    Excellence: {
-      label: 'EXCELLENCE',
-      gradient: 'from-amber-400 to-yellow-500',
-      icon: Crown,
-      desc: 'Pencapaian Istimewa — Top 50% Peserta'
-    },
-    Competent: {
-      label: 'COMPETENT',
-      gradient: 'from-blue-500 to-bpjs-blue',
-      icon: Star,
-      desc: 'Kompeten — Standar Industri Tercapai'
-    },
-    Participation: {
-      label: 'PARTICIPATION',
-      gradient: 'from-gray-400 to-gray-500',
-      icon: Award,
-      desc: 'Partisipasi Aktif Program Magang'
-    }
-  };
-  const tier = tierConfig[tp.current_tier as keyof typeof tierConfig];
-  const TierIcon = tier.icon;
+  const { logoUrl, borderColor, accentColor, logoSize } = certSettings;
+  const previewLogoSize = Math.round(logoSize * 0.75); // scale down untuk preview
+
+  const tierIcon = tp.current_tier === 'Excellence' ? Crown : tp.current_tier === 'Competent' ? Star : Award;
+  const TierIcon = tierIcon;
+  const tierLabel = tp.current_tier.toUpperCase();
+  const tierDesc = tp.current_tier === 'Excellence' ? 'Pencapaian Istimewa — Top 50% Peserta'
+    : tp.current_tier === 'Competent' ? 'Kompeten — Standar Industri Tercapai'
+    : 'Partisipasi Aktif Program Magang';
+  // Tier badge pakai accentColor untuk Excellence, borderColor untuk lainnya
+  const tierColor = tp.current_tier === 'Excellence' ? accentColor : borderColor;
 
   return (
     <div className="space-y-4">
@@ -357,36 +371,47 @@ function CertificatePreview({ profile }: { profile: any }) {
 
       {/* Preview sertifikat — desain sama dengan halaman verifikasi publik */}
       <div className="bg-white rounded-2xl shadow-2xl overflow-hidden relative">
-        {/* Border dekoratif atas */}
-        <div className={`h-2 bg-gradient-to-r ${tier.gradient}`} />
+        {/* Border dekoratif atas — pakai warna custom */}
+        <div style={{ height: '8px', background: `linear-gradient(to right, ${borderColor}, ${accentColor}, ${borderColor})` }} />
 
         {/* Konten */}
         <div className="p-6 sm:p-8 relative">
           {/* Watermark */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none">
-            <Trophy className="w-72 h-72 text-bpjs-blue" />
+            <Trophy className="w-72 h-72" style={{ color: borderColor }} />
           </div>
 
           {/* Header sertifikat */}
           <div className="relative flex items-start justify-between mb-6">
             <div className="flex items-center gap-2">
-              {/* Logo BPJS Ketenagakerjaan asli */}
-              <img
-                src="/bpjs-ketenagakerjaan-logo.png"
-                alt="BPJS Ketenagakerjaan"
-                className="h-12 w-auto object-contain"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                  const parent = (e.target as HTMLImageElement).parentElement;
-                  if (parent) {
-                    parent.innerHTML = '<div class="font-bold text-bpjs-blue-dark text-sm leading-tight">BPJS KETENAGAKERJAAN</div><div class="text-[10px] text-gray-500">CABANG CIREBON</div>';
-                  }
-                }}
-              />
+              {/* Logo: custom (blur, masih keliatan warnanya) atau default BPJS */}
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt="Logo"
+                  style={{ height: `${previewLogoSize}px`, width: 'auto', filter: 'blur(3px)' }}
+                  className="object-contain"
+                  onError={(e) => { (e.target as HTMLImageElement).src = '/bpjs-ketenagakerjaan-logo.png'; }}
+                />
+              ) : (
+                <img
+                  src="/bpjs-ketenagakerjaan-logo.png"
+                  alt="BPJS Ketenagakerjaan"
+                  style={{ height: `${previewLogoSize}px`, width: 'auto', filter: 'blur(3px)' }}
+                  className="object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                    const parent = (e.target as HTMLImageElement).parentElement;
+                    if (parent) {
+                      parent.innerHTML = '<div class="font-bold text-bpjs-blue-dark text-sm leading-tight">BPJS KETENAGAKERJAAN</div><div class="text-[10px] text-gray-500">CABANG CIREBON</div>';
+                    }
+                  }}
+                />
+              )}
             </div>
             <div className="text-right">
-              <div className="text-[9px] text-gray-400 uppercase tracking-wider">Sertifikat Magang</div>
-              <div className="font-mono text-[11px] font-bold text-bpjs-blue mt-0.5 bg-gray-100 px-2 py-0.5 rounded">
+              <div className="text-[9px] uppercase tracking-wider" style={{ color: borderColor }}>Sertifikat Magang</div>
+              <div className="font-mono text-[11px] font-bold mt-0.5 bg-gray-100 px-2 py-0.5 rounded" style={{ color: borderColor }}>
                 MC-XXXX-XXXXXX
               </div>
             </div>
@@ -409,15 +434,19 @@ function CertificatePreview({ profile }: { profile: any }) {
             </p>
           </div>
 
-          {/* Tier badge — estimasi tier saat ini */}
+          {/* Tier badge — estimasi tier saat ini, pakai warna custom */}
           <div className="flex justify-center mb-6">
-            <div className={`relative inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-br ${tier.gradient} shadow-lg ring-2 ring-offset-2 ring-gray-200`}>
+            <div
+              className="relative inline-flex items-center gap-2 px-5 py-3 rounded-xl shadow-lg ring-2 ring-offset-2 ring-gray-200"
+              style={{ background: `linear-gradient(to bottom right, ${tierColor}, ${tierColor}dd)` }}
+            >
               <TierIcon className="w-6 h-6 text-white fill-current" />
               <div className="text-left">
                 <div className="text-[9px] text-white/80 uppercase tracking-wider">TIER ESTIMASI SAAT INI</div>
                 <div className="text-lg font-bold text-white">
-                  {tier.label}
+                  {tierLabel}
                 </div>
+                <div className="text-[9px] text-white/90">{tierDesc}</div>
               </div>
             </div>
           </div>
@@ -465,8 +494,8 @@ function CertificatePreview({ profile }: { profile: any }) {
           </div>
         </div>
 
-        {/* Border dekoratif bawah */}
-        <div className={`h-2 bg-gradient-to-r ${tier.gradient}`} />
+        {/* Border dekoratif bawah — pakai warna custom */}
+        <div style={{ height: '8px', background: `linear-gradient(to right, ${borderColor}, ${accentColor}, ${borderColor})` }} />
       </div>
 
       {/* CTA — cara dapatkan sertifikat */}
