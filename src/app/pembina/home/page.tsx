@@ -17,16 +17,21 @@ import {
 export default function PembinaHomePage() {
   const [pembina, setPembina] = useState<any>(null);
   const [groups, setGroups] = useState<any[]>([]);
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/groups/list')
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.success) {
-          setGroups(d.groups || []);
-          // Get pembina info from first group's my_role or fallback
-          setPembina({ name: 'Pembina' }); // Will be enhanced later
+    Promise.all([
+      fetch('/api/groups/list').then(r => r.json()),
+      fetch('/api/leaderboard').then(r => r.json()),
+    ])
+      .then(([groupData, lbData]) => {
+        if (groupData.success) {
+          setGroups(groupData.groups || []);
+          setPembina({ name: 'Pembina' });
+        }
+        if (lbData.success) {
+          setLeaderboard(lbData.leaderboard || []);
         }
       })
       .finally(() => setLoading(false));
@@ -165,6 +170,45 @@ export default function PembinaHomePage() {
           </div>
         )}
       </div>
+
+      {/* Leaderboard — Top 10 scrollable */}
+      {leaderboard.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-200 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+              <TrendingUp className="w-5 h-5 text-bpjs-yellow" /> Papan Peringkat EXP
+            </h2>
+            <span className="text-xs text-gray-400">Top 10 peserta magang</span>
+          </div>
+          <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1 -mr-1 leaderboard-scroll">
+            {leaderboard.map((entry, idx) => (
+              <div key={entry.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-purple-50/40 transition-colors">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 ${
+                  idx === 0 ? 'bg-bpjs-yellow text-bpjs-blue-dark' :
+                  idx === 1 ? 'bg-gray-300 text-gray-700' :
+                  idx === 2 ? 'bg-orange-400 text-orange-900' :
+                  'bg-gray-100 text-gray-500'
+                }`}>
+                  {idx + 1}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 text-sm truncate">{entry.name}</p>
+                  <p className="text-xs text-gray-500">{entry.department} • {entry.major}</p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="font-bold text-bpjs-yellow text-sm">{entry.total_exp}</p>
+                  <p className="text-xs text-gray-400">EXP</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          {leaderboard.length > 5 && (
+            <div className="mt-2 text-center text-[10px] text-gray-400 italic">
+              Gulir untuk lihat peringkat 6–{leaderboard.length}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

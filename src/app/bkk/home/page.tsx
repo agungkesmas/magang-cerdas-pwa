@@ -77,7 +77,7 @@ export default function BKKHomePage() {
 
   const { teacher, stats, interns } = data;
   const hasActiveRequests = reqStats.submitted + reqStats.under_review + reqStats.accepted > 0;
-  const topInterns = [...interns].filter((i) => i.is_active).sort((a, b) => (b.total_exp || 0) - (a.total_exp || 0)).slice(0, 5);
+  const topInterns = [...interns].filter((i) => i.is_active).sort((a, b) => (b.total_exp || 0) - (a.total_exp || 0)).slice(0, 10);
   const endingSoon = interns.filter((i) => i.is_active && i.days_remaining <= 14).sort((a, b) => a.days_remaining - b.days_remaining).slice(0, 4);
   const certifiedInterns = interns.filter((i) => i.certificate_unlocked).slice(0, 4);
 
@@ -230,7 +230,7 @@ export default function BKKHomePage() {
               <p className="text-gray-500 text-sm">Belum ada pemagang aktif.</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1 -mr-1 leaderboard-scroll">
               {topInterns.map((intern, idx) => (
                 <Link
                   key={intern.id}
