@@ -695,9 +695,26 @@ function BatchPrintCredentialsModal({ results, onClose }: { results: BatchResult
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4">
+    <>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          body * { visibility: hidden !important; }
+          .batch-print-modal, .batch-print-modal * { visibility: visible !important; }
+          .batch-print-modal {
+            position: absolute !important;
+            inset: 0 !important;
+            background: white !important;
+            display: block !important;
+            padding: 8px !important;
+            max-height: none !important;
+            overflow: visible !important;
+          }
+          .batch-print-modal .batch-modal-header { display: none !important; }
+        }
+      `}} />
+    <div className="batch-print-modal fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="flex items-center justify-between p-5 border-b border-gray-100 sticky top-0 bg-white print:hidden">
+        <div className="batch-modal-header flex items-center justify-between p-5 border-b border-gray-100 sticky top-0 bg-white print:hidden">
           <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2"><Printer className="w-5 h-5" /> Kartu Kredensial ({results.length})</h3>
           <div className="flex gap-2">
             <button onClick={copyAll} className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg flex items-center gap-1"><Copy className="w-4 h-4" /> Copy Semua</button>
@@ -736,6 +753,7 @@ function BatchPrintCredentialsModal({ results, onClose }: { results: BatchResult
         </div>
       </div>
     </div>
+    </>
   );
 }
 
