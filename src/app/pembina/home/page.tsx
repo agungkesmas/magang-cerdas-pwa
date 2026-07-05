@@ -13,7 +13,8 @@ import {
   TrendingUp,
   ArrowRight,
   X,
-  Send
+  Send,
+  Mail
 } from 'lucide-react';
 
 export default function PembinaHomePage() {
@@ -23,6 +24,7 @@ export default function PembinaHomePage() {
   const [myInterns, setMyInterns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [assignTaskFor, setAssignTaskFor] = useState<any | null>(null);
+  const [dmLoading, setDmLoading] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -184,6 +186,33 @@ export default function PembinaHomePage() {
                   className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-md flex-shrink-0"
                 >
                   <Target className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={async () => {
+                    setDmLoading(intern.id);
+                    try {
+                      const res = await fetch('/api/pembina/dm', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ intern_id: intern.id }),
+                      });
+                      const data = await res.json();
+                      if (data.success) {
+                        window.location.href = `/pembina/chat/${data.group_id}`;
+                      } else {
+                        alert('Error: ' + data.error);
+                      }
+                    } catch (e: any) {
+                      alert('Error: ' + e.message);
+                    } finally {
+                      setDmLoading(null);
+                    }
+                  }}
+                  disabled={dmLoading === intern.id}
+                  title={`Chat langsung dengan ${intern.name}`}
+                  className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md flex-shrink-0 disabled:opacity-50"
+                >
+                  {dmLoading === intern.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
                 </button>
               </div>
             ))}

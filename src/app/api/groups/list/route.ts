@@ -34,7 +34,8 @@ export async function GET(req: NextRequest) {
     if (admin && !pembina && !intern) {
       let query = supabase
         .from('groups')
-        .select('*');
+        .select('*')
+        .neq('group_type', 'dm'); // Hide DM groups from admin list
       if (filterActive !== undefined) query = query.eq('is_active', filterActive);
       const { data: groups, error } = await query.order('created_at', { ascending: false });
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
