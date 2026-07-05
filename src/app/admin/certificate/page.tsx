@@ -11,6 +11,7 @@ interface Intern {
   end_date: string;
   total_exp: number;
   days_remaining: number;
+  time_progress: number;
   certificate_unlocked: boolean;
 }
 
@@ -138,7 +139,11 @@ export default function AdminCertificatePage() {
                         <span>•</span>
                         <span>Selesai: {new Date(intern.end_date).toLocaleDateString('id-ID')}</span>
                         <span>•</span>
-                        <span>{intern.days_remaining} hari lagi</span>
+                        <span className={`font-medium ${
+                          intern.time_progress >= 80 ? 'text-red-600' :
+                          intern.time_progress >= 50 ? 'text-amber-600' :
+                          'text-green-600'
+                        }`}>{intern.days_remaining} hari lagi</span>
                       </div>
                     </div>
                   </div>

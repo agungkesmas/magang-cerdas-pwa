@@ -1,11 +1,13 @@
 // ============================================================
 // /api/interns/list — List all interns
 // Akses: Admin (semua field) ATAU Pembina (exclude raw_password)
+// Compute: days_remaining, time_progress untuk setiap intern
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getAdminToken, getPembinaToken } from '@/lib/auth';
+import { calculateTimeProgress, daysRemaining } from '@/lib/utils';
 
 export async function GET(req: NextRequest) {
   try {
@@ -33,7 +35,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, interns: data || [] });
+    // Compute days_remaining + time_progress untuk setiap intern
+    const enriched = (data || []).map((i: any) => ({
+      ...i,
+      time_progress: calculateTimeProgress(i.start_date, i.end_date),
+      days_remaining: daysRemaining(i.end_date)
+    }));
+
+    return NextResponse.json({ success: true, interns: enriched });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

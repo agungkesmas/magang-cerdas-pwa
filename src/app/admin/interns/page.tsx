@@ -249,17 +249,37 @@ export default function AdminInternsPage() {
                       {!intern.is_active && <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full">Nonaktif</span>}
                     </div>
                     <div className="flex items-center gap-4 mt-1 text-xs text-gray-500 flex-wrap">
-                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{intern.days_remaining} hari tersisa</span>
+                      <span className={`flex items-center gap-1 font-medium ${
+                        intern.time_progress >= 80 ? 'text-red-600' :
+                        intern.time_progress >= 50 ? 'text-amber-600' :
+                        'text-green-600'
+                      }`}>
+                        <Clock className="w-3 h-3" />
+                        {intern.days_remaining} hari tersisa
+                      </span>
                       <span className="flex items-center gap-1"><Award className="w-3 h-3" />{intern.total_exp} EXP</span>
                       <span className="flex items-center gap-1"><Flame className="w-3 h-3 text-orange-500" />{intern.streak_count} streak</span>
                       {intern.email && <span>📧 {intern.email}</span>}
                       {intern.whatsapp && <span>💬 {intern.whatsapp}</span>}
                     </div>
                     <div className="mt-2 flex items-center gap-2">
-                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden max-w-xs">
-                        <div className="h-full bg-gradient-to-r from-bpjs-blue to-bpjs-blue-light" style={{ width: `${intern.time_progress}%` }} />
+                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden max-w-xs">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            intern.time_progress >= 80 ? 'bg-gradient-to-r from-red-400 to-red-600' :
+                            intern.time_progress >= 50 ? 'bg-gradient-to-r from-amber-400 to-amber-600' :
+                            'bg-gradient-to-r from-green-400 to-green-600'
+                          }`}
+                          style={{ width: `${intern.time_progress}%` }}
+                        />
                       </div>
-                      <span className="text-xs text-gray-500">{intern.time_progress}%</span>
+                      <span className={`text-xs font-semibold ${
+                        intern.time_progress >= 80 ? 'text-red-600' :
+                        intern.time_progress >= 50 ? 'text-amber-600' :
+                        'text-green-600'
+                      }`}>
+                        {intern.time_progress}%
+                      </span>
                     </div>
                   </div>
                 </div>

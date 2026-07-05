@@ -180,15 +180,27 @@ function InternList() {
                 <div className="sm:w-40">
                   <div className="flex items-center justify-between text-xs mb-1">
                     <span className="text-gray-500">Waktu magang</span>
-                    <span className="font-semibold text-gray-700">{intern.time_progress}%</span>
+                    <span className={`font-semibold ${
+                      intern.time_progress >= 80 ? 'text-red-600' :
+                      intern.time_progress >= 50 ? 'text-amber-600' :
+                      'text-green-600'
+                    }`}>{intern.time_progress}%</span>
                   </div>
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-bpjs-green to-bpjs-green-dark"
+                      className={`h-full rounded-full transition-all ${
+                        intern.time_progress >= 80 ? 'bg-gradient-to-r from-red-400 to-red-600' :
+                        intern.time_progress >= 50 ? 'bg-gradient-to-r from-amber-400 to-amber-600' :
+                        'bg-gradient-to-r from-green-400 to-green-600'
+                      }`}
                       style={{ width: `${intern.time_progress}%` }}
                     />
                   </div>
-                  <div className="text-xs text-gray-400 mt-1">
+                  <div className={`text-xs mt-1 font-medium ${
+                    intern.time_progress >= 80 ? 'text-red-600' :
+                    intern.time_progress >= 50 ? 'text-amber-600' :
+                    'text-green-600'
+                  }`}>
                     {intern.is_active ? `${intern.days_remaining} hari lagi` : 'Selesai'}
                   </div>
                 </div>
@@ -294,11 +306,23 @@ function InternDetail({ internId }: { internId: string }) {
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex items-center gap-2 mb-1">
-            <Clock className="w-4 h-4 text-bpjs-blue" />
+            <Clock className={`w-4 h-4 ${
+              intern.time_progress >= 80 ? 'text-red-500' :
+              intern.time_progress >= 50 ? 'text-amber-500' :
+              'text-green-500'
+            }`} />
             <span className="text-xs text-gray-500">Progress Waktu</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900">{intern.time_progress}%</div>
-          <div className="text-xs text-gray-400 mt-0.5">{intern.days_remaining} hari tersisa</div>
+          <div className={`text-2xl font-bold ${
+            intern.time_progress >= 80 ? 'text-red-600' :
+            intern.time_progress >= 50 ? 'text-amber-600' :
+            'text-green-600'
+          }`}>{intern.time_progress}%</div>
+          <div className={`text-xs mt-0.5 font-medium ${
+            intern.time_progress >= 80 ? 'text-red-600' :
+            intern.time_progress >= 50 ? 'text-amber-600' :
+            'text-green-600'
+          }`}>{intern.days_remaining} hari tersisa</div>
         </div>
       </div>
 
