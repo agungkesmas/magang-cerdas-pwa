@@ -184,20 +184,25 @@ export default function VerifyPageClient({ data, error }: { data: VerifyData | n
           {/* Header sertifikat */}
           <div className="relative flex items-start justify-between mb-8">
             <div className="flex items-center gap-3">
-              <div className="w-16 h-16 bg-bpjs-blue rounded-xl flex items-center justify-center">
-                <Building2 className="w-10 h-10 text-bpjs-yellow" strokeWidth={2.5} />
-              </div>
-              <div>
-                <div className="font-bold text-bpjs-blue-dark text-lg leading-tight" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-                  BPJS KETENAGAKERJAAN
-                </div>
-                <div className="text-xs text-gray-500">CABANG CIREBON</div>
-                <div className="text-[10px] text-gray-400 mt-0.5">Badan Penyelenggara Jaminan Sosial Ketenagakerjaan</div>
-              </div>
+              {/* Logo BPJS Ketenagakerjaan asli */}
+              <img
+                src="/bpjs-ketenagakerjaan-logo.png"
+                alt="BPJS Ketenagakerjaan"
+                className="h-14 w-auto object-contain"
+                onError={(e) => {
+                  // Fallback ke text logo kalau PNG gagal load
+                  (e.target as HTMLImageElement).style.display = 'none';
+                  const parent = (e.target as HTMLImageElement).parentElement;
+                  if (parent) {
+                    parent.innerHTML = '<div class="font-bold text-bpjs-blue-dark text-lg leading-tight">BPJS KETENAGAKERJAAN</div><div class="text-xs text-gray-500">CABANG CIREBON</div>';
+                  }
+                }}
+              />
             </div>
             <div className="text-right">
               <div className="text-[10px] text-gray-400 uppercase tracking-wider">Sertifikat Magang</div>
               <div className="font-mono text-xs font-bold text-bpjs-blue mt-0.5">{cert.verification_id}</div>
+              <div className="text-[10px] text-gray-400 mt-1">Cabang Cirebon</div>
             </div>
           </div>
 

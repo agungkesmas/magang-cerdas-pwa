@@ -191,15 +191,19 @@ export default function InternCertificatePage() {
               {/* BPJS Header */}
               <div className="flex items-center justify-between border-b-4 border-bpjs-blue pb-4 mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="w-14 h-14 bg-bpjs-blue rounded-full flex items-center justify-center text-white font-bold text-2xl">
-                    BPJS
-                  </div>
-                  <div>
-                    <div className="font-bold text-bpjs-blue text-lg" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-                      BPJS KETENAGAKERJAAN
-                    </div>
-                    <div className="text-xs text-gray-500">CABANG CIREBON</div>
-                  </div>
+                  {/* Logo BPJS Ketenagakerjaan asli */}
+                  <img
+                    src="/bpjs-ketenagakerjaan-logo.png"
+                    alt="BPJS Ketenagakerjaan"
+                    className="h-12 w-auto object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                      const parent = (e.target as HTMLImageElement).parentElement;
+                      if (parent) {
+                        parent.innerHTML = '<div class="font-bold text-bpjs-blue text-lg" style="font-family: Plus Jakarta Sans, sans-serif;">BPJS KETENAGAKERJAAN</div><div class="text-xs text-gray-500">CABANG CIREBON</div>';
+                      }
+                    }}
+                  />
                 </div>
                 <div className="text-right text-xs text-gray-500">
                   <div className="font-bold">SERTIFIKAT</div>
@@ -366,15 +370,19 @@ function CertificatePreview({ profile }: { profile: any }) {
           {/* Header sertifikat */}
           <div className="relative flex items-start justify-between mb-6">
             <div className="flex items-center gap-2">
-              <div className="w-12 h-12 bg-bpjs-blue rounded-lg flex items-center justify-center">
-                <Trophy className="w-7 h-7 text-bpjs-yellow" strokeWidth={2.5} />
-              </div>
-              <div>
-                <div className="font-bold text-bpjs-blue-dark text-sm leading-tight">
-                  BPJS KETENAGAKERJAAN
-                </div>
-                <div className="text-[10px] text-gray-500">CABANG CIREBON</div>
-              </div>
+              {/* Logo BPJS Ketenagakerjaan asli */}
+              <img
+                src="/bpjs-ketenagakerjaan-logo.png"
+                alt="BPJS Ketenagakerjaan"
+                className="h-10 w-auto object-contain"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                  const parent = (e.target as HTMLImageElement).parentElement;
+                  if (parent) {
+                    parent.innerHTML = '<div class="font-bold text-bpjs-blue-dark text-sm leading-tight">BPJS KETENAGAKERJAAN</div><div class="text-[10px] text-gray-500">CABANG CIREBON</div>';
+                  }
+                }}
+              />
             </div>
             <div className="text-right">
               <div className="text-[9px] text-gray-400 uppercase tracking-wider">Sertifikat Magang</div>

@@ -31,6 +31,8 @@ export default function AdminCertificatePage() {
   const [official, setOfficial] = useState<Official | null>(null);
   const [loading, setLoading] = useState(true);
   const [issuing, setIssuing] = useState<string | null>(null);
+  const [autoCreateLoading, setAutoCreateLoading] = useState(false);
+  const [autoCreateResult, setAutoCreateResult] = useState<any>(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -72,6 +74,24 @@ export default function AdminCertificatePage() {
     }
   };
 
+  // === Auto-create sertifikat untuk peserta yang sudah selesai + grace period 7 hari ===
+  const handleAutoCreate = async () => {
+    if (!confirm('Jalankan auto-create sertifikat? Sistem akan otomatis terbitkan sertifikat untuk peserta yang masa magangnya sudah selesai + 7 hari grace period TAPI belum punya sertifikat.')) return;
+    setAutoCreateLoading(true);
+    setAutoCreateResult(null);
+    try {
+      const res = await fetch('/api/cron/autocreate-certificates', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Gagal');
+      setAutoCreateResult(data);
+      fetchAll(); // refresh list
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    } finally {
+      setAutoCreateLoading(false);
+    }
+  };
+
   // Tier dinamis berdasarkan durasi magang per peserta (calculateTier dari utils)
   const tierInfo = (exp: number, startDate?: string | null, endDate?: string | null) => {
     const tier = calculateTier(exp, startDate, endDate);
@@ -103,6 +123,73 @@ export default function AdminCertificatePage() {
           </div>
         </div>
       )}
+
+      {/* Auto-create sertifikat section */}
+      <div className="bg-bpjs-blue/5 border border-bpjs-blue/20 rounded-xl p-4">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-bpjs-blue-dark flex items-center gap-2">
+              <Zap className="w-4 h-4 text-bpjs-yellow" /> Auto-Create Sertifikat
+            </h3>
+            <p className="text-sm text-gray-600 mt-1">
+              Sistem otomatis terbitkan sertifikat untuk peserta yang masa magangnya sudah selesai + 7 hari grace period TAPI belum punya sertifikat (kelupaan manual).
+              Cron job berjalan otomatis setiap jam. Anda juga bisa trigger manual di bawah.
+            </p>
+          </div>
+          <button
+            onClick={handleAutoCreate}
+            disabled={autoCreateLoading}
+            className="inline-flex items-center gap-2 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white text-sm font-semibold px-4 py-2 rounded-lg disabled:opacity-50 flex-shrink-0"
+          >
+            {autoCreateLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+            Jalankan Auto-Create
+          </button>
+        </div>
+
+        {autoCreateResult && (
+          <div className="mt-3 bg-white border border-gray-200 rounded-lg p-3 text-sm">
+            <p className="font-semibold text-gray-900">
+              ✅ {autoCreateResult.message || 'Auto-create selesai'}
+            </p>
+            <div className="grid grid-cols-3 gap-3 mt-2 text-center">
+              <div>
+                <div className="text-2xl font-bold text-bpjs-green">{autoCreateResult.created || 0}</div>
+                <div className="text-xs text-gray-500">Dibuat</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-500">{autoCreateResult.skipped || 0}</div>
+                <div className="text-xs text-gray-500">Dilewati</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-bpjs-blue">{autoCreateResult.total_eligible || 0}</div>
+                <div className="text-xs text-gray-500">Eligible</div>
+              </div>
+            </div>
+            {autoCreateResult.details && autoCreateResult.details.length > 0 && (
+              <details className="mt-3">
+                <summary className="text-xs text-gray-500 cursor-pointer">Lihat detail ({autoCreateResult.details.length})</summary>
+                <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">
+                  {autoCreateResult.details.map((d: any, i: number) => (
+                    <div key={i} className="text-xs flex items-center gap-2 p-1.5 bg-gray-50 rounded">
+                      <span className={`px-1.5 py-0.5 rounded font-medium ${
+                        d.status === 'created' ? 'bg-bpjs-green/10 text-bpjs-green' :
+                        d.status === 'skipped' ? 'bg-gray-200 text-gray-600' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {d.status}
+                      </span>
+                      <span className="font-medium text-gray-900">{d.name}</span>
+                      {d.tier && <span className="text-gray-500">• {d.tier}</span>}
+                      {d.verification_id && <span className="font-mono text-bpjs-blue">{d.verification_id}</span>}
+                      {d.reason && <span className="text-gray-400 italic">• {d.reason}</span>}
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+          </div>
+        )}
+      </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-12">

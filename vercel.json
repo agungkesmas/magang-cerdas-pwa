@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/autocreate-certificates",
+      "schedule": "0 * * * *"
+    }
+  ]
+}
