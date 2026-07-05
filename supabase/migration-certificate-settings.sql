@@ -21,7 +21,9 @@ CREATE TABLE IF NOT EXISTS certificate_settings (
 );
 
 ALTER TABLE certificate_settings ENABLE ROW LEVEL SECURITY;
--- Public read (untuk halaman /verify/[id] tanpa login)
+
+-- Drop policy kalau sudah ada (idempotent), lalu create ulang
+DROP POLICY IF EXISTS "Public read certificate_settings" ON certificate_settings;
 CREATE POLICY "Public read certificate_settings" ON certificate_settings
   FOR SELECT USING (TRUE);
 
@@ -40,21 +42,23 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('certificate-assets', 'certificate-assets', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Storage policy: public read
+-- Storage policies: drop dulu kalau ada, lalu create (idempotent)
+DROP POLICY IF EXISTS "Public read certificate-assets" ON storage.objects;
 CREATE POLICY "Public read certificate-assets" ON storage.objects
   FOR SELECT
   USING (bucket_id = 'certificate-assets');
 
--- Storage policy: authenticated upload (service role bypasses RLS)
+DROP POLICY IF EXISTS "Authenticated upload certificate-assets" ON storage.objects;
 CREATE POLICY "Authenticated upload certificate-assets" ON storage.objects
   FOR INSERT
   WITH CHECK (bucket_id = 'certificate-assets');
 
--- Storage policy: authenticated delete/update
+DROP POLICY IF EXISTS "Authenticated update certificate-assets" ON storage.objects;
 CREATE POLICY "Authenticated update certificate-assets" ON storage.objects
   FOR UPDATE
   USING (bucket_id = 'certificate-assets');
 
+DROP POLICY IF EXISTS "Authenticated delete certificate-assets" ON storage.objects;
 CREATE POLICY "Authenticated delete certificate-assets" ON storage.objects
   FOR DELETE
   USING (bucket_id = 'certificate-assets');
