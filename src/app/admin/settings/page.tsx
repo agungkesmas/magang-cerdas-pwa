@@ -21,7 +21,10 @@ import {
   AlertTriangle,
   CheckCircle2,
   Package,
-  Calendar
+  Calendar,
+  Award,
+  Palette,
+  Image as ImageIcon
 } from 'lucide-react';
 import JSZip from 'jszip';
 import { LLM_PROVIDERS, LLMProvider } from '@/types';
@@ -36,7 +39,7 @@ interface Official {
 }
 
 export default function AdminSettingsPage() {
-  const [tab, setTab] = useState<'office' | 'llm' | 'security' | 'officials' | 'holidays'>('office');
+  const [tab, setTab] = useState<'office' | 'llm' | 'security' | 'officials' | 'holidays' | 'certificate'>('office');
   const [loading, setLoading] = useState(true);
   const [office, setOffice] = useState({
     office_name: 'BPJS Ketenagakerjaan Cabang Cirebon',
@@ -173,6 +176,14 @@ export default function AdminSettingsPage() {
           }`}
         >
           <Calendar className="w-4 h-4" /> Hari Libur
+        </button>
+        <button
+          onClick={() => setTab('certificate')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium ${
+            tab === 'certificate' ? 'bg-bpjs-blue text-white' : 'text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          <Award className="w-4 h-4" /> Sertifikat
         </button>
       </div>
 
@@ -396,6 +407,11 @@ export default function AdminSettingsPage() {
       {/* HOLIDAYS TAB */}
       {tab === 'holidays' && (
         <HolidaysTab />
+      )}
+
+      {/* CERTIFICATE TAB */}
+      {tab === 'certificate' && (
+        <CertificateTab />
       )}
 
       {showOfficialForm && (
@@ -1217,6 +1233,449 @@ function HolidaysTab() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// CertificateTab — Customizable certificate (logo + colors + live preview)
+// ============================================================
+function CertificateTab() {
+  const [settings, setSettings] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  // Form state (local, disimpan ke DB saat Save)
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [borderColor, setBorderColor] = useState('#0F4C81');
+  const [accentColor, setAccentColor] = useState('#D4AF37');
+
+  const fetchSettings = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/certificate-settings');
+      const d = await res.json();
+      if (d.success) {
+        setSettings(d.settings);
+        setLogoUrl(d.settings.logo_url);
+        setBorderColor(d.settings.border_color || '#0F4C81');
+        setAccentColor(d.settings.accent_color || '#D4AF37');
+      }
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchSettings(); }, [fetchSettings]);
+
+  // === Upload logo ===
+  const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/admin/certificate-upload-logo', {
+        method: 'POST',
+        body: formData
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setLogoUrl(d.logo_url);
+      // Auto-extract dominant color dari logo yang baru di-upload
+      extractDominantColor(d.logo_url).then(color => {
+        if (color) {
+          setBorderColor(color);
+          setSuccess(`Logo diupload. Warna border otomatis di-set ke ${color} (dari logo). Klik Save untuk simpan.`);
+        } else {
+          setSuccess('Logo diupload. Klik Save untuk simpan.');
+        }
+      });
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // === Extract dominant color dari image (client-side canvas) ===
+  // Approach: load image ke canvas, sample pixel, cari warna yang paling sering muncul
+  // (exclude warna terlalu gelap/terang/abu-abu supaya dapat warna vibrant)
+  const extractDominantColor = (url: string): Promise<string | null> => {
+    return new Promise((resolve) => {
+      try {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) { resolve(null); return; }
+            // Scale down untuk performance
+            const size = 50;
+            canvas.width = size;
+            canvas.height = size;
+            ctx.drawImage(img, 0, 0, size, size);
+            const data = ctx.getImageData(0, 0, size, size).data;
+
+            // Hitung frekuensi warna (quantize ke 16 level per channel)
+            const colorCount: Record<string, number> = {};
+            for (let i = 0; i < data.length; i += 4) {
+              const r = data[i];
+              const g = data[i + 1];
+              const b = data[i + 2];
+              const a = data[i + 3];
+              if (a < 128) continue; // skip transparent
+              // Skip warna terlalu gelap/terang/abu-abu
+              const max = Math.max(r, g, b);
+              const min = Math.min(r, g, b);
+              const sat = max === 0 ? 0 : (max - min) / max;
+              const lum = (max + min) / 2;
+              if (sat < 0.25 || lum < 50 || lum > 230) continue;
+              // Quantize
+              const rq = Math.round(r / 16) * 16;
+              const gq = Math.round(g / 16) * 16;
+              const bq = Math.round(b / 16) * 16;
+              const key = `${rq},${gq},${bq}`;
+              colorCount[key] = (colorCount[key] || 0) + 1;
+            }
+
+            // Cari warna dengan count tertinggi
+            let maxCount = 0;
+            let dominantColor: string | null = null;
+            for (const [key, count] of Object.entries(colorCount)) {
+              if (count > maxCount) {
+                maxCount = count;
+                const [r, g, b] = key.split(',').map(Number);
+                dominantColor = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+              }
+            }
+            resolve(dominantColor);
+          } catch (e) {
+            console.error('[extractColor] error:', e);
+            resolve(null);
+          }
+        };
+        img.onerror = () => resolve(null);
+        img.src = url;
+      } catch (e) {
+        resolve(null);
+      }
+    });
+  };
+
+  // === Save settings ===
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch('/api/admin/certificate-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          logo_url: logoUrl,
+          border_color: borderColor,
+          accent_color: accentColor
+        })
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setSettings(d.settings);
+      setSuccess('✅ Pengaturan sertifikat tersimpan!');
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // === Reset ke default ===
+  const handleReset = () => {
+    setLogoUrl(null);
+    setBorderColor('#0F4C81');
+    setAccentColor('#D4AF37');
+    setSuccess('Di-reset ke default. Klik Save untuk simpan.');
+  };
+
+  if (loading) {
+    return <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-bpjs-blue" /></div>;
+  }
+
+  // Preset warna border
+  const borderPresets = [
+    { name: 'BPJS Blue', color: '#0F4C81' },
+    { name: 'Gold', color: '#D4AF37' },
+    { name: 'BPJS Green', color: '#00A859' },
+    { name: 'Maroon', color: '#800020' },
+    { name: 'Dark Gray', color: '#374151' },
+    { name: 'Navy', color: '#1E3A8A' }
+  ];
+
+  return (
+    <div className="space-y-4">
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-sm flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0" /> {error}
+        </div>
+      )}
+      {success && (
+        <div className="bg-bpjs-green/10 border border-bpjs-green/30 rounded-xl p-3 text-bpjs-green-dark text-sm flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> {success}
+        </div>
+      )}
+
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
+          <Award className="w-4 h-4 text-bpjs-blue" /> Desain Sertifikat Magang
+        </h3>
+        <p className="text-sm text-gray-500 mb-4">
+          Kustomisasi tampilan sertifikat yang akan diterima peserta magang.
+          Perubahan langsung berlaku di halaman verifikasi publik & Vault peserta.
+        </p>
+
+        {/* === Logo Section === */}
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="flex items-center gap-2 mb-3">
+            <ImageIcon className="w-4 h-4 text-bpjs-blue" />
+            <h4 className="font-medium text-gray-900">Logo Sertifikat</h4>
+          </div>
+          <div className="flex items-start gap-4 flex-wrap">
+            {/* Preview logo */}
+            <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg p-4 flex items-center justify-center w-40 h-24 flex-shrink-0">
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
+              ) : (
+                <div className="text-center text-gray-400">
+                  <ImageIcon className="w-8 h-8 mx-auto mb-1" />
+                  <p className="text-[10px]">Default BPJS</p>
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-gray-500 mb-2">
+                Upload logo custom (PNG/JPG/SVG/WebP, max 2MB).
+                Kalau kosong, pakai logo BPJS Ketenagakerjaan default.
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <label className="inline-flex items-center gap-1.5 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white text-sm font-semibold px-3 py-1.5 rounded-lg cursor-pointer disabled:opacity-50">
+                  {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                  {uploading ? 'Uploading...' : 'Upload Logo'}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                    onChange={handleUploadLogo}
+                    disabled={uploading}
+                    className="hidden"
+                  />
+                </label>
+                {logoUrl && (
+                  <button
+                    onClick={() => { setLogoUrl(null); setSuccess('Logo dihapus. Klik Save untuk simpan.'); }}
+                    className="inline-flex items-center gap-1 text-red-600 hover:bg-red-50 text-sm font-medium px-3 py-1.5 rounded-lg"
+                  >
+                    <Trash2 className="w-4 h-4" /> Hapus Logo
+                  </button>
+                )}
+              </div>
+              <p className="text-[11px] text-gray-400 mt-2">
+                💡 Setelah upload, warna border otomatis di-extract dari logo (bisa di-override di bawah).
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* === Color Settings === */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          {/* Border Color */}
+          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-2 mb-2">
+              <Palette className="w-4 h-4 text-bpjs-blue" />
+              <label className="font-medium text-gray-900 text-sm">Warna Border Sertifikat</label>
+            </div>
+            <div className="flex items-center gap-2 mb-2">
+              <input
+                type="color"
+                value={borderColor}
+                onChange={(e) => setBorderColor(e.target.value)}
+                className="w-12 h-10 rounded cursor-pointer border border-gray-300"
+              />
+              <input
+                type="text"
+                value={borderColor}
+                onChange={(e) => setBorderColor(e.target.value)}
+                className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm font-mono"
+                maxLength={7}
+              />
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {borderPresets.map(p => (
+                <button
+                  key={p.color}
+                  onClick={() => setBorderColor(p.color)}
+                  title={p.name}
+                  className={`w-6 h-6 rounded border-2 ${borderColor === p.color ? 'border-gray-900' : 'border-gray-200'}`}
+                  style={{ backgroundColor: p.color }}
+                />
+              ))}
+            </div>
+            <p className="text-[11px] text-gray-500 mt-2">Default: dari logo. Klik preset atau color picker untuk ubah.</p>
+          </div>
+
+          {/* Accent Color (untuk tier Excellence) */}
+          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-2 mb-2">
+              <Star className="w-4 h-4 text-amber-500" />
+              <label className="font-medium text-gray-900 text-sm">Warna Aksen (Tier Excellence)</label>
+            </div>
+            <div className="flex items-center gap-2 mb-2">
+              <input
+                type="color"
+                value={accentColor}
+                onChange={(e) => setAccentColor(e.target.value)}
+                className="w-12 h-10 rounded cursor-pointer border border-gray-300"
+              />
+              <input
+                type="text"
+                value={accentColor}
+                onChange={(e) => setAccentColor(e.target.value)}
+                className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm font-mono"
+                maxLength={7}
+              />
+            </div>
+            <p className="text-[11px] text-gray-500">
+              Dipakai untuk border & badge tier Excellence. Default: Gold (#D4AF37).
+            </p>
+          </div>
+        </div>
+
+        {/* === Action buttons === */}
+        <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="inline-flex items-center gap-1.5 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white text-sm font-semibold px-4 py-2 rounded-lg disabled:opacity-50"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Simpan Pengaturan
+          </button>
+          <button
+            onClick={handleReset}
+            className="inline-flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg"
+          >
+            Reset ke Default
+          </button>
+        </div>
+      </div>
+
+      {/* === Live Preview Sertifikat === */}
+      <CertificatePreviewMini
+        logoUrl={logoUrl}
+        borderColor={borderColor}
+        accentColor={accentColor}
+      />
+    </div>
+  );
+}
+
+// ============================================================
+// CertificatePreviewMini — Live preview sertifikat dengan config custom
+// ============================================================
+function CertificatePreviewMini({ logoUrl, borderColor, accentColor }: {
+  logoUrl: string | null;
+  borderColor: string;
+  accentColor: string;
+}) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+        <ImageIcon className="w-4 h-4 text-bpjs-blue" /> Live Preview Sertifikat
+      </h3>
+      <div className="bg-gray-100 p-4 rounded-lg">
+        <div className="bg-white rounded shadow-lg overflow-hidden mx-auto" style={{ maxWidth: '600px' }}>
+          {/* Border atas */}
+          <div style={{ height: '6px', background: `linear-gradient(to right, ${borderColor}, ${accentColor}, ${borderColor})` }} />
+
+          <div className="p-5">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                {logoUrl ? (
+                  <img src={logoUrl} alt="Logo" className="h-10 w-auto object-contain" />
+                ) : (
+                  <img src="/bpjs-ketenagakerjaan-logo.png" alt="BPJS" className="h-10 w-auto object-contain" />
+                )}
+              </div>
+              <div className="text-right text-[8px] text-gray-400">
+                <div className="uppercase tracking-wider">Sertifikat</div>
+                <div className="font-mono font-bold text-bpjs-blue">MC-XXXX-XXXXXX</div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="text-center mb-4">
+              <p className="text-[8px] text-gray-500 uppercase tracking-[0.3em] mb-1">Dengan ini menyatakan bahwa</p>
+              <h2 className="text-xl font-bold text-gray-900 mb-0.5" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+                Andi Pratama
+              </h2>
+              <p className="text-[10px] text-gray-500">SMK Al Hidayah • Pemasaran</p>
+            </div>
+
+            {/* Tier badge pakai accentColor */}
+            <div className="flex justify-center mb-3">
+              <div
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-bold"
+                style={{ background: accentColor }}
+              >
+                <Star className="w-3 h-3 fill-current" /> EXCELLENCE
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-2 mb-3 text-center" style={{ background: `${borderColor}08`, padding: '8px', borderRadius: '6px' }}>
+              <div>
+                <div className="text-sm font-bold" style={{ color: borderColor }}>130</div>
+                <div className="text-[8px] text-gray-500">HARI</div>
+              </div>
+              <div>
+                <div className="text-sm font-bold" style={{ color: borderColor }}>1,040</div>
+                <div className="text-[8px] text-gray-500">JAM</div>
+              </div>
+              <div>
+                <div className="text-sm font-bold" style={{ color: borderColor }}>7,200</div>
+                <div className="text-[8px] text-gray-500">EXP</div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between pt-3 border-t" style={{ borderColor: `${borderColor}30` }}>
+              <div className="text-[8px] text-gray-400">
+                <div className="uppercase">Verification ID</div>
+                <div className="font-mono font-bold text-bpjs-blue">MC-XXXX-XXXXXX</div>
+              </div>
+              <div className="text-center">
+                <div className="h-6 w-20 bg-gradient-to-r from-transparent via-gray-300 to-transparent mb-0.5" />
+                <div className="border-t border-gray-300 pt-0.5">
+                  <div className="text-[8px] font-bold text-gray-500">Kepala Cabang</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Border bawah */}
+          <div style={{ height: '6px', background: `linear-gradient(to right, ${borderColor}, ${accentColor}, ${borderColor})` }} />
+        </div>
+      </div>
+      <p className="text-xs text-gray-500 mt-3 text-center italic">
+        Preview ini menggunakan data contoh. Sertifikat asli akan menampilkan data peserta sebenarnya.
+      </p>
     </div>
   );
 }

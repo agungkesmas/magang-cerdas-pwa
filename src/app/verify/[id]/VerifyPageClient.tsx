@@ -58,6 +58,11 @@ interface VerifyData {
     achievement_percent: number;
     tier: 'Excellence' | 'Competent' | 'Participation';
   };
+  settings?: {
+    logo_url: string | null;
+    border_color: string;
+    accent_color: string;
+  };
 }
 
 export default function VerifyPageClient({ data, error }: { data: VerifyData | null; error: string | null }) {
@@ -95,8 +100,18 @@ export default function VerifyPageClient({ data, error }: { data: VerifyData | n
   }
 
   // === STATE 2: VALID — tampilkan sertifikat prestisius ===
-  const { certificate: cert, intern, official, stats } = data;
+  const { certificate: cert, intern, official, stats, settings } = data;
   const verifyUrl = typeof window !== 'undefined' ? `${window.location.origin}/verify/${cert.verification_id}` : '';
+
+  // Certificate settings (dari DB, fallback ke default)
+  const certSettings = settings || {
+    logo_url: null,
+    border_color: '#0F4C81',
+    accent_color: '#D4AF37'
+  };
+  const borderColor = certSettings.border_color;
+  const accentColor = certSettings.accent_color;
+  const logoUrl = certSettings.logo_url;
 
   const tierConfig = {
     Excellence: {
@@ -171,8 +186,8 @@ export default function VerifyPageClient({ data, error }: { data: VerifyData | n
 
       {/* === SERTIFIKAT UTAMA === */}
       <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden">
-        {/* Border dekoratif atas */}
-        <div className={`h-2 bg-gradient-to-r ${tier.bg.includes('amber') ? 'from-amber-400 via-yellow-300 to-amber-400' : tier.bg.includes('blue') ? 'from-bpjs-blue via-bpjs-yellow to-bpjs-blue' : 'from-gray-400 via-gray-300 to-gray-400'}`} />
+        {/* Border dekoratif atas — pakai warna custom dari settings */}
+        <div style={{ height: '8px', background: `linear-gradient(to right, ${borderColor}, ${accentColor}, ${borderColor})` }} />
 
         {/* Konten sertifikat */}
         <div className="p-8 sm:p-12 relative">
@@ -184,23 +199,35 @@ export default function VerifyPageClient({ data, error }: { data: VerifyData | n
           {/* Header sertifikat */}
           <div className="relative flex items-start justify-between mb-8">
             <div className="flex items-center gap-3">
-              {/* Logo BPJS Ketenagakerjaan asli (icon + text) */}
-              <img
-                src="/bpjs-ketenagakerjaan-logo.png"
-                alt="BPJS Ketenagakerjaan"
-                className="h-16 w-auto object-contain"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                  const parent = (e.target as HTMLImageElement).parentElement;
-                  if (parent) {
-                    parent.innerHTML = '<div class="font-bold text-bpjs-blue-dark text-lg leading-tight">BPJS KETENAGAKERJAAN</div><div class="text-xs text-gray-500">CABANG CIREBON</div>';
-                  }
-                }}
-              />
+              {/* Logo: custom (kalau ada) atau default BPJS */}
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt="Logo"
+                  className="h-16 w-auto object-contain"
+                  onError={(e) => {
+                    // Fallback ke default BPJS kalau custom gagal load
+                    (e.target as HTMLImageElement).src = '/bpjs-ketenagakerjaan-logo.png';
+                  }}
+                />
+              ) : (
+                <img
+                  src="/bpjs-ketenagakerjaan-logo.png"
+                  alt="BPJS Ketenagakerjaan"
+                  className="h-16 w-auto object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                    const parent = (e.target as HTMLImageElement).parentElement;
+                    if (parent) {
+                      parent.innerHTML = '<div class="font-bold text-bpjs-blue-dark text-lg leading-tight">BPJS KETENAGAKERJAAN</div><div class="text-xs text-gray-500">CABANG CIREBON</div>';
+                    }
+                  }}
+                />
+              )}
             </div>
             <div className="text-right">
-              <div className="text-[10px] text-gray-400 uppercase tracking-wider">Sertifikat Magang</div>
-              <div className="font-mono text-xs font-bold text-bpjs-blue mt-0.5">{cert.verification_id}</div>
+              <div className="text-[10px] uppercase tracking-wider" style={{ color: borderColor }}>Sertifikat Magang</div>
+              <div className="font-mono text-xs font-bold mt-0.5" style={{ color: borderColor }}>{cert.verification_id}</div>
               <div className="text-[10px] text-gray-400 mt-1">Cabang Cirebon</div>
             </div>
           </div>
@@ -225,9 +252,18 @@ export default function VerifyPageClient({ data, error }: { data: VerifyData | n
             </p>
           </div>
 
-          {/* Tier badge — prestisius */}
+          {/* Tier badge — prestisius, pakai warna custom */}
           <div className="flex justify-center mb-8">
-            <div className={`relative inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-br ${tier.bg} shadow-xl ring-4 ${tier.ring} ring-offset-2`}>
+            <div
+              className="relative inline-flex items-center gap-3 px-8 py-4 rounded-2xl shadow-xl ring-4 ring-offset-2"
+              style={{
+                background: stats.tier === 'Excellence'
+                  ? `linear-gradient(to bottom right, ${accentColor}, ${accentColor}dd)`
+                  : `linear-gradient(to bottom right, ${borderColor}, ${borderColor}dd)`,
+                // @ts-ignore — ring color via CSS var
+                '--tw-ring-color': stats.tier === 'Excellence' ? `${accentColor}40` : `${borderColor}40`
+              }}
+            >
               <TierIcon className="w-8 h-8 text-white fill-current" />
               <div className="text-left">
                 <div className="text-[10px] text-white/80 uppercase tracking-wider font-medium">TIER PENCAPAIAN</div>
@@ -331,8 +367,8 @@ export default function VerifyPageClient({ data, error }: { data: VerifyData | n
           </div>
         </div>
 
-        {/* Border dekoratif bawah */}
-        <div className={`h-2 bg-gradient-to-r ${tier.bg.includes('amber') ? 'from-amber-400 via-yellow-300 to-amber-400' : tier.bg.includes('blue') ? 'from-bpjs-blue via-bpjs-yellow to-bpjs-blue' : 'from-gray-400 via-gray-300 to-gray-400'}`} />
+        {/* Border dekoratif bawah — pakai warna custom */}
+        <div style={{ height: '8px', background: `linear-gradient(to right, ${borderColor}, ${accentColor}, ${borderColor})` }} />
       </div>
 
       {/* Action buttons */}
