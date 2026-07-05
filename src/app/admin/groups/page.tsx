@@ -47,6 +47,7 @@ export default function AdminGroupsPage() {
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const [tab, setTab] = useState<'active' | 'archived'>('active');
 
   const fetchGroups = useCallback(async () => {
     setLoading(true);
@@ -63,11 +64,23 @@ export default function AdminGroupsPage() {
 
   const filtered = groups.filter((g) => {
     const s = search.toLowerCase();
-    return !s || g.name.toLowerCase().includes(s) || (g.department || '').toLowerCase().includes(s);
+    const matchSearch = !s || g.name.toLowerCase().includes(s) || (g.department || '').toLowerCase().includes(s);
+    const matchTab = tab === 'active' ? g.is_active : !g.is_active;
+    return matchSearch && matchTab;
   });
 
   if (selectedGroup) {
     return <GroupDetail groupId={selectedGroup} onBack={() => { setSelectedGroup(null); fetchGroups(); }} />;
+  }
+
+  // Quick archive/restore dari list view
+  async function handleQuickArchive(groupId: string, archive: boolean) {
+    if (archive) {
+      await fetch(`/api/groups/${groupId}`, { method: 'DELETE' });
+    } else {
+      await fetch(`/api/groups/${groupId}/restore`, { method: 'POST' });
+    }
+    fetchGroups();
   }
 
   return (
@@ -100,6 +113,22 @@ export default function AdminGroupsPage() {
         />
       </div>
 
+      {/* Tab Aktif / Arsip */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setTab('active')}
+          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'active' ? 'bg-bpjs-blue text-white shadow-sm' : 'text-gray-600 bg-white border border-gray-200'}`}
+        >
+          Aktif ({groups.filter(g => g.is_active).length})
+        </button>
+        <button
+          onClick={() => setTab('archived')}
+          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'archived' ? 'bg-gray-600 text-white shadow-sm' : 'text-gray-600 bg-white border border-gray-200'}`}
+        >
+          Arsip ({groups.filter(g => !g.is_active).length})
+        </button>
+      </div>
+
       {loading ? (
         <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-bpjs-blue" /></div>
       ) : filtered.length === 0 ? (
@@ -112,18 +141,18 @@ export default function AdminGroupsPage() {
           {filtered.map((g) => (
             <div
               key={g.id}
-              className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-bpjs-blue/30 transition-all cursor-pointer"
-              onClick={() => setSelectedGroup(g.id)}
+              className={`bg-white rounded-xl border p-4 hover:shadow-md hover:border-bpjs-blue/30 transition-all ${!g.is_active ? 'border-gray-300 bg-gray-50/50' : 'border-gray-200'}`}
             >
               <div className="flex items-start gap-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-bpjs-blue/10 to-bpjs-blue/5 flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-bpjs-blue/10 to-bpjs-blue/5 flex items-center justify-center flex-shrink-0 cursor-pointer" onClick={() => setSelectedGroup(g.id)}>
                   <MessageCircle className="w-6 h-6 text-bpjs-blue" />
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setSelectedGroup(g.id)}>
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <h3 className="font-bold text-gray-900">{g.name}</h3>
                     <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">{g.group_type}</span>
                     {g.department && <span className="text-xs px-2 py-0.5 bg-bpjs-blue/10 text-bpjs-blue rounded-full">{g.department}</span>}
+                    {!g.is_active && <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full font-medium">Arsip</span>}
                   </div>
                   {g.description && <p className="text-sm text-gray-500 mb-2 line-clamp-1">{g.description}</p>}
                   <div className="flex items-center gap-4 text-xs text-gray-500 flex-wrap">
@@ -131,6 +160,26 @@ export default function AdminGroupsPage() {
                     <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {g.peserta_count} peserta</span>
                     <span>Dibuat oleh: {g.created_by_name}</span>
                   </div>
+                </div>
+                {/* Quick action buttons */}
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {g.is_active ? (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); if (confirm(`Arsipkan grup "${g.name}"? Chat tidak bisa dikirim, tapi riwayat tetap ada.`)) { handleQuickArchive(g.id, true); } }}
+                      className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md"
+                      title="Arsipkan grup"
+                    >
+                      <Archive className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); if (confirm(`Restore grup "${g.name}"? Grup akan aktif kembali.`)) { handleQuickArchive(g.id, false); } }}
+                      className="p-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-md"
+                      title="Restore grup"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
