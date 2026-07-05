@@ -147,11 +147,7 @@ export default function AdminPembinaPage() {
                       onClick={async () => {
                         if (!confirm(`Yakin hapus ${selectedCount} pembina terpilih? Tindakan ini tidak bisa dibatalkan.`)) return;
                         for (const id of selectedIds) {
-                          await fetch('/api/pembina/delete', {
-                            method: 'DELETE',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ id }),
-                          });
+                          await fetch(`/api/pembina/delete?id=${id}`, { method: 'DELETE' });
                         }
                         setSelectedIds(new Set());
                         fetchPembina();

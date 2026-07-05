@@ -196,11 +196,7 @@ export default function AdminInternsPage() {
                       onClick={async () => {
                         if (!confirm(`Yakin hapus ${selectedCount} peserta terpilih? Tindakan ini tidak bisa dibatalkan.`)) return;
                         for (const id of selectedIds) {
-                          await fetch('/api/interns/update', {
-                            method: 'DELETE',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ id }),
-                          });
+                          await fetch(`/api/interns/update?id=${id}`, { method: 'DELETE' });
                         }
                         setSelectedIds(new Set());
                         fetchInterns();

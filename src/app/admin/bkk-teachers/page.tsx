@@ -260,11 +260,7 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
                       onClick={async () => {
                         if (!confirm(`Yakin hapus ${selectedCount} guru BKK terpilih? Tindakan ini tidak bisa dibatalkan.`)) return;
                         for (const id of selectedIds) {
-                          await fetch('/api/bkk-teachers/update', {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ id, action: 'delete' }),
-                          });
+                          await fetch(`/api/bkk-teachers/update?id=${id}`, { method: 'DELETE' });
                         }
                         setSelectedIds(new Set());
                         fetchAll();
