@@ -20,6 +20,8 @@ import {
   Printer
 } from 'lucide-react';
 import PrintCredentialsModal, { PrintableCredential } from '@/components/admin/PrintCredentialsModal';
+import BatchUploadModal from '@/components/admin/BatchUploadModal';
+import { Upload } from 'lucide-react';
 
 interface Pembina {
   id: string;
@@ -44,6 +46,7 @@ export default function AdminPembinaPage() {
   const [copied, setCopied] = useState<string | null>(null);
   const [printItems, setPrintItems] = useState<PrintableCredential[] | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBatch, setShowBatch] = useState(false);
 
   const fetchPembina = useCallback(async () => {
     setLoading(true);
@@ -74,12 +77,20 @@ export default function AdminPembinaPage() {
             {pembinaList.length} pembina terdaftar • {pembinaList.filter((p) => p.is_active).length} aktif
           </p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="inline-flex items-center gap-2 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white font-semibold px-4 py-2.5 rounded-lg shadow-md"
-        >
-          <Plus className="w-4 h-4" /> Tambah Pembina
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowBatch(true)}
+            className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2.5 rounded-lg shadow-md"
+          >
+            <Upload className="w-4 h-4" /> Batch Upload
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="inline-flex items-center gap-2 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white font-semibold px-4 py-2.5 rounded-lg shadow-md"
+          >
+            <Plus className="w-4 h-4" /> Tambah Pembina
+          </button>
+        </div>
       </div>
 
       <div className="relative">
@@ -252,6 +263,14 @@ export default function AdminPembinaPage() {
 
       {printItems && (
         <PrintCredentialsModal items={printItems} role="pembina" onClose={() => setPrintItems(null)} />
+      )}
+
+      {showBatch && (
+        <BatchUploadModal
+          role="pembina"
+          onClose={() => setShowBatch(false)}
+          onSuccess={() => fetchPembina()}
+        />
       )}
     </div>
   );

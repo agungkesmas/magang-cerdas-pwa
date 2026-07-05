@@ -21,6 +21,8 @@ import {
   Printer
 } from 'lucide-react';
 import PrintCredentialsModal, { PrintableCredential } from '@/components/admin/PrintCredentialsModal';
+import BatchUploadModal from '@/components/admin/BatchUploadModal';
+import { Upload } from 'lucide-react';
 
 interface School {
   id: string;
@@ -53,6 +55,7 @@ export default function AdminBKKTeachersPage() {
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [printItems, setPrintItems] = useState<PrintableCredential[] | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBatch, setShowBatch] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -163,16 +166,25 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
             {teachers.length} guru BKK • {teachers.filter((t) => t.is_active).length} aktif
           </p>
         </div>
-        <button
-          onClick={() => {
-            setEditingTeacher(null);
-            setShowForm(true);
-          }}
-          className="inline-flex items-center gap-2 bg-bpjs-green hover:bg-bpjs-green-dark text-white font-semibold px-4 py-2.5 rounded-lg shadow-md"
-        >
-          <Plus className="w-4 h-4" />
-          Tambah Guru BKK
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowBatch(true)}
+            className="inline-flex items-center gap-2 bg-bpjs-green hover:bg-bpjs-green-dark text-white font-semibold px-4 py-2.5 rounded-lg shadow-md"
+          >
+            <Upload className="w-4 h-4" />
+            Batch Upload
+          </button>
+          <button
+            onClick={() => {
+              setEditingTeacher(null);
+              setShowForm(true);
+            }}
+            className="inline-flex items-center gap-2 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white font-semibold px-4 py-2.5 rounded-lg shadow-md"
+          >
+            <Plus className="w-4 h-4" />
+            Tambah Guru BKK
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -511,6 +523,14 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
 
       {printItems && (
         <PrintCredentialsModal items={printItems} role="bkk" onClose={() => setPrintItems(null)} />
+      )}
+
+      {showBatch && (
+        <BatchUploadModal
+          role="bkk"
+          onClose={() => setShowBatch(false)}
+          onSuccess={() => fetchAll()}
+        />
       )}
     </div>
   );
