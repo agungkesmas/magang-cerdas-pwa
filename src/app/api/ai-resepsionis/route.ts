@@ -67,7 +67,7 @@ PERAN:
 - Menjawab pertanyaan terkait menu dashboard pembina saja
 
 MENU DASHBOARD PEMBINA (5 menu):
-1. **Beranda** — ringkasan statistik: grup dibimbing, total peserta, total pembina dalam grup. Quick actions: buka Grup Saya, buka Chat Grup, Deploy Quest. Ada list "Grup yang Saya Bimbing" — **tombol icon Clock** per peserta untuk lihat riwayat aktivitas lengkap (audit trail: absensi, tugas, quest, izin, sertifikat) — bagus untuk monitoring & bimbingan. Tombol icon Target untuk assign tugas individual ke peserta. Tombol DM untuk chat 1-on-1 dengan peserta. **Tombol Tag** (icon Tag, kuning) untuk beri tag/flag peserta (Unggul, Perlu Perhatian, Leadership, Fast Learner, Bermasalah) — sharing dengan admin. **Section "Persetujuan Check-in/out"** (amber, muncul kalau ada pending): approve/reject check-in/out peserta di hari libur/weekend — EXP diberikan setelah approve.
+1. **Beranda** — ringkasan statistik: grup dibimbing, total peserta, total pembina dalam grup. Quick actions: buka Grup Saya, buka Chat Grup, Deploy Quest. Ada list "Grup yang Saya Bimbing" — **tombol icon Clock** per peserta untuk lihat timeline lengkap (audit trail: absensi, tugas, quest, izin, sertifikat). Di timeline inilah pembina bisa kasih **Bonus XP (Gift)** ke aktivitas yang ditambahkan peserta sendiri — cari aktivitas dengan badge "Self-Added", klik tombol 🎁 +Bonus XP. Tombol icon Target untuk assign tugas individual ke peserta. Tombol DM untuk chat 1-on-1 dengan peserta. **Tombol Tag** (icon Tag, kuning) untuk beri tag/flag peserta (Unggul, Perlu Perhatian, Leadership, Fast Learner, Bermasalah) — sharing dengan admin. **Section "Persetujuan Check-in/out"** (amber, muncul kalau ada pending): approve/reject check-in/out peserta di hari libur/weekend — EXP diberikan setelah approve.
 2. **Grup Saya** — kelola grup kolaborasi. 3 tipe grup: Proyek Lintas Bidang (default), Department, Event/Sementara. 4 pilihan departemen: Lintas Bidang, Pelayanan, Pemasaran, Keuangan. Bisa: buat grup baru, lihat detail grup, tambah/hapus anggota (pembina lain + peserta magang — bebas dari departemen mana saja, seperti WhatsApp), arsipkan grup, restore grup yang diarsipkan. **Pembina yang buat grup otomatis jadi group_admin.** Tidak ada auto-link by department — anggota harus dipilih manual.
 3. **Chat Grup** — buka chat room grup. Realtime via Supabase (fallback polling 3 detik). Bisa: kirim pesan text, kirim foto & document (klik ikon 📎 — support JPG/JPEG/PNG/WEBP/GIF + PDF/DOC/DOCX/XLS/XLSX/PPT/PPTX/TXT/CSV, max 10MB), klik foto untuk zoom full-screen, klik document untuk download. Deploy Quest Card ke grup. Lihat progress peserta yang ambil quest. Tombol ⋮ di Quest Card untuk Edit/Archive/Force-Cancel. Tombol **Clear File** (icon trash) untuk hapus semua file dari grup — wajib ketik "HAPUS" untuk konfirmasi, hanya group_admin/admin yang bisa, pesan chat tetap ada.
 4. **Quest Saya** — daftar semua quest yang pernah Anda deploy. Filter (Semua/Aktif/Lewat Deadline/Diarsipkan), cari, Edit, Arsipkan, Batalkan Peserta In-Progress (wajib isi alasan). Hapus Permanen tidak tersedia untuk pembina — hubungi admin jika perlu.
@@ -91,6 +91,26 @@ ALUR QUEST UNTUK PESERTA:
 - Peserta kerjakan, lalu klik **SUBMIT** dengan catatan opsional → dapat XP otomatis
 - Quest completion muncul di tab Riwayat menu Aktivitas peserta
 - Quest recurring: peserta bisa complete 1x per hari di rentang tanggal
+
+BONUS XP / GIFT DARI PEMBINA (2 jalur):
+- **Jalur 1 — Bonus XP untuk Quest (di Chat Grup)**:
+  * Buka menu **Chat Grup** → buka grup tempat quest di-deploy
+  * Scroll ke Quest Card, lihat section "Progress Peserta"
+  * Untuk peserta yang sudah completed (badge hijau "✓ Selesai"), tombol 🎁 **+Bonus XP** muncul
+  * Pilih XP (quick 10/20/30/50 atau custom 1-100), isi catatan (opsional), klik Berikan
+  * Hanya berlaku untuk Quest "Sekali Selesai" (BUKAN Harian Berulang)
+  * 1 bonus per peserta per quest (anti double-award)
+- **Jalur 2 — Bonus XP untuk Aktivitas Self-Added (di Beranda → Timeline Peserta)**:
+  * Buka menu **Beranda** → di list "Grup yang Saya Bimbing", klik icon **Clock** di sebelah nama peserta
+  * Akan terbuka halaman Timeline lengkap peserta (audit trail: absensi, tugas, quest, izin, sertifikat)
+  * Cari aktivitas dengan badge ungu "Self-Added" (aktivitas yang ditambahkan peserta sendiri)
+  * Tombol 🎁 **+Bonus XP** muncul di sebelah aktivitas tersebut (kalau belum dapat bonus)
+  * Pilih XP (quick 10/20/30/50 atau custom 1-100), isi catatan (opsional), klik Berikan
+  * Hanya untuk aktivitas self-added yang sudah completed & belum dapat bonus
+  * Pembina harus dari departemen sama dengan peserta (atau Lintas Bidang)
+- Setelah bonus diberikan, peserta terima nudge notifikasi otomatis: "🎁 [Pembina] memberi Bonus XP +X untuk aktivitas 'Y'"
+- Bonus XP di atas XP default aktivitas/quest (jadi peserta bisa dapat lebih dari 1x XP per aktivitas)
+- Audit trail: semua bonus tercatat di xp_bonus_logs (quest) & activity_bonus_logs (aktivitas self-added)
 
 ATURAN JAWABAN:
 - Pakai bahasa Indonesia, simple, profesional, ramah
@@ -252,29 +272,43 @@ function stubAnswer(dashboard: string, question: string): string {
 
   // === PEMBINA STUB ===
   if (dashboard === 'pembina') {
-    if (q.includes('deploy') || (q.includes('quest') && !q.includes('edit') && !q.includes('hapus') && !q.includes('arsip')))
-      return 'Untuk deploy quest: buka menu **Chat Grup** → pilih grup → klik **+ Deploy Quest**. Isi judul (klik ✨ Magic untuk AI generate deskripsi), deskripsi, XP (10/20/30/50, default 20), max slots (opsional). Mode "Sekali Selesai" (1x deadline) atau "Harian Berulang" (rentang tanggal + skip weekend + daily deadline). Setelah deploy, kamu bisa monitoring progress peserta DAN mengelola quest via tombol ⋮ di Quest Card.';
+    // Bonus XP / Gift — cek paling awal supaya tidak ketimpa "quest" atau "aktivitas"
+    if (q.includes('bonus') || q.includes('gift') || q.includes('hadiah') || q.includes('kasih xp') || q.includes('beri xp') || q.includes('tambah xp') || q.includes('reward ekstra') || q.includes('apresiasi')) {
+      if (q.includes('aktivitas') || q.includes('self') || q.includes('sendiri') || q.includes('tambahan') || q.includes('manual'))
+        return 'Untuk kasih **Bonus XP ke aktivitas yang ditambahkan peserta sendiri**: buka menu **Beranda** → di list "Grup yang Saya Bimbing", klik icon **Clock** di sebelah nama peserta → terbuka halaman Timeline lengkap → cari aktivitas dengan badge ungu "Self-Added" yang sudah completed → klik tombol 🎁 **+Bonus XP** di sebelahnya. Pilih XP (quick 10/20/30/50 atau custom 1-100), isi catatan opsional, klik Berikan. Hanya untuk aktivitas yang sudah completed & belum dapat bonus. Anda harus dari departemen sama dengan peserta (atau Lintas Bidang). Peserta akan terima nudge notifikasi otomatis.';
+      if (q.includes('quest') || q.includes('chat'))
+        return 'Untuk kasih **Bonus XP ke Quest**: buka menu **Chat Grup** → grup tempat quest di-deploy → scroll ke Quest Card → di section "Progress Peserta", untuk peserta yang sudah completed (badge hijau ✓), klik tombol 🎁 **+Bonus XP**. Pilih XP (10/20/30/50 atau custom 1-100), isi catatan opsional, klik Berikan. Hanya untuk Quest "Sekali Selesai" (bukan Harian Berulang). 1 bonus per peserta per quest.';
+      return 'Ada 2 jalur **Bonus XP (Gift)** yang bisa Anda berikan sebagai pembina:\n\n**1. Untuk Aktivitas Self-Added** (di Beranda): buka menu Beranda → di list "Grup yang Saya Bimbing", klik icon **Clock** di sebelah nama peserta → terbuka halaman Timeline → cari aktivitas dengan badge ungu "Self-Added" yang sudah completed → klik 🎁 +Bonus XP.\n\n**2. Untuk Quest** (di Chat Grup): buka chat grup → scroll ke Quest Card → di section "Progress Peserta", untuk peserta yang sudah completed, klik 🎁 +Bonus XP. Hanya untuk Quest "Sekali Selesai".\n\nBonus XP 1-100 per aktivitas. Peserta akan terima nudge notifikasi otomatis. Semua bonus tercatat di audit trail.';
+    }
+    if (q.includes('timeline') || q.includes('riwayat peserta') || q.includes('audit peserta') || (q.includes('aktivitas peserta') && !q.includes('tambah')))
+      return 'Untuk lihat **timeline lengkap peserta** (audit trail): buka menu **Beranda** → di list "Grup yang Saya Bimbing", klik icon **Clock** di sebelah nama peserta. Halaman Timeline menampilkan: absensi, tugas selesai, quest, izin/cuti, sertifikat, keanggotaan grup. **Di sini juga tempat Anda kasih Bonus XP (🎁)** ke aktivitas yang ditambahkan peserta sendiri (cari badge ungu "Self-Added" yang sudah completed). Tujuan timeline: anti-pemalsuan sertifikat — bisa dijadikan bukti riwayat magang.';
+    if (q.includes('deploy') || (q.includes('quest') && !q.includes('edit') && !q.includes('hapus') && !q.includes('arsip') && !q.includes('bonus')))
+      return 'Untuk deploy quest: buka menu **Chat Grup** → pilih grup → klik **+ Deploy Quest**. Isi judul (klik ✨ Magic untuk AI generate deskripsi), deskripsi, XP (10/20/30/50, default 20), max slots (opsional). Mode "Sekali Selesai" (1x deadline) atau "Harian Berulang" (rentang tanggal + skip weekend + daily deadline). Setelah deploy, Anda bisa monitoring progress peserta DAN mengelola quest via tombol ⋮ di Quest Card.';
     if (q.includes('grup') || q.includes('buat grup') || q.includes('tambah orang') || q.includes('anggota'))
       return 'Untuk buat grup: menu **Grup Saya** → **+ Buat Grup Baru**. Pilih tipe (Proyek Lintas Bidang/Department/Event), departemen, tambah pembina lain + peserta magang sebagai anggota (cross-department, bebas seperti WhatsApp). Anda otomatis jadi group_admin. Bisa arsipkan/restore grup di detail.';
     if (q.includes('foto') || q.includes('file') || q.includes('document') || (q.includes('upload') && q.includes('chat')) || q.includes('kirim foto') || q.includes('attachment'))
       return 'Untuk kirim foto/document di chat: buka **Chat Grup** → pilih grup → klik ikon 📎 di sebelah input. Support JPG/PNG/WEBP/GIF + PDF/DOC/DOCX/XLS/XLSX/PPT/PPTX/TXT/CSV, max 10MB. Bisa tambah caption text sebelum kirim. Klik foto untuk zoom, klik document untuk download.';
     if (q.includes('clear') || q.includes('hapus file') || q.includes('hapus foto') || q.includes('storage'))
       return 'Untuk hapus semua file dari grup: buka **Chat Grup** → pilih grup → klik tombol **Clear File** (icon trash) di header. Wajib ketik "HAPUS" untuk konfirmasi. Hanya group_admin/admin yang bisa. Pesan chat tetap ada, hanya file yang dihapus permanen (hemat storage).';
-    if (q.includes('profil') || q.includes('telepon') || q.includes('nama') || q.includes('ganti'))
-      return 'Untuk edit profil: buka menu **Profil** → edit nama & nomor telepon → klik Simpan. Email dan departemen TIDAK bisa diubah (locked).';
+    if (q.includes('profil') || q.includes('telepon') || (q.includes('nama') && !q.includes('peserta')) || q.includes('ganti nama'))
+      return 'Untuk edit profil: buka menu **Profil** → edit nama & nomor telepon → klik Simpan. Email dan departemen TIDAK bisa diubah (locked). Save via PUT /api/pembina/update.';
     if ((q.includes('edit') || q.includes('ubah') || q.includes('ganti')) && (q.includes('quest') || q.includes('deploy')))
       return 'Untuk edit quest yang sudah di-deploy: klik tombol ⋮ di Quest Card (di chat room) → pilih **Edit Quest**. Bisa ubah judul (kecuali sudah ada peserta completed), deskripsi, deadline, dan max_slots. **XP tidak bisa diubah** kalau sudah ada peserta yang ambil (anti-fraud). Alternatif: buka menu **Quest Saya** untuk lihat semua quest Anda. Semua perubahan tersimpan ke audit log.';
     if ((q.includes('hapus') || q.includes('arsip') || q.includes('delete') || q.includes('batal')) && (q.includes('quest') || q.includes('deploy')))
       return 'Untuk hapus/arsip quest: klik tombol ⋮ di Quest Card → pilih **Arsipkan Quest** (disembunyikan dari peserta baru, EXP tetap aman). Untuk batalkan peserta yang sedang in_progress, pilih **Batalkan Peserta In-Progress** (wajib isi alasan). **Hapus Permanen** hanya bisa oleh Admin — gunakan archive sebagai alternatif. Lihat semua quest Anda di menu **Quest Saya**.';
+    if (q.includes('tag') || q.includes('flag') || q.includes('tandai peserta'))
+      return 'Untuk tag peserta: buka menu **Beranda** → di list "Grup yang Saya Bimbing", klik tombol **Tag** (icon Tag, kuning) di sebelah nama peserta. Pilih tag: Unggul, Perlu Perhatian, Leadership, Fast Learner, atau Bermasalah. Tag sharing dengan admin (untuk monitoring bersama). Peserta & BKK tidak bisa lihat tag.';
     if (q.includes('chat'))
-      return 'Menu **Chat Grup** untuk buka chat room grup. Realtime (Supabase, fallback polling 3 detik). Bisa kirim pesan text, foto & document (📎), dan deploy Quest Card. Lihat progress peserta yang ambil quest (in_progress/completed) di Quest Card. Kelola quest via tombol ⋮ di Quest Card.';
+      return 'Menu **Chat Grup** untuk buka chat room grup. Realtime (Supabase, fallback polling 3 detik). Bisa kirim pesan text, foto & document (📎), dan deploy Quest Card. Lihat progress peserta yang ambil quest (in_progress/completed) di Quest Card. Kelola quest via tombol ⋮ di Quest Card (Edit/Archive/Force-Cancel). Kasih Bonus XP ke peserta yang sudah completed lewat tombol 🎁 di section Progress Peserta.';
     if (q.includes('xp') || q.includes('poin') || q.includes('exp'))
-      return 'Saat deploy quest, Anda pilih XP reward: 10 (Easy), 20 (Medium, default), 30 (Hard), atau 50 (Expert). XP tidak bisa diubah setelah ada peserta yang ambil (anti-fraud). XP langsung masuk ke peserta setelah mereka klik SUBMIT di quest card. Bonus XP (1-100) bisa diberikan terpisah ke peserta yang sudah submit.';
+      return 'Saat deploy quest, Anda pilih XP reward: 10 (Easy), 20 (Medium, default), 30 (Hard), atau 50 (Expert). XP tidak bisa diubah setelah ada peserta yang ambil (anti-fraud). XP langsung masuk ke peserta setelah mereka klik SUBMIT di quest card. **Bonus XP (1-100)** bisa diberikan terpisah ke peserta yang sudah submit quest (via tombol 🎁 di Chat Grup) ATAU ke aktivitas yang ditambahkan peserta sendiri (via tombol 🎁 di Timeline peserta di menu Beranda).';
     if (q.includes('recurring') || q.includes('harian') || q.includes('rentang') || q.includes('berulang'))
-      return 'Quest mode "Harian Berulang": muncul tiap hari di rentang tanggal (start_date + end_date), skip weekend (default on), daily deadline jam 15:00-20:00 WIB (default 17:00). Peserta bisa complete 1x per hari, dapat XP per hari. Kalau selesai SEMUA hari kerja, peserta dapat bonus +50 EXP sekali.';
-    if (q.includes('quest saya') || q.includes('riwayat quest') || q.includes('daftar quest'))
+      return 'Quest mode "Harian Berulang": muncul tiap hari di rentang tanggal (start_date + end_date), skip weekend (default on), daily deadline jam 15:00-20:00 WIB (default 17:00). Peserta bisa complete 1x per hari, dapat XP per hari. Kalau selesai SEMUA hari kerja, peserta dapat bonus +50 EXP sekali. Catatan: Bonus XP (Gift) dari pembina HANYA untuk Quest "Sekali Selesai", bukan Harian Berulang.';
+    if (q.includes('quest saya') || q.includes('daftar quest') || q.includes('riwayat quest'))
       return 'Menu **Quest Saya** menampilkan semua quest yang pernah Anda deploy. Bisa filter (Semua/Aktif/Lewat Deadline/Diarsipkan), cari, edit, arsipkan, atau batalkan peserta in_progress. Hapus permanen tidak tersedia untuk pembina — hubungi admin jika perlu.';
-    return 'Maaf, saya hanya melayani pertanyaan seputar dashboard pembina. Coba tanya tentang: Beranda, Grup Saya, Chat Grup, Deploy Quest, Edit/Hapus Quest, Quest Saya, kirim foto, atau Clear File.';
+    if (q.includes('beranda') || q.includes('home') || q.includes('dashboard'))
+      return 'Menu **Beranda** menampilkan ringkasan statistik: grup dibimbing, total peserta, total pembina. Ada list "Grup yang Saya Bimbing" dengan tombol per peserta: icon **Clock** (timeline + kasih Bonus XP untuk aktivitas self-added), icon **Target** (assign tugas individual), tombol **DM** (chat 1-on-1), tombol **Tag** (flag peserta). Ada juga section "Persetujuan Check-in/out" kalau ada check-in peserta di hari libur yang perlu di-approve.';
+    return 'Maaf, saya hanya melayani pertanyaan seputar dashboard pembina. Coba tanya tentang: Beranda, Grup Saya, Chat Grup, Deploy Quest, Edit/Hapus Quest, Quest Saya, **Bonus XP (Gift)**, Timeline Peserta, Tag Peserta, kirim foto, atau Clear File.';
   }
 
   // === INTERN STUB ===

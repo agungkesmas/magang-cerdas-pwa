@@ -66,9 +66,10 @@ const SUGGESTED_QUESTIONS: Record<string, string[]> = {
   ],
   pembina: [
     'Bagaimana cara deploy quest?',
+    'Cara kasih Bonus XP ke aktivitas peserta?',
     'Bisa edit quest setelah deploy?',
     'Cara arsipkan quest saya?',
-    'Cara batalkan peserta in-progress?'
+    'Di mana lihat timeline peserta?'
   ],
   bkk: [
     'Bagaimana cara ajukan permintaan magang?',
