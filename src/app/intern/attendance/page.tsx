@@ -203,16 +203,20 @@ export default function InternAttendancePage() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set canvas size = video size
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
+    // Set canvas size = video size, tapi cap max 640px untuk kompresi
+    const maxW = 640;
+    const vw = video.videoWidth || 640;
+    const vh = video.videoHeight || 480;
+    const scale = Math.min(1, maxW / vw);
+    canvas.width = Math.round(vw * scale);
+    canvas.height = Math.round(vh * scale);
 
     // Mirror horizontal (karena kamera depan biasanya mirror)
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Convert ke blob
+    // Convert ke blob dengan quality lebih rendah untuk size lebih kecil
     canvas.toBlob(
       (blob) => {
         if (!blob) return;
@@ -224,7 +228,7 @@ export default function InternAttendancePage() {
         closeCamera();
       },
       'image/jpeg',
-      0.85
+      0.7
     );
   }, [closeCamera]);
 
@@ -248,11 +252,21 @@ export default function InternAttendancePage() {
       // 3. Upload photo if available
       let photoUrl: string | null = null;
       if (photoFile) {
+        setGeoStatus('checking'); // keep showing loading
         const fd = new FormData();
         fd.append('photo', photoFile);
         const upRes = await fetch('/api/upload/attendance-photo', { method: 'POST', body: fd });
+        if (!upRes.ok) {
+          let errMsg = 'Upload foto gagal';
+          try {
+            const upData = await upRes.json();
+            errMsg = upData.error || errMsg;
+          } catch {
+            errMsg = `Upload foto gagal (HTTP ${upRes.status}). Coba lagi.`;
+          }
+          throw new Error(errMsg);
+        }
         const upData = await upRes.json();
-        if (!upRes.ok) throw new Error(upData.error || 'Upload foto gagal');
         photoUrl = upData.url;
       }
 
@@ -263,8 +277,17 @@ export default function InternAttendancePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ latitude: lat, longitude: lng, photo_url: photoUrl })
       });
+      if (!res.ok) {
+        let errMsg = `Gagal (${res.status})`;
+        try {
+          const data = await res.json();
+          errMsg = data.error || errMsg;
+        } catch {
+          errMsg = `Server error (HTTP ${res.status}). Coba lagi.`;
+        }
+        throw new Error(errMsg);
+      }
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
 
       setSuccess({
         exp: data.exp_gained,
