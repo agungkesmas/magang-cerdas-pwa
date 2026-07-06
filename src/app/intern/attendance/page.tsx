@@ -90,13 +90,43 @@ export default function InternAttendancePage() {
   const getLocation = (): Promise<{ lat: number; lng: number }> => {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
-        reject(new Error('Geolocation tidak didukung browser ini'));
+        reject(new Error('GPS tidak didukung di browser ini. Gunakan Chrome atau Safari terbaru.'));
         return;
       }
+
+      // Step 1: Try high accuracy first (GPS satellite)
       navigator.geolocation.getCurrentPosition(
         (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        (err) => reject(new Error(err.message || 'Gagal mendapatkan lokasi')),
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        (err) => {
+          // Step 2: If high accuracy fails, try with low accuracy (network/Wi-Fi based)
+          if (err.code === err.TIMEOUT || err.code === err.POSITION_UNAVAILABLE) {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+              (err2) => {
+                // Step 3: Last resort — try with maximumAge (cached position)
+                navigator.geolocation.getCurrentPosition(
+                  (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                  (err3) => {
+                    let msg = 'Gagal mendapatkan lokasi GPS. ';
+                    if (err3.code === 1) msg += 'Izinkan akses lokasi di pengaturan browser Anda.';
+                    else if (err3.code === 2) msg += 'Sinyal GPS lemah. Coba di luar ruangan atau dekat jendela.';
+                    else if (err3.code === 3) msg += 'Waktu habis. Coba lagi.';
+                    else msg += err3.message || 'Error tidak diketahui.';
+                    reject(new Error(msg));
+                  },
+                  { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+                );
+              },
+              { enableHighAccuracy: false, timeout: 15000, maximumAge: 30000 }
+            );
+          } else if (err.code === 1) {
+            // PERMISSION_DENIED
+            reject(new Error('Akses lokasi ditolak. Buka pengaturan browser → izinkan akses lokasi untuk MAGANG-CERDAS.'));
+          } else {
+            reject(new Error(err.message || 'Gagal mendapatkan lokasi GPS.'));
+          }
+        },
+        { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 }
       );
     });
   };
@@ -464,6 +494,22 @@ export default function InternAttendancePage() {
 
       {/* Action buttons */}
       <div className="space-y-3">
+        {/* GPS Status indicator */}
+        {action && (
+          <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${
+            geoStatus === 'checking' ? 'bg-bpjs-blue/20 text-bpjs-yellow' :
+            geoStatus === 'ok' ? 'bg-bpjs-green/20 text-bpjs-green' :
+            geoStatus === 'fail' ? 'bg-red-500/20 text-red-300' :
+            'bg-white/5 text-white/60'
+          }`}>
+            {geoStatus === 'checking' && <Loader2 className="w-4 h-4 animate-spin" />}
+            {geoStatus === 'checking' && <span>Mencari sinyal GPS... Pastikan Anda di dalam radius kantor BPJS. Bisa makan 10-30 detik.</span>}
+            {geoStatus === 'ok' && <CheckCircle2 className="w-4 h-4" />}
+            {geoStatus === 'ok' && <span>GPS terkunci! Mengirim data...</span>}
+            {geoStatus === 'fail' && <AlertTriangle className="w-4 h-4" />}
+            {geoStatus === 'fail' && <span>Gagal. Coba lagi atau cek izin lokasi di browser.</span>}
+          </div>
+        )}
         {!checkedIn && (
           <button
             onClick={() => handleAction('check-in')}
