@@ -18,7 +18,8 @@ import {
   School,
   Inbox,
   MessageCircle,
-  UserCog
+  UserCog,
+  Target
 } from 'lucide-react';
 
 const NAV = [
@@ -26,6 +27,7 @@ const NAV = [
   { href: '/admin/requests', label: 'Permintaan Magang', icon: Inbox, badge: true },
   { href: '/admin/interns', label: 'Peserta Magang', icon: Users },
   { href: '/admin/activities', label: 'Riwayat Aktivitas', icon: CheckSquare },
+  { href: '/admin/quests', label: 'Quest', icon: Target },
   { href: '/admin/chat', label: 'Chat Grup', icon: MessageCircle },
   { href: '/admin/groups', label: 'Kelola Grup', icon: Users },
   { href: '/admin/certificate', label: 'Sertifikat', icon: Award },

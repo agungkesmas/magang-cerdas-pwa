@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Target,
   Clock,
@@ -12,6 +12,12 @@ import {
   PlayCircle,
   StopCircle,
   Gift,
+  MoreVertical,
+  Edit2,
+  Archive,
+  RotateCcw,
+  Ban,
+  Trash2,
   X
 } from 'lucide-react';
 
@@ -32,18 +38,53 @@ interface QuestCardProps {
   myQuestLog?: any;
   questLogs?: QuestLogEntry[]; // untuk pembina: list semua peserta
   userRole: 'pembina' | 'peserta' | 'admin';
+  canManage?: boolean; // pembina (creator) atau admin (always true)
   onStart?: () => Promise<void>;
   onSubmit?: (notes: string) => Promise<void>;
+  onEdit?: () => void;
+  onArchive?: () => void;
+  onRestore?: () => void;
+  onForceCancel?: () => void;
+  onDelete?: () => void;
   loading?: boolean;
   // Callback setelah bonus XP berhasil diberikan (untuk refresh chat)
   onBonusXpGiven?: () => void;
 }
 
-export default function QuestCard({ quest, myQuestLog, questLogs, userRole, onStart, onSubmit, loading, onBonusXpGiven }: QuestCardProps) {
+export default function QuestCard({
+  quest,
+  myQuestLog,
+  questLogs,
+  userRole,
+  canManage = false,
+  onStart,
+  onSubmit,
+  onEdit,
+  onArchive,
+  onRestore,
+  onForceCancel,
+  onDelete,
+  loading,
+  onBonusXpGiven
+}: QuestCardProps) {
   const [showSubmitForm, setShowSubmitForm] = useState(false);
   const [submissionNotes, setSubmissionNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
 
   // Bonus XP modal state
   const [bonusTarget, setBonusTarget] = useState<QuestLogEntry | null>(null);
@@ -56,6 +97,7 @@ export default function QuestCard({ quest, myQuestLog, questLogs, userRole, onSt
 
   const isOverdue = quest.due_date ? new Date(quest.due_date).getTime() < Date.now() : false;
   const slotsFull = quest.max_slots && quest.current_slots_taken >= quest.max_slots;
+  const isArchived = quest.is_archived;
 
   const handleStart = async () => {
     setStarting(true);
@@ -106,26 +148,101 @@ export default function QuestCard({ quest, myQuestLog, questLogs, userRole, onSt
     }
   };
 
+  const handleMenuAction = (action: 'edit' | 'archive' | 'restore' | 'forceCancel' | 'delete') => {
+    setMenuOpen(false);
+    if (action === 'edit') onEdit?.();
+    else if (action === 'archive') onArchive?.();
+    else if (action === 'restore') onRestore?.();
+    else if (action === 'forceCancel') onForceCancel?.();
+    else if (action === 'delete') onDelete?.();
+  };
+
   // Status peserta
   const myStatus = myQuestLog?.status;
   const isInProgress = myStatus === 'in_progress';
   const isCompleted = myStatus === 'completed';
 
   return (
-    <div className="bg-white border-2 border-purple-200 rounded-xl p-4 shadow-sm">
+    <div className={`bg-white border-2 rounded-xl p-4 shadow-sm relative ${isArchived ? 'border-gray-200 opacity-75' : 'border-purple-200'}`}>
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-bold flex items-center gap-1">
-              <Target className="w-3 h-3" /> QUEST
+            <span className={`text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1 ${
+              isArchived ? 'bg-gray-100 text-gray-600' : 'bg-purple-100 text-purple-700'
+            }`}>
+              <Target className="w-3 h-3" /> {isArchived ? 'QUEST (ARSIP)' : 'QUEST'}
             </span>
-            <h4 className="font-bold text-gray-900">{quest.title}</h4>
+            <h4 className="font-bold text-gray-900 break-words">{quest.title}</h4>
           </div>
         </div>
-        <div className="flex items-center gap-1 text-sm">
-          <Zap className="w-4 h-4 text-bpjs-yellow" />
-          <span className="font-bold text-bpjs-yellow">{quest.xp_reward || 20} XP</span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1 text-sm">
+            <Zap className="w-4 h-4 text-bpjs-yellow" />
+            <span className="font-bold text-bpjs-yellow">{quest.xp_reward || 20} XP</span>
+          </div>
+          {/* ⋮ menu — only for pembina (creator) & admin */}
+          {canManage && (userRole === 'pembina' || userRole === 'admin') && (
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                disabled={loading}
+                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 disabled:opacity-50"
+                title="Opsi quest"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 top-full mt-1 z-20 w-56 bg-white border border-gray-200 rounded-lg shadow-lg py-1 text-sm">
+                  {/* Edit — disabled kalau sudah ada submission */}
+                  {!isArchived && (
+                    <button
+                      onClick={() => handleMenuAction('edit')}
+                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-left text-gray-700"
+                    >
+                      <Edit2 className="w-4 h-4" /> Edit Quest
+                    </button>
+                  )}
+                  {/* Force-cancel — hanya jika ada peserta in_progress */}
+                  {!isArchived && (
+                    <button
+                      onClick={() => handleMenuAction('forceCancel')}
+                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-orange-50 text-left text-orange-700"
+                    >
+                      <Ban className="w-4 h-4" /> Batalkan Peserta In-Progress
+                    </button>
+                  )}
+                  {/* Archive */}
+                  {!isArchived && (
+                    <button
+                      onClick={() => handleMenuAction('archive')}
+                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-left text-gray-700"
+                    >
+                      <Archive className="w-4 h-4" /> Arsipkan Quest
+                    </button>
+                  )}
+                  {/* Restore — admin only */}
+                  {isArchived && userRole === 'admin' && (
+                    <button
+                      onClick={() => handleMenuAction('restore')}
+                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-green-50 text-left text-bpjs-green"
+                    >
+                      <RotateCcw className="w-4 h-4" /> Restore Quest
+                    </button>
+                  )}
+                  {/* Delete permanen — admin only */}
+                  {userRole === 'admin' && (
+                    <button
+                      onClick={() => handleMenuAction('delete')}
+                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-red-50 text-left text-red-600 border-t border-gray-100"
+                    >
+                      <Trash2 className="w-4 h-4" /> Hapus Permanen
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -143,14 +260,15 @@ export default function QuestCard({ quest, myQuestLog, questLogs, userRole, onSt
             Slot: {quest.current_slots_taken}/{quest.max_slots}
           </span>
         )}
-        {!quest.is_active && <span className="text-red-600 font-medium">Nonaktif</span>}
+        {!quest.is_active && !isArchived && <span className="text-orange-600 font-medium">Nonaktif</span>}
+        {isArchived && <span className="text-gray-500 font-medium">Diarsipkan</span>}
       </div>
 
       {/* Description */}
       <p className="text-sm text-gray-700 whitespace-pre-line mb-3">{quest.description}</p>
 
       {/* ===== PESERTA VIEW ===== */}
-      {userRole === 'peserta' && (
+      {userRole === 'peserta' && !isArchived && (
         <>
           {/* Status badges */}
           {isCompleted && (
@@ -252,10 +370,12 @@ export default function QuestCard({ quest, myQuestLog, questLogs, userRole, onSt
                         <span className={`px-1.5 py-0.5 rounded-full font-medium ${
                           log.status === 'completed' ? 'bg-bpjs-green/10 text-bpjs-green' :
                           log.status === 'in_progress' ? 'bg-bpjs-blue/10 text-bpjs-blue' :
+                          log.status === 'cancelled' ? 'bg-orange-100 text-orange-700' :
                           'bg-gray-200 text-gray-600'
                         }`}>
                           {log.status === 'completed' ? '✓ Selesai' :
                            log.status === 'in_progress' ? '🔵 Proses' :
+                           log.status === 'cancelled' ? '🚫 Dibatalkan' :
                            log.status}
                         </span>
                         {isCompletedLog && log.xp_awarded !== undefined && (

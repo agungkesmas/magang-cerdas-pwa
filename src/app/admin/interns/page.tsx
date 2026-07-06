@@ -24,6 +24,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import PrintCredentialsModal, { PrintableCredential } from '@/components/admin/PrintCredentialsModal';
+import LeaderboardPanel from '@/components/shared/LeaderboardPanel';
 
 // Predefined tags with colors
 const PREDEFINED_TAGS = [
@@ -140,6 +141,9 @@ export default function AdminInternsPage() {
           </button>
         </div>
       </div>
+
+      {/* Leaderboard Panel — visibilitas cross-department untuk oversight admin */}
+      <LeaderboardPanel accent="blue" limit={10} />
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />

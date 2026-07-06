@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   Sparkles,
-  UserCircle
+  UserCircle,
+  Target
 } from 'lucide-react';
 import AIResepsionist from '@/components/shared/AIResepsionist';
 
@@ -20,6 +21,7 @@ const NAV = [
   { href: '/pembina/home', label: 'Beranda', icon: Home },
   { href: '/pembina/chat', label: 'Chat Grup', icon: MessageCircle },
   { href: '/pembina/groups', label: 'Grup Saya', icon: Users },
+  { href: '/pembina/quests', label: 'Quest Saya', icon: Target },
   { href: '/pembina/profile', label: 'Profil', icon: UserCircle }
 ];
 

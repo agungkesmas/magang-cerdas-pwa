@@ -19,7 +19,11 @@ import {
   Download,
   XCircle,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Edit2,
+  Archive,
+  RotateCcw,
+  Ban
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import QuestCard from './QuestCard';
@@ -79,6 +83,14 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
   const [showClearFiles, setShowClearFiles] = useState(false);
   const [clearConfirmText, setClearConfirmText] = useState('');
   const [clearing, setClearing] = useState(false);
+  // Quest management state
+  const [editingQuest, setEditingQuest] = useState<any>(null);
+  const [archivingQuest, setArchivingQuest] = useState<any>(null);
+  const [deletingQuest, setDeletingQuest] = useState<any>(null);
+  const [forceCancelQuest, setForceCancelQuest] = useState<any>(null);
+  const [restoringQuest, setRestoringQuest] = useState<any>(null);
+  const [questActionLoading, setQuestActionLoading] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);  // UUID pembina/admin saat ini
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -108,6 +120,17 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
   }, [groupId, fetchMessages]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Fetch current user ID (untuk menentukan canManage di QuestCard)
+  // Hanya perlu untuk pembina — admin selalu canManage=true
+  useEffect(() => {
+    if (userRole === 'pembina') {
+      fetch('/api/pembina/me')
+        .then((r) => r.json())
+        .then((d) => { if (d.success && d.pembina?.id) setCurrentUserId(d.pembina.id); })
+        .catch(() => {});
+    }
+  }, [userRole]);
 
   // ============================================================
   // REALTIME: Subscribe ke chat_messages table changes
@@ -280,6 +303,87 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
     }
   };
 
+  // ============================================================
+  // Quest management handlers (edit/archive/restore/force-cancel/delete)
+  // ============================================================
+  const handleArchiveQuest = async (questId: string, reason: string) => {
+    setQuestActionLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/quests/${questId}/archive`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason.trim() || null })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setArchivingQuest(null);
+      await fetchData();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setQuestActionLoading(false);
+    }
+  };
+
+  const handleRestoreQuest = async (questId: string) => {
+    setQuestActionLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/quests/${questId}/restore`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setRestoringQuest(null);
+      await fetchData();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setQuestActionLoading(false);
+    }
+  };
+
+  const handleForceCancelQuest = async (questId: string, reason: string) => {
+    setQuestActionLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/quests/${questId}/force-cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setForceCancelQuest(null);
+      await fetchData();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setQuestActionLoading(false);
+    }
+  };
+
+  const handleDeleteQuest = async (questId: string) => {
+    setQuestActionLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/quests/${questId}`, {
+        method: 'DELETE',
+        headers: { 'x-confirm': 'HAPUS' }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setDeletingQuest(null);
+      await fetchData();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setQuestActionLoading(false);
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-purple-600" /></div>;
   }
@@ -375,6 +479,9 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
                 );
               }
               if (msg.message_type === 'quest_card') {
+                // canManage: admin (selalu), pembina (creator quest)
+                const questCreatorId = msg.quest?.created_by_pembina_id;
+                const canManage = userRole === 'admin' || (userRole === 'pembina' && !!currentUserId && currentUserId === questCreatorId);
                 return (
                   <div key={msg.id} className="flex gap-2">
                     <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
@@ -387,9 +494,15 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
                         myQuestLog={msg.my_quest_log}
                         questLogs={msg.quest_logs}
                         userRole={userRole}
+                        canManage={canManage}
                         onStart={() => handleStartQuest(msg.quest_id!)}
                         onSubmit={(notes) => handleSubmitQuest(msg.quest_id!, notes)}
                         onBonusXpGiven={fetchMessages}
+                        onEdit={() => setEditingQuest(msg.quest)}
+                        onArchive={() => setArchivingQuest(msg.quest)}
+                        onRestore={() => setRestoringQuest(msg.quest)}
+                        onForceCancel={() => setForceCancelQuest(msg.quest)}
+                        onDelete={() => setDeletingQuest(msg.quest)}
                       />
                     </div>
                   </div>
@@ -633,6 +746,58 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
           onSuccess={() => { setShowDeployForm(false); fetchData(); }}
         />
       )}
+
+      {/* Edit Quest Modal */}
+      {editingQuest && (
+        <EditQuestModal
+          quest={editingQuest}
+          onClose={() => setEditingQuest(null)}
+          onSuccess={() => { setEditingQuest(null); fetchData(); }}
+        />
+      )}
+
+      {/* Archive confirmation */}
+      {archivingQuest && (
+        <ArchiveQuestModal
+          quest={archivingQuest}
+          loading={questActionLoading}
+          onClose={() => setArchivingQuest(null)}
+          onConfirm={(reason) => handleArchiveQuest(archivingQuest.id, reason)}
+        />
+      )}
+
+      {/* Restore confirmation (admin only) */}
+      {restoringQuest && (
+        <SimpleConfirmModal
+          title="Restore Quest"
+          message={`Restore quest "${restoringQuest.title}"? Quest akan aktif kembali${restoringQuest.due_date && new Date(restoringQuest.due_date).getTime() < Date.now() ? ' (catatan: deadline sudah lewat, quest tetap nonaktif)' : ' dan bisa diambil peserta'}.`}
+          confirmText="Restore"
+          confirmColor="green"
+          loading={questActionLoading}
+          onClose={() => setRestoringQuest(null)}
+          onConfirm={() => handleRestoreQuest(restoringQuest.id)}
+        />
+      )}
+
+      {/* Force-cancel confirmation */}
+      {forceCancelQuest && (
+        <ForceCancelModal
+          quest={forceCancelQuest}
+          loading={questActionLoading}
+          onClose={() => setForceCancelQuest(null)}
+          onConfirm={(reason) => handleForceCancelQuest(forceCancelQuest.id, reason)}
+        />
+      )}
+
+      {/* Delete permanent confirmation (admin only) */}
+      {deletingQuest && (
+        <DeleteQuestModal
+          quest={deletingQuest}
+          loading={questActionLoading}
+          onClose={() => setDeletingQuest(null)}
+          onConfirm={() => handleDeleteQuest(deletingQuest.id)}
+        />
+      )}
     </div>
   );
 }
@@ -867,6 +1032,354 @@ function DeployQuestModal({ groupId, onClose, onSuccess, userRole = 'pembina' }:
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// EditQuestModal — Edit quest yang sudah di-deploy
+// Pembina (creator) atau Admin. Restrict: XP tidak bisa diubah jika sudah ada peserta ambil
+// ============================================================
+function EditQuestModal({ quest, onClose, onSuccess }: { quest: any; onClose: () => void; onSuccess: () => void }) {
+  const [form, setForm] = useState({
+    title: quest.title || '',
+    description: quest.description || '',
+    xp_reward: String(quest.xp_reward || 20),
+    deadline: quest.due_date ? new Date(quest.due_date).toISOString().slice(0, 10) : '',
+    deadline_time: quest.due_date ? new Date(quest.due_date).toISOString().slice(11, 16) : '17:00',
+    max_slots: quest.max_slots ? String(quest.max_slots) : ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [restrictions, setRestrictions] = useState<{ xpLocked: boolean; titleLocked: boolean }>({
+    xpLocked: false,
+    titleLocked: false
+  });
+
+  // Cek restrictions saat mount
+  useEffect(() => {
+    fetch(`/api/quests/list?group_id=${quest.group_id}`)
+      .then((r) => r.json())
+      .then(() => {
+        // Cek dari quest_logs di quest object (kalau ada quest_logs)
+        const hasSubmission = quest.quest_logs && quest.quest_logs.some((l: any) => l.status === 'in_progress' || l.status === 'completed');
+        const hasCompleted = quest.quest_logs && quest.quest_logs.some((l: any) => l.status === 'completed');
+        setRestrictions({
+          xpLocked: !!hasSubmission,
+          titleLocked: !!hasCompleted
+        });
+      })
+      .catch(() => {});
+  }, [quest]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      let deadlineISO: string | null = null;
+      if (form.deadline) {
+        deadlineISO = new Date(`${form.deadline}T${form.deadline_time}:00`).toISOString();
+      }
+      const payload: any = {
+        title: form.title.trim(),
+        description: form.description.trim(),
+        deadline: deadlineISO,
+        max_slots: form.max_slots ? parseInt(form.max_slots, 10) : null
+      };
+      if (!restrictions.xpLocked) {
+        payload.xp_reward = parseInt(form.xp_reward, 10) || 20;
+      }
+      const res = await fetch(`/api/quests/${quest.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100 sticky top-0 bg-white">
+          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <Edit2 className="w-5 h-5 text-purple-600" /> Edit Quest
+          </h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Judul Quest *</label>
+            <input
+              required
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              disabled={restrictions.titleLocked}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500/40 disabled:bg-gray-100 disabled:text-gray-500"
+            />
+            {restrictions.titleLocked && <p className="text-xs text-orange-600 mt-1">Judul terkunci karena sudah ada peserta yang menyelesaikan quest.</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi *</label>
+            <textarea
+              required
+              rows={4}
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">XP Reward</label>
+              <select
+                value={form.xp_reward}
+                onChange={(e) => setForm({ ...form, xp_reward: e.target.value })}
+                disabled={restrictions.xpLocked}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white disabled:bg-gray-100 disabled:text-gray-500"
+              >
+                <option value="10">10 XP (Easy)</option>
+                <option value="20">20 XP (Medium)</option>
+                <option value="30">30 XP (Hard)</option>
+                <option value="50">50 XP (Expert)</option>
+              </select>
+              {restrictions.xpLocked && <p className="text-xs text-orange-600 mt-1">XP terkunci (anti-fraud) — sudah ada peserta yang ambil.</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Max Slots</label>
+              <input
+                type="number"
+                min={1}
+                value={form.max_slots}
+                onChange={(e) => setForm({ ...form, max_slots: e.target.value })}
+                placeholder="kosong = unlimited"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Deadline</label>
+            <div className="grid grid-cols-2 gap-2">
+              <input type="date" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white" />
+              <select value={form.deadline_time} onChange={(e) => setForm({ ...form, deadline_time: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white">
+                {['12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00'].map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Kosongkan untuk hapus deadline.</p>
+          </div>
+
+          {error && <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">{error}</div>}
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
+            ℹ️ Perubahan akan tersimpan ke audit log dan broadcast system message ke chat grup ini.
+          </div>
+
+          <div className="flex gap-2 pt-2 sticky bottom-0 bg-white">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium">Batal</button>
+            <button type="submit" disabled={loading} className="flex-1 inline-flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded-lg text-sm disabled:opacity-50">
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Edit2 className="w-4 h-4" />} Simpan Perubahan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// ArchiveQuestModal — konfirmasi arsip quest
+// ============================================================
+function ArchiveQuestModal({ quest, loading, onClose, onConfirm }: { quest: any; loading: boolean; onClose: () => void; onConfirm: (reason: string) => void }) {
+  const [reason, setReason] = useState('');
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <Archive className="w-5 h-5 text-gray-600" /> Arsipkan Quest
+          </h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <p className="text-sm text-gray-700">
+            Anda akan mengarsipkan quest <strong className="text-gray-900">&ldquo;{quest.title}&rdquo;</strong>.
+          </p>
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 space-y-1">
+            <p>📦 Quest disembunyikan dari peserta baru</p>
+            <p>✅ Peserta yang sudah ambil tetap melihat history</p>
+            <p>💎 EXP tetap aman (tidak di-revoke)</p>
+            <p>♻️ Hanya admin yang bisa restore</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Alasan (opsional)</label>
+            <textarea
+              rows={2}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Misal: Quest sudah tidak relevan, salah deploy, dll."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={onClose} disabled={loading} className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium disabled:opacity-50">Batal</button>
+            <button onClick={() => onConfirm(reason)} disabled={loading} className="flex-1 inline-flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-800 text-white font-semibold px-4 py-2 rounded-lg text-sm disabled:opacity-50">
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />} Arsipkan
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// ForceCancelModal — konfirmasi batalkan peserta in_progress
+// ============================================================
+function ForceCancelModal({ quest, loading, onClose, onConfirm }: { quest: any; loading: boolean; onClose: () => void; onConfirm: (reason: string) => void }) {
+  const [reason, setReason] = useState('');
+  const inProgressCount = (quest.quest_logs || []).filter((l: any) => l.status === 'in_progress').length;
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+          <h3 className="text-lg font-bold text-orange-700 flex items-center gap-2">
+            <Ban className="w-5 h-5" /> Batalkan Peserta In-Progress
+          </h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <p className="text-sm text-gray-700">
+            Batalkan <strong className="text-orange-700">{inProgressCount} peserta</strong> yang sedang mengerjakan quest <strong className="text-gray-900">&ldquo;{quest.title}&rdquo;</strong>?
+          </p>
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-xs text-orange-800 space-y-1">
+            <p>🚫 Peserta in_progress → status &ldquo;cancelled&rdquo;</p>
+            <p>❌ EXP tidak diberikan ke peserta yang belum submit</p>
+            <p>✅ Peserta yang sudah completed tetap dapat EXP</p>
+            <p>⛔ Quest dinonaktifkan (tidak bisa diambil lagi)</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Alasan (wajib, min 5 karakter) *</label>
+            <textarea
+              rows={3}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Misal: Quest salah total, ada bug di instruksi, perlu recall"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={onClose} disabled={loading} className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium disabled:opacity-50">Batal</button>
+            <button onClick={() => onConfirm(reason)} disabled={loading || reason.trim().length < 5} className="flex-1 inline-flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold px-4 py-2 rounded-lg text-sm disabled:opacity-50">
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />} Batalkan {inProgressCount} Peserta
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// DeleteQuestModal — konfirmasi hapus permanen (admin only)
+// ============================================================
+function DeleteQuestModal({ quest, loading, onClose, onConfirm }: { quest: any; loading: boolean; onClose: () => void; onConfirm: () => void }) {
+  const [confirmText, setConfirmText] = useState('');
+  const match = confirmText === 'HAPUS';
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+        <div className="flex items-center justify-between p-5 border-b border-red-100">
+          <h3 className="text-lg font-bold text-red-600 flex items-center gap-2">
+            <Trash2 className="w-5 h-5" /> Hapus Permanen Quest
+          </h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
+            <p className="font-semibold mb-1">⚠️ Aksi ini tidak bisa di-undo</p>
+            <p>Quest <strong>&ldquo;{quest.title}&rdquo;</strong> akan dihapus permanen dari database.</p>
+          </div>
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 space-y-1">
+            <p>🗑️ Semua quest_logs & activity_completions dihapus</p>
+            <p>🗑️ Chat quest_card di grup akan dihapus</p>
+            <p>📝 Audit log tetap tersimpan (untuk audit trail)</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Ketik <strong className="text-red-600">HAPUS</strong> untuk konfirmasi *
+            </label>
+            <input
+              type="text"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder="HAPUS"
+              className="w-full px-3 py-2 border border-red-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500/40"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={onClose} disabled={loading} className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium disabled:opacity-50">Batal</button>
+            <button onClick={onConfirm} disabled={loading || !match} className="flex-1 inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-lg text-sm disabled:opacity-50">
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} Hapus Permanen
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// SimpleConfirmModal — konfirmasi sederhana (untuk restore)
+// ============================================================
+function SimpleConfirmModal({
+  title,
+  message,
+  confirmText,
+  confirmColor,
+  loading,
+  onClose,
+  onConfirm
+}: {
+  title: string;
+  message: string;
+  confirmText: string;
+  confirmColor: 'green' | 'blue' | 'orange';
+  loading: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const colorClasses = {
+    green: 'bg-bpjs-green hover:bg-bpjs-green-dark',
+    blue: 'bg-bpjs-blue hover:bg-bpjs-blue-dark',
+    orange: 'bg-orange-600 hover:bg-orange-700'
+  };
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+          <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <p className="text-sm text-gray-700">{message}</p>
+          <div className="flex gap-2">
+            <button onClick={onClose} disabled={loading} className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium disabled:opacity-50">Batal</button>
+            <button onClick={onConfirm} disabled={loading} className={`flex-1 px-4 py-2 text-white font-semibold rounded-lg text-sm disabled:opacity-50 ${colorClasses[confirmColor]}`}>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null} {confirmText}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

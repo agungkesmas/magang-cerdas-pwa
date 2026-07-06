@@ -60,15 +60,15 @@ const DASHBOARD_LABEL = {
 const SUGGESTED_QUESTIONS: Record<string, string[]> = {
   admin: [
     'Bagaimana cara tambah peserta magang?',
-    'Cara backup & clean file storage?',
-    'Cara terbitkan sertifikat?',
-    'Bagaimana konfigurasi AI Provider?'
+    'Cara kelola quest yang sudah di-deploy?',
+    'Di mana lihat leaderboard peserta?',
+    'Cara terbitkan sertifikat?'
   ],
   pembina: [
     'Bagaimana cara deploy quest?',
-    'Cara kirim foto di chat?',
-    'Cara hapus file di grup (Clear File)?',
-    'Bisa edit quest setelah deploy?'
+    'Bisa edit quest setelah deploy?',
+    'Cara arsipkan quest saya?',
+    'Cara batalkan peserta in-progress?'
   ],
   bkk: [
     'Bagaimana cara ajukan permintaan magang?',
