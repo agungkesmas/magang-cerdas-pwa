@@ -17,8 +17,10 @@ import {
   Mail,
   Clock,
   Zap,
-  Tag
+  Tag,
+  Gift
 } from 'lucide-react';
+import QuickGiftModal from '@/components/shared/QuickGiftModal';
 
 export default function PembinaHomePage() {
   const [pembina, setPembina] = useState<any>(null);
@@ -34,6 +36,8 @@ export default function PembinaHomePage() {
   const [pendingAttendances, setPendingAttendances] = useState<any[]>([]);
   const [attActionLoading, setAttActionLoading] = useState<string | null>(null);
   const [activeQuests, setActiveQuests] = useState<any[]>([]);
+  // Quick Gift — modal bonus XP cepat (3 klik: tombol Gift → aktivitas → XP)
+  const [giftFor, setGiftFor] = useState<{ id: string; name: string } | null>(null);
 
   // Predefined tags (harus sama dengan admin/interns/page.tsx + API pembina/interns/[id]/tags)
   const PREDEFINED_TAGS = [
@@ -423,6 +427,13 @@ export default function PembinaHomePage() {
                 {/* Buttons — wrap ke baris baru di mobile */}
                 <div className="flex items-center gap-1.5 w-full sm:w-auto justify-end sm:justify-start">
                 <button
+                  onClick={() => setGiftFor({ id: intern.id, name: intern.name })}
+                  title={`🎁 Kasih Bonus XP ke ${intern.name} (Quick Gift)`}
+                  className="p-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-md flex-shrink-0"
+                >
+                  <Gift className="w-4 h-4" />
+                </button>
+                <button
                   onClick={() => setAssignTaskFor(intern)}
                   title={`Beri tugas ke ${intern.name}`}
                   className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-md flex-shrink-0"
@@ -577,6 +588,21 @@ export default function PembinaHomePage() {
           onSuccess={() => {
             setAssignTaskFor(null);
             alert('Tugas berhasil diberikan!');
+          }}
+        />
+      )}
+
+      {/* Quick Gift Modal — Bonus XP cepat ke aktivitas peserta */}
+      {giftFor && (
+        <QuickGiftModal
+          internId={giftFor.id}
+          internName={giftFor.name}
+          onClose={() => setGiftFor(null)}
+          onSuccess={(newTotalExp) => {
+            // Update EXP peserta di list myInterns supaya langsung refleksi
+            setMyInterns((prev) => prev.map((i) =>
+              i.id === giftFor.id ? { ...i, total_exp: newTotalExp } : i
+            ));
           }}
         />
       )}
