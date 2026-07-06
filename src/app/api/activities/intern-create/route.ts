@@ -2,11 +2,16 @@
 // /api/activities/intern-create — Intern tambah aktivitas sendiri
 // Two-way: peserta bisa catat aktivitas tambahan yang mereka kerjakan
 // Support: xp_reward (default 20, pilihan 10/20/30/50)
+//
+// LIMIT ANTI-EXP-FARMING: maksimal 3 aktivitas self-added per hari
+// (standar industri: cegah percobaan up nilai tidak wajar)
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getInternToken } from '@/lib/auth';
+
+const MAX_DAILY_SELF_ACTIVITIES = 3;
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,6 +33,8 @@ export async function POST(req: NextRequest) {
     // 0. CEK: Peserta sudah check-in hari ini?
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
     const { data: todayCheckIn } = await supabase
       .from('attendance')
       .select('id')
@@ -41,6 +48,27 @@ export async function POST(req: NextRequest) {
         { status: 403 }
       );
     }
+
+    // 0b. CEK: Batas 3 aktivitas self-added per hari (anti EXP-farming)
+    const { count: todaySelfActivities } = await supabase
+      .from('activities')
+      .select('id', { count: 'exact', head: true })
+      .eq('intern_id', intern.intern_id)
+      .eq('created_by_intern', true)
+      .gte('created_at', todayStart.toISOString())
+      .lte('created_at', todayEnd.toISOString());
+
+    if ((todaySelfActivities || 0) >= MAX_DAILY_SELF_ACTIVITIES) {
+      return NextResponse.json(
+        {
+          error: `Batas penambahan aktivitas harian tercapai (${MAX_DAILY_SELF_ACTIVITIES} aktivitas/hari). Batas ini mencegah percobaan menaikkan nilai EXP secara tidak wajar. Jika ada aktivitas tambahan yang penting, minta pembina untuk menambahkannya melalui DM atau tag langsung.`,
+          limit: MAX_DAILY_SELF_ACTIVITIES,
+          remaining: 0
+        },
+        { status: 429 }
+      );
+    }
+
     const { data, error } = await supabase
       .from('activities')
       .insert({
@@ -58,8 +86,13 @@ export async function POST(req: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    return NextResponse.json({ success: true, activity: data });
+    return NextResponse.json({
+      success: true,
+      activity: data,
+      remaining_today: MAX_DAILY_SELF_ACTIVITIES - ((todaySelfActivities || 0) + 1)
+    });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+

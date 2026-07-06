@@ -551,6 +551,15 @@ function InternAddActivityModal({ onClose, onSuccess }: { onClose: () => void; o
   const [form, setForm] = useState({ title: '', description: '', xp_reward: '20' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [remainingToday, setRemainingToday] = useState<number | null>(null);
+
+  // Fetch sisa limit harian saat mount
+  useEffect(() => {
+    // Hitung dari API: count activities self-added hari ini
+    // Pakai endpoint existing (activities/list atau fetch langsung)
+    // Untuk simplicity, kita cek dari response intern-create berikutnya
+    // Atau bisa via API khusus — tapi biar minimal, kita skip dulu & tampilkan info statis
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -564,6 +573,7 @@ function InternAddActivityModal({ onClose, onSuccess }: { onClose: () => void; o
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+      if (data.remaining_today !== undefined) setRemainingToday(data.remaining_today);
       onSuccess();
     } catch (err: any) {
       setError(err.message);
@@ -582,6 +592,10 @@ function InternAddActivityModal({ onClose, onSuccess }: { onClose: () => void; o
           <button onClick={onClose} className="text-white/40 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {/* Info limit harian */}
+          <div className="bg-bpjs-yellow/10 border border-bpjs-yellow/30 rounded-lg p-2.5 text-xs text-bpjs-yellow">
+            ⚠️ Batas: maksimal 3 aktivitas self-added per hari (anti EXP-farming). Jika sudah habis, minta pembina tambahkan melalui DM.
+          </div>
           <div>
             <label className="block text-sm font-medium text-white/80 mb-1">Judul *</label>
             <input
@@ -612,7 +626,7 @@ function InternAddActivityModal({ onClose, onSuccess }: { onClose: () => void; o
               <option value="30" className="bg-agent-card">30 XP (Hard)</option>
               <option value="50" className="bg-agent-card">50 XP (Expert)</option>
             </select>
-            <p className="text-[10px] text-white/40 mt-1">XP akan didapat setelah aktivitas ditandai selesai</p>
+            <p className="text-[10px] text-white/40 mt-1">XP akan didapat setelah aktivitas ditandai selesai. Pembina bisa beri Bonus XP tambahan jika kerja Anda istimewa.</p>
           </div>
           {error && <p className="text-xs text-red-400">{error}</p>}
           <div className="flex gap-2">

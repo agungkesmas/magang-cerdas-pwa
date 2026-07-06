@@ -108,11 +108,24 @@ const TYPE_META: Record<string, { label: string; icon: any; color: string; bg: s
   bonus_xp: { label: 'Bonus XP', icon: Gift, color: 'text-amber-600', bg: 'bg-amber-100' }
 };
 
-export default function InternTimelineView({ internId, backHref = '/admin/activities' }: { internId: string; backHref?: string }) {
+export default function InternTimelineView({
+  internId,
+  backHref = '/admin/activities',
+  viewerRole = 'admin'
+}: {
+  internId: string;
+  backHref?: string;
+  viewerRole?: 'admin' | 'pembina' | 'bkk';
+}) {
   const [data, setData] = useState<TimelineResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [bonusModal, setBonusModal] = useState<{ activityId: string; activityTitle: string; completionId: string } | null>(null);
+  const [bonusXp, setBonusXp] = useState(20);
+  const [bonusNote, setBonusNote] = useState('');
+  const [bonusLoading, setBonusLoading] = useState(false);
+  const [bonusError, setBonusError] = useState('');
 
   useEffect(() => {
     fetch(`/api/admin/interns/${internId}/timeline`)
@@ -409,6 +422,47 @@ export default function InternTimelineView({ internId, backHref = '/admin/activi
                           )}
                           {item.metadata?.has_photo && <span>📷 Ada foto</span>}
                         </div>
+                      ) : item.type === 'task_complete' ? (
+                        <div className="text-[10px] text-gray-500 mt-1 flex flex-wrap gap-2 items-center">
+                          {item.metadata?.xp_reward > 0 && (
+                            <span className="text-bpjs-green font-medium">+{item.metadata.xp_reward} EXP</span>
+                          )}
+                          {item.metadata?.is_self_added && (
+                            <span className="text-purple-600 font-medium bg-purple-50 px-1.5 py-0.5 rounded">Self-Added</span>
+                          )}
+                          {item.metadata?.has_bonus && (
+                            <span className="text-amber-600 font-medium flex items-center gap-0.5">
+                              <Gift className="w-3 h-3" /> +{item.metadata.bonus_xp} bonus
+                              {item.metadata.bonus_note && (
+                                <span className="italic text-gray-500 ml-1">"{item.metadata.bonus_note}"</span>
+                              )}
+                            </span>
+                          )}
+                          {/* Tombol +Bonus XP — hanya pembina, hanya untuk aktivitas self-added yang belum dapat bonus */}
+                          {viewerRole === 'pembina'
+                            && item.metadata?.is_self_added
+                            && !item.metadata?.is_quest
+                            && !item.metadata?.has_bonus
+                            && item.metadata?.activity_id
+                            && item.metadata?.completion_id && (
+                            <button
+                              onClick={() => {
+                                setBonusModal({
+                                  activityId: item.metadata.activity_id,
+                                  activityTitle: item.title.replace(/^Tugas Selesai:\s*/, ''),
+                                  completionId: item.metadata.completion_id
+                                });
+                                setBonusXp(20);
+                                setBonusNote('');
+                                setBonusError('');
+                              }}
+                              className="ml-auto flex items-center gap-1 px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded text-[10px] font-semibold"
+                              title="Beri Bonus XP ke peserta untuk aktivitas ini"
+                            >
+                              <Gift className="w-3 h-3" /> +Bonus XP
+                            </button>
+                          )}
+                        </div>
                       ) : item.type === 'task_daily_complete' ? (
                         <div className="text-[10px] text-gray-500 mt-1 flex flex-wrap gap-2">
                           {item.metadata?.exp_awarded !== undefined && (
@@ -500,6 +554,117 @@ export default function InternTimelineView({ internId, backHref = '/admin/activi
                 {g.department && ` (${g.department})`}
               </span>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Bonus XP — untuk aktivitas self-added (pembina only) */}
+      {bonusModal && viewerRole === 'pembina' && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <Gift className="w-5 h-5 text-amber-600" /> Bonus XP untuk Aktivitas
+              </h3>
+              <button
+                onClick={() => setBonusModal(null)}
+                className="text-gray-400 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                <p className="font-medium mb-1">Aktivitas: {bonusModal.activityTitle}</p>
+                <p className="text-xs">Bonus XP ini diberikan sebagai apresiasi atas inisiatif peserta menambah aktivitas sendiri. Akan tercatat di audit trail & notifikasi ke peserta.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Bonus XP (1-100) *</label>
+                <div className="grid grid-cols-4 gap-2 mb-2">
+                  {[10, 20, 30, 50].map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setBonusXp(v)}
+                      className={`py-2 rounded-lg text-sm font-semibold ${
+                        bonusXp === v
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      +{v}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={bonusXp}
+                  onChange={(e) => setBonusXp(Math.min(100, Math.max(1, parseInt(e.target.value) || 1)))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Catatan (opsional)</label>
+                <textarea
+                  rows={2}
+                  value={bonusNote}
+                  onChange={(e) => setBonusNote(e.target.value)}
+                  placeholder="Misal: Inisiatif bagus, kerja lengkap, dll."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+
+              {bonusError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-red-700 text-sm">{bonusError}</div>
+              )}
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setBonusModal(null)}
+                  disabled={bonusLoading}
+                  className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium disabled:opacity-50"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={async () => {
+                    setBonusLoading(true);
+                    setBonusError('');
+                    try {
+                      const res = await fetch(`/api/activities/${bonusModal.activityId}/bonus-xp`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          bonus_xp: bonusXp,
+                          note: bonusNote.trim() || undefined
+                        })
+                      });
+                      const d = await res.json();
+                      if (!res.ok) throw new Error(d.error);
+                      // Refresh data
+                      setBonusModal(null);
+                      // Refetch timeline
+                      fetch(`/api/admin/interns/${internId}/timeline`)
+                        .then((r) => r.json())
+                        .then((d) => { if (d.success) setData(d); })
+                        .catch(() => {});
+                    } catch (err: any) {
+                      setBonusError(err.message);
+                    } finally {
+                      setBonusLoading(false);
+                    }
+                  }}
+                  disabled={bonusLoading || bonusXp < 1 || bonusXp > 100}
+                  className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-lg text-sm disabled:opacity-50 flex items-center justify-center gap-1"
+                >
+                  {bonusLoading ? '...' : <><Gift className="w-4 h-4" /> Berikan +{bonusXp} XP</>}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

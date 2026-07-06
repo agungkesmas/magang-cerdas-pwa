@@ -75,9 +75,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         .limit(500),
 
       // Activity completions (one-time) — XP dari activities.xp_reward
+      // Include created_by_intern & bonus_xp untuk tombol "Bonus XP" pembina
       supabase
         .from('activity_completions')
-        .select('id, activity_id, completed_at, activities!inner(id, title, description, department, due_date, is_recurring, xp_reward)')
+        .select('id, activity_id, completed_at, bonus_xp, bonus_note, bonus_at, activities!inner(id, title, description, department, due_date, is_recurring, xp_reward, created_by_intern, is_quest)')
         .eq('intern_id', internId)
         .order('completed_at', { ascending: false })
         .limit(200),
@@ -180,9 +181,17 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         description: act?.description || undefined,
         metadata: {
           activity_id: c.activity_id,
+          completion_id: c.id,
           department: act?.department,
           due_date: act?.due_date,
-          is_recurring: act?.is_recurring
+          is_recurring: act?.is_recurring,
+          is_self_added: act?.created_by_intern === true,
+          is_quest: act?.is_quest === true,
+          xp_reward: act?.xp_reward,
+          bonus_xp: c.bonus_xp || 0,
+          bonus_note: c.bonus_note || null,
+          bonus_at: c.bonus_at || null,
+          has_bonus: (c.bonus_xp || 0) > 0
         }
       });
     });
