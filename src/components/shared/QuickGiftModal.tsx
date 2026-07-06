@@ -12,6 +12,8 @@ interface EligibleActivity {
   xp_reward: number;
   is_self_added: boolean;
   department: string | null;
+  related_department: string | null;
+  is_related_to_my_department: boolean;
   completion_notes: string | null;
 }
 
@@ -183,7 +185,9 @@ export default function QuickGiftModal({ internId, internName, onClose, onSucces
                     <div
                       key={act.completion_id}
                       className={`border rounded-lg overflow-hidden transition-all ${
-                        isExpanded ? 'border-amber-300 shadow-sm' : 'border-gray-200'
+                        isExpanded
+                          ? (act.is_related_to_my_department ? 'border-amber-500 shadow-md ring-1 ring-amber-200' : 'border-amber-300 shadow-sm')
+                          : (act.is_related_to_my_department ? 'border-amber-300 bg-amber-50/30' : 'border-gray-200')
                       }`}
                     >
                       {/* Activity header — klik untuk expand */}
@@ -201,6 +205,17 @@ export default function QuickGiftModal({ internId, internName, onClose, onSucces
                             }`}>
                               {act.is_self_added ? 'Self-Added' : 'Departemen'}
                             </span>
+                            {/* Badge "Terkait: X" — prioritas untuk pembina divisi terkait */}
+                            {act.related_department && (
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5 ${
+                                act.is_related_to_my_department
+                                  ? 'bg-amber-500 text-white shadow-sm'
+                                  : 'bg-amber-100 text-amber-700'
+                              }`} title={`Aktivitas ini berhubungan dengan bidang ${act.related_department}`}>
+                                {act.is_related_to_my_department && '⭐ '}
+                                Terkait: {act.related_department}
+                              </span>
+                            )}
                             <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
                               <Zap className="w-2.5 h-2.5" /> +{act.xp_reward} XP
                             </span>

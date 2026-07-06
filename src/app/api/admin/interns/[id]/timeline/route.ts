@@ -78,7 +78,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       // Include created_by_intern & bonus_xp untuk tombol "Bonus XP" pembina
       supabase
         .from('activity_completions')
-        .select('id, activity_id, completed_at, bonus_xp, bonus_note, bonus_at, activities!inner(id, title, description, department, due_date, is_recurring, xp_reward, created_by_intern, is_quest)')
+        .select('id, activity_id, completed_at, bonus_xp, bonus_note, bonus_at, activities!inner(id, title, description, department, due_date, is_recurring, xp_reward, created_by_intern, is_quest, related_department)')
         .eq('intern_id', internId)
         .order('completed_at', { ascending: false })
         .limit(200),
@@ -196,6 +196,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           is_department_task: !isSelfAdded && !isQuest && !isRecurring,
           is_quest: isQuest,
           xp_reward: act?.xp_reward,
+          related_department: act?.related_department || null,
           bonus_xp: c.bonus_xp || 0,
           bonus_note: c.bonus_note || null,
           bonus_at: c.bonus_at || null,

@@ -433,6 +433,11 @@ export default function InternTimelineView({
                           {item.metadata?.is_department_task && (
                             <span className="text-bpjs-blue font-medium bg-bpjs-blue/10 px-1.5 py-0.5 rounded">Departemen</span>
                           )}
+                          {item.metadata?.related_department && (
+                            <span className="text-amber-700 font-medium bg-amber-100 px-1.5 py-0.5 rounded" title={`Aktivitas ini berhubungan dengan bidang ${item.metadata.related_department}`}>
+                              Terkait: {item.metadata.related_department}
+                            </span>
+                          )}
                           {item.metadata?.has_bonus && (
                             <span className="text-amber-600 font-medium flex items-center gap-0.5">
                               <Gift className="w-3 h-3" /> +{item.metadata.bonus_xp} bonus

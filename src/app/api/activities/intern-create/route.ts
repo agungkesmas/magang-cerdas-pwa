@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     const intern = await getInternToken();
     if (!intern) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { title, description, xp_reward } = await req.json();
+    const { title, description, xp_reward, related_department } = await req.json();
     if (!title?.trim()) return NextResponse.json({ error: 'Judul wajib diisi' }, { status: 400 });
     if (!description?.trim()) return NextResponse.json({ error: 'Deskripsi wajib diisi' }, { status: 400 });
 
@@ -26,6 +26,20 @@ export async function POST(req: NextRequest) {
     const xp = parseInt(xp_reward, 10) || 20;
     if (![10, 20, 30, 50].includes(xp)) {
       return NextResponse.json({ error: 'XP tidak valid (10/20/30/50)' }, { status: 400 });
+    }
+
+    // Validate related_department (opsional — boleh null)
+    // Tujuan: peserta kasih sinyal "aktivitas ini berhubungan dengan bidang X"
+    // supaya pembina divisi X bisa cepat filter & kasih gift
+    const VALID_DEPARTMENTS = ['Pelayanan', 'Pemasaran', 'Keuangan', 'Lintas Bidang'];
+    const relatedDept = related_department && related_department.trim()
+      ? related_department.trim()
+      : null;
+    if (relatedDept && !VALID_DEPARTMENTS.includes(relatedDept)) {
+      return NextResponse.json(
+        { error: `Bidang terkait tidak valid. Pilih: ${VALID_DEPARTMENTS.join(', ')}` },
+        { status: 400 }
+      );
     }
 
     const supabase = createServerClient();
@@ -79,7 +93,8 @@ export async function POST(req: NextRequest) {
         is_active: true,
         is_archived: false,
         created_by_intern: true,
-        xp_reward: xp
+        xp_reward: xp,
+        related_department: relatedDept
       })
       .select()
       .single();

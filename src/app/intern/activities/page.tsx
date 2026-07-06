@@ -548,7 +548,7 @@ export default function InternActivitiesPage() {
 }
 
 function InternAddActivityModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
-  const [form, setForm] = useState({ title: '', description: '', xp_reward: '20' });
+  const [form, setForm] = useState({ title: '', description: '', xp_reward: '20', related_department: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [remainingToday, setRemainingToday] = useState<number | null>(null);
@@ -627,6 +627,26 @@ function InternAddActivityModal({ onClose, onSuccess }: { onClose: () => void; o
               <option value="50" className="bg-agent-card">50 XP (Expert)</option>
             </select>
             <p className="text-[10px] text-white/40 mt-1">XP akan didapat setelah aktivitas ditandai selesai. Pembina bisa beri Bonus XP tambahan jika kerja Anda istimewa.</p>
+          </div>
+          {/* Bidang terkait — peserta kasih sinyal aktivitas ini berhubungan dengan bidang X */}
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-1">
+              Berhubungan dengan bidang lain? <span className="text-white/40 text-xs">(opsional)</span>
+            </label>
+            <select
+              value={form.related_department}
+              onChange={(e) => setForm({ ...form, related_department: e.target.value })}
+              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-bpjs-yellow"
+            >
+              <option value="" className="bg-agent-card">Tidak — bidang saya sendiri</option>
+              <option value="Pelayanan" className="bg-agent-card">Pelayanan</option>
+              <option value="Pemasaran" className="bg-agent-card">Pemasaran</option>
+              <option value="Keuangan" className="bg-agent-card">Keuangan</option>
+              <option value="Lintas Bidang" className="bg-agent-card">Lintas Bidang</option>
+            </select>
+            <p className="text-[10px] text-white/40 mt-1">
+              💡 Kalau kamu bantu kerja divisi lain (mis. kamu Pelayanan bantu Pemasaran), pilih bidang tersebut. Pembina divisi itu bisa lihat aktivitasmu & kasih Bonus XP.
+            </p>
           </div>
           {error && <p className="text-xs text-red-400">{error}</p>}
           <div className="flex gap-2">

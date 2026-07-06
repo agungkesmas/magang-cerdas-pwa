@@ -76,7 +76,7 @@ export async function GET(
         activities!inner(
           id, title, description, department, due_date,
           is_quest, is_recurring, is_active,
-          created_by_intern, xp_reward
+          created_by_intern, xp_reward, related_department
         )
       `)
       .eq('intern_id', internId)
@@ -86,6 +86,8 @@ export async function GET(
     if (cErr) return NextResponse.json({ error: cErr.message }, { status: 500 });
 
     // 4. Filter eligible: BUKAN quest, BUKAN recurring, bonus_xp = 0 / null
+    //    + Sort: aktivitas dengan related_department == pembina.department muncul paling atas
+    //    (prioritas untuk pembina divisi terkait)
     const eligible = (completions || []).filter((c: any) => {
       const act = c.activities;
       if (!act) return false;
@@ -104,8 +106,15 @@ export async function GET(
         xp_reward: act.xp_reward || 20,
         is_self_added: act.created_by_intern === true,
         department: act.department,
+        related_department: act.related_department || null,
+        is_related_to_my_department: act.related_department === pembina.department,
         completion_notes: c.completion_notes
       };
+    }).sort((a: any, b: any) => {
+      // Sort: yang related to my department paling atas, lalu by completed_at desc
+      if (a.is_related_to_my_department && !b.is_related_to_my_department) return -1;
+      if (!a.is_related_to_my_department && b.is_related_to_my_department) return 1;
+      return new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime();
     });
 
     return NextResponse.json({
