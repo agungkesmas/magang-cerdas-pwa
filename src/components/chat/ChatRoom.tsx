@@ -23,7 +23,8 @@ import {
   Edit2,
   Archive,
   RotateCcw,
-  Ban
+  Ban,
+  Megaphone
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import QuestCard from './QuestCard';
@@ -403,18 +404,50 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
       </button>
 
       {/* Header grup */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5">
-        <div className="flex items-start gap-3 flex-wrap">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-purple-100 to-purple-50 flex items-center justify-center flex-shrink-0">
-            <Users className="w-5 h-5 sm:w-6 sm:h-6 text-purple-700" />
+      <div className={`rounded-2xl border p-4 sm:p-5 relative overflow-hidden ${
+        group.group_type === 'system' && group.name === 'All Peserta Magang'
+          ? 'border-amber-400/50 bg-gradient-to-br from-amber-50 to-yellow-50'
+          : 'border-gray-200 bg-white'
+      }`}>
+        {/* Ornamen mading: stripes halus */}
+        {group.group_type === 'system' && group.name === 'All Peserta Magang' && (
+          <>
+            <div
+              className="absolute inset-0 opacity-[0.04] pointer-events-none"
+              style={{
+                backgroundImage: 'repeating-linear-gradient(45deg, #f59e0b 0, #f59e0b 1px, transparent 0, transparent 50%)',
+                backgroundSize: '8px 8px'
+              }}
+            />
+            <div className="absolute top-0 right-0 bg-amber-500 text-white text-[10px] font-bold px-3 py-0.5 rounded-bl-lg uppercase tracking-wider flex items-center gap-1">
+              <Megaphone className="w-2.5 h-2.5" /> Mading Pengumuman
+            </div>
+          </>
+        )}
+        <div className="flex items-start gap-3 flex-wrap relative">
+          <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+            group.group_type === 'system' && group.name === 'All Peserta Magang'
+              ? 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/30'
+              : 'bg-gradient-to-br from-purple-100 to-purple-50'
+          }`}>
+            {group.group_type === 'system' && group.name === 'All Peserta Magang' ? (
+              <Megaphone className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            ) : (
+              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-purple-700" />
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-              {group.name}
+              {group.group_type === 'system' && group.name === 'All Peserta Magang'
+                ? 'Mading Pengumuman Kantor'
+                : group.name}
             </h1>
             <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-              {pembinaMembers.length} pembina • {pesertaMembers.length} peserta
-              {group.department && ` • ${group.department}`}
+              {group.group_type === 'system' && group.name === 'All Peserta Magang' ? (
+                <>Pengumuman resmi dari admin & pembina • {pembinaMembers.length} pembina • {pesertaMembers.length} peserta</>
+              ) : (
+                <>{pembinaMembers.length} pembina • {pesertaMembers.length} peserta{group.department && ` • ${group.department}`}</>
+              )}
             </p>
           </div>
           {userRole === 'pembina' && (
