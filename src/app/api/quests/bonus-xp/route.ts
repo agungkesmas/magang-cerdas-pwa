@@ -84,15 +84,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // === 3. Validasi: Quest harus "Sekali Selesai" (bukan recurring harian) ===
-    // Standar industri: bonus XP hanya untuk quest one-shot, agar audit trail jelas
-    // (recurring harian terlalu ribet kalau per-hari bisa dapat bonus)
-    if (questActivity?.is_recurring) {
-      return NextResponse.json(
-        { error: 'Bonus XP hanya untuk Quest "Sekali Selesai", bukan "Harian Berulang".' },
-        { status: 400 }
-      );
-    }
+    // === 3. (Removed) Restriction is_recurring ===
+    // Sebelumnya: bonus XP hanya untuk Quest "Sekali Selesai"
+    // Sekarang: bonus XP BOLEH untuk Quest Harian Berulang juga
+    // (karena quest_logs UNIQUE(quest_id, intern_id), 1 bonus per quest_log tetap aman dari double-award)
+    // Note: Quest recurring saat ini cuma bisa complete 1x untuk seluruh rentang (bukan per-hari),
+    // jadi gift diberikan 1x per peserta per quest recurring.
 
     // === 4. Validasi: pembina harus anggota grup tempat quest di-deploy ===
     const { data: membership } = await supabase

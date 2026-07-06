@@ -361,7 +361,8 @@ export default function QuestCard({
                 const isCompletedLog = log.status === 'completed';
                 const hasBonus = log.bonus_xp !== undefined && log.bonus_xp !== null && log.bonus_xp > 0;
                 // Hanya pembina yang bisa kasih bonus (bukan admin)
-                const canGiveBonus = userRole === 'pembina' && isCompletedLog && !hasBonus && !quest.is_recurring;
+                // Catatan: sekarang BOLEH untuk quest recurring juga (1 bonus per quest_log)
+                const canGiveBonus = userRole === 'pembina' && isCompletedLog && !hasBonus;
                 return (
                   <div key={i} className="flex items-center justify-between text-xs p-2 bg-gray-50 rounded gap-2">
                     <div className="flex-1 min-w-0">
@@ -419,7 +420,7 @@ export default function QuestCard({
           )}
           {quest.is_recurring && (
             <p className="text-[10px] text-gray-400 italic mt-2">
-              💡 Quest berulang harian tidak bisa dikasih bonus XP (hanya untuk "Sekali Selesai").
+              💡 Quest Harian Berulang: 1 Bonus XP per peserta (diberikan setelah peserta complete quest ini).
             </p>
           )}
         </div>
