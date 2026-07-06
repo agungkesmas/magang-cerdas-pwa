@@ -27,6 +27,7 @@ export default function PembinaHomePage() {
   const [groups, setGroups] = useState<any[]>([]);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [myInterns, setMyInterns] = useState<any[]>([]);
+  const [otherInterns, setOtherInterns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [assignTaskFor, setAssignTaskFor] = useState<any | null>(null);
   const [dmLoading, setDmLoading] = useState<string | null>(null);
@@ -75,10 +76,11 @@ export default function PembinaHomePage() {
       fetch('/api/groups/list').then(r => r.json()),
       fetch('/api/leaderboard').then(r => r.json()),
       fetch('/api/pembina/my-interns').then(r => r.json()),
+      fetch('/api/pembina/other-interns').then(r => r.json()),
       fetch('/api/pembina/pending-attendances').then(r => r.json()),
       fetch('/api/pembina/active-quests').then(r => r.json()),
     ])
-      .then(([groupData, lbData, internsData, pendingData, questsData]) => {
+      .then(([groupData, lbData, internsData, otherInternsData, pendingData, questsData]) => {
         if (groupData.success) {
           setGroups(groupData.groups || []);
           setPembina({ name: 'Pembina' });
@@ -88,6 +90,9 @@ export default function PembinaHomePage() {
         }
         if (internsData.success) {
           setMyInterns(internsData.interns || []);
+        }
+        if (otherInternsData.success) {
+          setOtherInterns(otherInternsData.interns || []);
         }
         if (pendingData.success) {
           setPendingAttendances(pendingData.pending || []);
@@ -498,6 +503,99 @@ export default function PembinaHomePage() {
         </div>
       )}
 
+      {/* Peserta Lain (Collaborator) — peserta di luar bimbingan saya, ada di grup yang sama */}
+      {otherInterns.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-200 p-5">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+              <Users className="w-5 h-5 text-blue-500" /> Peserta Lain (Collaborator)
+            </h2>
+            <span className="text-xs text-gray-400">{otherInterns.length} peserta</span>
+          </div>
+          <p className="text-xs text-gray-500 mb-3">
+            💡 Peserta di luar bimbingan Anda yang ada di grup yang sama (mis. <strong>Diskusi Magang All</strong>). Bisa kasih 🎁 Bonus XP kalau mereka bantu pekerjaan Anda.
+          </p>
+          <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1 -mr-1 leaderboard-scroll">
+            {otherInterns.map((intern) => (
+              <div key={intern.id} className="flex items-start gap-3 p-2 rounded-lg hover:bg-blue-50/40 transition-colors flex-wrap">
+                <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <span className="text-blue-600 font-bold text-sm">{intern.name.charAt(0).toUpperCase()}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <p className="font-semibold text-gray-900 text-sm truncate">{intern.name}</p>
+                    {intern.is_cross_department && (
+                      <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium" title={`Berbeda departemen dengan Anda (${intern.department})`}>
+                        {intern.department}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-500 flex-wrap mt-0.5">
+                    <span>{intern.major}</span>
+                    <span>•</span>
+                    <span className={intern.time_progress >= 80 ? 'text-red-600' : intern.time_progress >= 50 ? 'text-amber-600' : 'text-green-600'}>
+                      {intern.days_remaining} hari tersisa
+                    </span>
+                    {intern.shared_groups && intern.shared_groups.length > 0 && (
+                      <span className="text-gray-400 italic truncate" title={`Grup yang sama: ${intern.shared_groups.join(', ')}`}>
+                        via {intern.shared_groups[0]}{intern.shared_groups.length > 1 ? ` +${intern.shared_groups.length - 1}` : ''}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="font-bold text-bpjs-yellow text-sm">{intern.total_exp}</p>
+                  <p className="text-[10px] text-gray-400">EXP</p>
+                </div>
+                <div className="flex items-center gap-1.5 w-full sm:w-auto justify-end sm:justify-start">
+                  <button
+                    onClick={() => setGiftFor({ id: intern.id, name: intern.name })}
+                    title={`🎁 Kasih Bonus XP ke ${intern.name}`}
+                    className="p-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-md flex-shrink-0"
+                  >
+                    <Gift className="w-4 h-4" />
+                  </button>
+                  <Link
+                    href={`/pembina/interns/${intern.id}`}
+                    title={`Lihat riwayat aktivitas ${intern.name}`}
+                    className="p-2 bg-blue-100 hover:bg-blue-200 text-bpjs-blue rounded-md flex-shrink-0"
+                  >
+                    <Clock className="w-4 h-4" />
+                  </Link>
+                  <button
+                    onClick={async () => {
+                      setDmLoading(intern.id);
+                      try {
+                        const res = await fetch('/api/pembina/dm', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ intern_id: intern.id }),
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          window.location.href = `/pembina/chat/${data.group_id}`;
+                        } else {
+                          alert('Error: ' + data.error);
+                        }
+                      } catch (e: any) {
+                        alert('Error: ' + e.message);
+                      } finally {
+                        setDmLoading(null);
+                      }
+                    }}
+                    disabled={dmLoading === intern.id}
+                    title={`Chat langsung dengan ${intern.name}`}
+                    className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md flex-shrink-0 disabled:opacity-50"
+                  >
+                    {dmLoading === intern.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* List Grup */}
       <div className="bg-white rounded-2xl border border-gray-200 p-5">
         <div className="flex items-center justify-between mb-4">
@@ -599,8 +697,11 @@ export default function PembinaHomePage() {
           internName={giftFor.name}
           onClose={() => setGiftFor(null)}
           onSuccess={(newTotalExp) => {
-            // Update EXP peserta di list myInterns supaya langsung refleksi
+            // Update EXP peserta di list myInterns ATAU otherInterns supaya langsung refleksi
             setMyInterns((prev) => prev.map((i) =>
+              i.id === giftFor.id ? { ...i, total_exp: newTotalExp } : i
+            ));
+            setOtherInterns((prev) => prev.map((i) =>
               i.id === giftFor.id ? { ...i, total_exp: newTotalExp } : i
             ));
           }}

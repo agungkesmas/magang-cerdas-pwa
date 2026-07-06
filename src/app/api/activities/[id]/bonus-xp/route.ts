@@ -11,7 +11,9 @@
 // - Aktivitas harus sudah completed (ada row di activity_completions)
 // - 1 bonus per activity_completion (UNIQUE constraint di activity_bonus_logs) — anti double-award
 // - Bonus XP min 1, max 100 (anti abuse)
-// - Pembina harus dari departemen yang sama dengan peserta (atau Lintas Bidang)
+// - Pembina harus punya minimal 1 grup yang sama dengan peserta
+//   (Cakupan: pembina bisa kasih gift ke peserta divisi lain SELAMA ada grup yang sama,
+//    mis. grup sistem "Diskusi Magang All" — semua peserta & pembina otomatis eligible)
 // - Setelah berhasil:
 //   1. Update interns.total_exp += bonus_xp
 //   2. Update activity_completions.bonus_xp/bonus_note/bonus_by_pembina_id/bonus_at
@@ -119,10 +121,26 @@ export async function POST(
       return NextResponse.json({ error: 'Peserta tidak ditemukan' }, { status: 404 });
     }
 
-    // === 7. Validasi: pembina harus dari departemen sama dengan peserta, ATAU pembina Lintas Bidang ===
-    if (pembina.department !== intern.department && pembina.department !== 'Lintas Bidang') {
+    // === 7. Validasi: pembina & peserta harus punya minimal 1 grup yang sama ===
+    // (Cakupan: grup departemen, project, event, ATAU sistem "Diskusi Magang All")
+    // Tujuan: ada konteks kolaborasi nyata, anti gift random ke peserta yang tidak ada hubungan
+    const { data: pembinaGroups } = await supabase
+      .from('group_members')
+      .select('group_id')
+      .eq('user_type', 'pembina')
+      .eq('user_id', pembina.pembina_id);
+    const { data: internGroups } = await supabase
+      .from('group_members')
+      .select('group_id')
+      .eq('user_type', 'peserta')
+      .eq('user_id', intern.id);
+
+    const pembinaGroupIds = new Set((pembinaGroups || []).map((g: any) => g.group_id));
+    const hasSharedGroup = (internGroups || []).some((g: any) => pembinaGroupIds.has(g.group_id));
+
+    if (!hasSharedGroup) {
       return NextResponse.json(
-        { error: `Anda hanya bisa kasih bonus ke peserta departemen Anda (${pembina.department}). Peserta ini dari departemen ${intern.department}.` },
+        { error: 'Anda tidak punya grup yang sama dengan peserta ini. Gabung grup yang sama (mis. "Diskusi Magang All") sebelum bisa kasih Bonus XP.' },
         { status: 403 }
       );
     }
@@ -184,12 +202,15 @@ export async function POST(
     const activityKind = activity.created_by_intern
       ? 'aktivitas yang ditambahkan sendiri'
       : (activity.department ? `aktivitas departemen ${activity.department}` : 'aktivitas yang diberikan pembina');
+    const crossDeptNote = intern.department !== pembina.department
+      ? ' (cross-department)'
+      : '';
     await supabase.from('nudges').insert({
       intern_id: intern.id,
       sender_type: 'pembina',
       sender_id: pembina.pembina_id,
       sender_name: pembina.name,
-      message: `🎁 ${pembina.name} memberi Bonus XP +${bonusXp} untuk ${activityKind} "${activity.title}"${trimmedNote ? ` — "${trimmedNote}"` : ''}`,
+      message: `🎁 ${pembina.name} memberi Bonus XP +${bonusXp} untuk ${activityKind} "${activity.title}"${trimmedNote ? ` — "${trimmedNote}"` : ''}${crossDeptNote}`,
       type: 'bonus_xp',
       created_at: new Date().toISOString()
     });

@@ -41,10 +41,25 @@ export async function GET(
       return NextResponse.json({ error: 'Peserta tidak ditemukan' }, { status: 404 });
     }
 
-    // 2. Validasi: pembina harus dari departemen sama (atau Lintas Bidang)
-    if (pembina.department !== intern.department && pembina.department !== 'Lintas Bidang') {
+    // 2. Validasi: pembina & peserta harus punya minimal 1 grup yang sama
+    // (Cakupan: grup departemen, project, event, ATAU sistem "Diskusi Magang All")
+    const { data: pembinaGroups } = await supabase
+      .from('group_members')
+      .select('group_id')
+      .eq('user_type', 'pembina')
+      .eq('user_id', pembina.pembina_id);
+    const { data: internGroups } = await supabase
+      .from('group_members')
+      .select('group_id')
+      .eq('user_type', 'peserta')
+      .eq('user_id', internId);
+
+    const pembinaGroupIds = new Set((pembinaGroups || []).map((g: any) => g.group_id));
+    const hasSharedGroup = (internGroups || []).some((g: any) => pembinaGroupIds.has(g.group_id));
+
+    if (!hasSharedGroup) {
       return NextResponse.json(
-        { error: `Anda hanya bisa kasih bonus ke peserta departemen Anda (${pembina.department}). Peserta ini dari departemen ${intern.department}.` },
+        { error: 'Anda tidak punya grup yang sama dengan peserta ini. Gabung grup yang sama (mis. "Diskusi Magang All") sebelum bisa kasih Bonus XP.' },
         { status: 403 }
       );
     }
