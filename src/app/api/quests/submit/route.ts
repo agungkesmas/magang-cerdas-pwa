@@ -62,25 +62,90 @@ export async function POST(req: NextRequest) {
     if (!log) {
       return NextResponse.json({ error: 'Anda belum start quest ini. Klik START dulu.' }, { status: 400 });
     }
-    if (log.status === 'completed') {
+    // Untuk non-recurring: status 'completed' = permanen
+    // Untuk recurring: status tidak akan pernah 'completed' (pakai quest_daily_completions)
+    if (!quest.is_recurring && log.status === 'completed') {
       return NextResponse.json({ error: 'Anda sudah submit quest ini' }, { status: 409 });
     }
     if (log.status !== 'in_progress') {
       return NextResponse.json({ error: 'Status quest tidak valid untuk submit' }, { status: 400 });
     }
 
-    // 4. Update quest_log: completed
     const xpAwarded = quest.xp_reward || 20;
-    const { error: uErr } = await supabase
-      .from('quest_logs')
-      .update({
-        status: 'completed',
-        submitted_at: new Date().toISOString(),
-        submission_notes: submission_notes?.trim() || null,
-        xp_awarded: xpAwarded
-      })
-      .eq('id', log.id);
-    if (uErr) return NextResponse.json({ error: uErr.message }, { status: 500 });
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // 3b. Untuk quest RECURRING: cek race condition (sudah complete hari ini?)
+    if (quest.is_recurring) {
+      const { data: todayCompletion } = await supabase
+        .from('quest_daily_completions')
+        .select('id')
+        .eq('quest_id', quest_id)
+        .eq('intern_id', intern.intern_id)
+        .eq('completion_date', todayStr)
+        .maybeSingle();
+      if (todayCompletion) {
+        return NextResponse.json(
+          { error: 'Sudah selesai quest ini hari ini. Kembali besok untuk kerjakan lagi.' },
+          { status: 409 }
+        );
+      }
+    }
+
+    if (quest.is_recurring) {
+      // 4a. RECURRING: INSERT ke quest_daily_completions (1 row per hari)
+      const { data: dailyCompletion, error: dErr } = await supabase
+        .from('quest_daily_completions')
+        .insert({
+          quest_id,
+          intern_id: intern.intern_id,
+          group_id,
+          completion_date: todayStr,
+          submission_notes: submission_notes?.trim() || null,
+          xp_awarded: xpAwarded,
+          submitted_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+      if (dErr) {
+        if (dErr.code === '23505') {
+          return NextResponse.json(
+            { error: 'Sudah selesai quest ini hari ini (race condition). Reload halaman.' },
+            { status: 409 }
+          );
+        }
+        return NextResponse.json({ error: dErr.message }, { status: 500 });
+      }
+
+      // 4b. Reset quest_log status ke 'available' supaya besok bisa START lagi
+      await supabase
+        .from('quest_logs')
+        .update({ status: 'available', started_at: null })
+        .eq('id', log.id);
+    } else {
+      // 4c. NON-RECURRING: Update quest_log: completed (permanen)
+      const { error: uErr } = await supabase
+        .from('quest_logs')
+        .update({
+          status: 'completed',
+          submitted_at: new Date().toISOString(),
+          submission_notes: submission_notes?.trim() || null,
+          xp_awarded: xpAwarded
+        })
+        .eq('id', log.id);
+      if (uErr) return NextResponse.json({ error: uErr.message }, { status: 500 });
+
+      // 4d. Insert ke activity_completions (hanya untuk non-recurring — recurring pakai quest_daily_completions)
+      const { error: upsertErr } = await supabase
+        .from('activity_completions')
+        .upsert({
+          activity_id: quest_id,
+          intern_id: intern.intern_id,
+          completion_notes: submission_notes?.trim() || `[Quest] Selesai dari grup chat. XP: ${xpAwarded}`
+        }, { onConflict: 'activity_id,intern_id' });
+      if (upsertErr) {
+        console.error('[quests/submit] upsert activity_completions error:', upsertErr);
+      }
+    }
 
     // 5. Grant XP ke intern
     const { data: internData } = await supabase
@@ -90,21 +155,6 @@ export async function POST(req: NextRequest) {
       .single();
     const newTotalExp = (internData?.total_exp || 0) + xpAwarded;
     await supabase.from('interns').update({ total_exp: newTotalExp }).eq('id', intern.intern_id);
-
-    // 5b. Insert ke activity_completions supaya muncul di activities history peserta
-    // Pakai upsert karena UNIQUE(activity_id, intern_id) — kalau sudah ada, update notes
-    const { error: upsertErr } = await supabase
-      .from('activity_completions')
-      .upsert({
-        activity_id: quest_id,
-        intern_id: intern.intern_id,
-        completion_notes: submission_notes?.trim() || `[Quest] Selesai dari grup chat. XP: ${xpAwarded}`
-      }, { onConflict: 'activity_id,intern_id' });
-    if (upsertErr) {
-      console.error('[quests/submit] upsert activity_completions error:', upsertErr);
-      // Tetap lanjut — Quest sudah completed di quest_logs, XP sudah masuk
-      // History akan tetap muncul via query quest_logs (bukan via activity_completions)
-    }
 
     // 6. Insert system message di chat
     await supabase.from('chat_messages').insert({

@@ -36,6 +36,7 @@ interface QuestLogEntry {
 interface QuestCardProps {
   quest: any;
   myQuestLog?: any;
+  myDailyCompletion?: any; // untuk recurring: completion hari ini
   questLogs?: QuestLogEntry[]; // untuk pembina: list semua peserta
   userRole: 'pembina' | 'peserta' | 'admin';
   canManage?: boolean; // pembina (creator) atau admin (always true)
@@ -54,6 +55,7 @@ interface QuestCardProps {
 export default function QuestCard({
   quest,
   myQuestLog,
+  myDailyCompletion,
   questLogs,
   userRole,
   canManage = false,
@@ -161,6 +163,13 @@ export default function QuestCard({
   const myStatus = myQuestLog?.status;
   const isInProgress = myStatus === 'in_progress';
   const isCompleted = myStatus === 'completed';
+  // Untuk recurring: cek apakah sudah complete hari ini
+  const isRecurring = quest.is_recurring === true;
+  const isCompletedToday = isRecurring && !!myDailyCompletion;
+
+  // Untuk recurring: tidak ada konsep "permanen completed" — hanya "selesai hari ini"
+  // Untuk non-recurring: completed = permanen
+  const isPermanentlyDone = !isRecurring && isCompleted;
 
   return (
     <div className={`bg-white border-2 rounded-xl p-4 shadow-sm relative ${isArchived ? 'border-gray-200 opacity-75' : 'border-purple-200'}`}>
@@ -271,7 +280,7 @@ export default function QuestCard({
       {userRole === 'peserta' && !isArchived && (
         <>
           {/* Status badges */}
-          {isCompleted && (
+          {isPermanentlyDone && (
             <div className="bg-bpjs-green/10 border border-bpjs-green/30 rounded-lg p-3 mb-3 flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-bpjs-green" />
               <div>
@@ -283,7 +292,20 @@ export default function QuestCard({
             </div>
           )}
 
-          {isInProgress && !isCompleted && (
+          {/* Untuk recurring: badge "Selesai hari ini" */}
+          {isCompletedToday && (
+            <div className="bg-bpjs-green/10 border border-bpjs-green/30 rounded-lg p-3 mb-3 flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-bpjs-green" />
+              <div className="flex-1">
+                <p className="font-semibold text-bpjs-green-dark text-sm">✓ Selesai hari ini!</p>
+                <p className="text-xs text-gray-600">
+                  +{myDailyCompletion?.xp_awarded || quest.xp_reward || 20} XP • Kembali besok untuk kerjakan lagi
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isInProgress && !isCompletedToday && !isPermanentlyDone && (
             <div className="bg-bpjs-blue/10 border border-bpjs-blue/30 rounded-lg p-3 mb-3 flex items-center gap-2">
               <PlayCircle className="w-5 h-5 text-bpjs-blue" />
               <div className="flex-1">
@@ -296,7 +318,7 @@ export default function QuestCard({
           )}
 
           {/* Submit form */}
-          {showSubmitForm && isInProgress && (
+          {showSubmitForm && isInProgress && !isCompletedToday && (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3 space-y-2">
               <label className="block text-xs font-semibold text-gray-700">Catatan hasil (opsional)</label>
               <textarea
@@ -316,7 +338,7 @@ export default function QuestCard({
           )}
 
           {/* Action buttons */}
-          {!isCompleted && quest.is_active && !isOverdue && (
+          {!isPermanentlyDone && !isCompletedToday && quest.is_active && !isOverdue && (
             <>
               {!isInProgress && !showSubmitForm && (
                 <button
@@ -339,7 +361,7 @@ export default function QuestCard({
             </>
           )}
 
-          {isOverdue && !isCompleted && (
+          {isOverdue && !isPermanentlyDone && !isCompletedToday && (
             <div className="text-center text-sm text-red-600 py-2">
               <AlertCircle className="w-4 h-4 inline mr-1" /> Quest sudah lewat deadline
             </div>
@@ -357,42 +379,79 @@ export default function QuestCard({
             <p className="text-xs text-gray-400 italic">Belum ada peserta yang mengambil quest</p>
           ) : (
             <div className="space-y-1.5 max-h-48 overflow-y-auto">
-              {questLogs.map((log, i) => {
+              {questLogs.map((log: any, i: number) => {
                 const isCompletedLog = log.status === 'completed';
-                const hasBonus = log.bonus_xp !== undefined && log.bonus_xp !== null && log.bonus_xp > 0;
+                const isRecurringLog = quest.is_recurring === true;
+                // Untuk recurring: cek daily_count > 0 (sudah pernah complete minimal 1 hari)
+                const hasDailyCompletions = isRecurringLog && (log.daily_count || 0) > 0;
+                const dailyCount = log.daily_count || 0;
+                const latestDaily = log.daily_completions?.[0];
+                const latestDailyBonus = latestDaily?.bonus_xp || 0;
+                // Untuk non-recurring: pakai bonus_xp dari log
+                // Untuk recurring: pakai latest_daily_bonus_xp
+                const hasBonus = isRecurringLog
+                  ? latestDailyBonus > 0
+                  : (log.bonus_xp !== undefined && log.bonus_xp !== null && log.bonus_xp > 0);
+                const bonusXpValue = isRecurringLog ? latestDailyBonus : (log.bonus_xp || 0);
+                const bonusNoteValue = isRecurringLog ? (latestDaily?.bonus_note || null) : (log.bonus_note || null);
                 // Hanya pembina yang bisa kasih bonus (bukan admin)
-                // Catatan: sekarang BOLEH untuk quest recurring juga (1 bonus per quest_log)
-                const canGiveBonus = userRole === 'pembina' && isCompletedLog && !hasBonus;
+                // Untuk recurring: kasih bonus kalau sudah ada daily completion & belum dapat bonus untuk latest daily
+                // Untuk non-recurring: kasih bonus kalau status completed & belum dapat bonus
+                const canGiveBonus = userRole === 'pembina' && (
+                  isRecurringLog
+                    ? (hasDailyCompletions && !hasBonus)
+                    : (isCompletedLog && !hasBonus)
+                );
                 return (
                   <div key={i} className="flex items-center justify-between text-xs p-2 bg-gray-50 rounded gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-medium text-gray-700 truncate">{log.intern_name || 'Peserta'}</span>
-                        <span className={`px-1.5 py-0.5 rounded-full font-medium ${
-                          log.status === 'completed' ? 'bg-bpjs-green/10 text-bpjs-green' :
-                          log.status === 'in_progress' ? 'bg-bpjs-blue/10 text-bpjs-blue' :
-                          log.status === 'cancelled' ? 'bg-orange-100 text-orange-700' :
-                          'bg-gray-200 text-gray-600'
-                        }`}>
-                          {log.status === 'completed' ? '✓ Selesai' :
-                           log.status === 'in_progress' ? '🔵 Proses' :
-                           log.status === 'cancelled' ? '🚫 Dibatalkan' :
-                           log.status}
-                        </span>
-                        {isCompletedLog && log.xp_awarded !== undefined && (
+                        {isRecurringLog ? (
+                          // Status untuk recurring: tampilkan daily count
+                          <span className={`px-1.5 py-0.5 rounded-full font-medium ${hasDailyCompletions ? 'bg-bpjs-green/10 text-bpjs-green' : 'bg-gray-200 text-gray-600'}`}>
+                            {hasDailyCompletions ? `✓ ${dailyCount} hari` : 'Belum mulai'}
+                          </span>
+                        ) : (
+                          // Status untuk non-recurring
+                          <span className={`px-1.5 py-0.5 rounded-full font-medium ${
+                            log.status === 'completed' ? 'bg-bpjs-green/10 text-bpjs-green' :
+                            log.status === 'in_progress' ? 'bg-bpjs-blue/10 text-bpjs-blue' :
+                            log.status === 'cancelled' ? 'bg-orange-100 text-orange-700' :
+                            'bg-gray-200 text-gray-600'
+                          }`}>
+                            {log.status === 'completed' ? '✓ Selesai' :
+                             log.status === 'in_progress' ? '🔵 Proses' :
+                             log.status === 'cancelled' ? '🚫 Dibatalkan' :
+                             log.status}
+                          </span>
+                        )}
+                        {/* XP awarded */}
+                        {!isRecurringLog && isCompletedLog && log.xp_awarded !== undefined && (
                           <span className="text-bpjs-yellow font-semibold">+{log.xp_awarded} XP</span>
                         )}
+                        {isRecurringLog && hasDailyCompletions && (
+                          <span className="text-bpjs-yellow font-semibold" title={`Total XP dari ${dailyCount} hari`}>
+                            +{dailyCount * (quest.xp_reward || 20)} XP
+                          </span>
+                        )}
                         {hasBonus && (
-                          <span className="text-amber-600 font-semibold flex items-center gap-0.5">
-                            <Gift className="w-3 h-3" /> +{log.bonus_xp} bonus
+                          <span className="text-amber-600 font-semibold flex items-center gap-0.5" title={isRecurringLog ? `Bonus untuk ${latestDaily?.completion_date}` : undefined}>
+                            <Gift className="w-3 h-3" /> +{bonusXpValue} bonus
                           </span>
                         )}
                       </div>
-                      {hasBonus && log.bonus_note && (
-                        <p className="text-[10px] text-gray-500 italic mt-0.5 truncate">"{log.bonus_note}"</p>
+                      {hasBonus && bonusNoteValue && (
+                        <p className="text-[10px] text-gray-500 italic mt-0.5 truncate">"{bonusNoteValue}"</p>
+                      )}
+                      {/* Untuk recurring: tampilkan tanggal terakhir selesai */}
+                      {isRecurringLog && hasDailyCompletions && latestDaily && (
+                        <p className="text-[10px] text-gray-400 mt-0.5">
+                          Terakhir: {new Date(latestDaily.completion_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                        </p>
                       )}
                     </div>
-                    {/* Tombol Bonus XP — hanya untuk pembina, peserta completed, belum dapat bonus, quest non-recurring */}
+                    {/* Tombol Bonus XP — hanya untuk pembina */}
                     {canGiveBonus && (
                       <button
                         onClick={() => {
@@ -402,13 +461,13 @@ export default function QuestCard({
                           setBonusError('');
                         }}
                         className="flex items-center gap-1 px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded text-[11px] font-semibold flex-shrink-0"
-                        title={`Beri bonus XP ke ${log.intern_name}`}
+                        title={`Beri bonus XP ke ${log.intern_name}${isRecurringLog ? ` (untuk completion terakhir: ${latestDaily?.completion_date})` : ''}`}
                       >
                         <Gift className="w-3 h-3" /> +Bonus XP
                       </button>
                     )}
                     {/* Badge sudah dapat bonus — disabled */}
-                    {userRole === 'pembina' && isCompletedLog && hasBonus && (
+                    {userRole === 'pembina' && hasBonus && (
                       <span className="text-[10px] text-amber-600 font-medium flex-shrink-0">
                         ✓ Bonus diberikan
                       </span>
@@ -420,7 +479,7 @@ export default function QuestCard({
           )}
           {quest.is_recurring && (
             <p className="text-[10px] text-gray-400 italic mt-2">
-              💡 Quest Harian Berulang: 1 Bonus XP per peserta (diberikan setelah peserta complete quest ini).
+              💡 Quest Harian Berulang: peserta bisa complete 1x per hari. Bonus XP berlaku per-hari (1 bonus per completion terakhir).
             </p>
           )}
         </div>

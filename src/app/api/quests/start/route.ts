@@ -50,6 +50,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Quest sudah lewat deadline' }, { status: 400 });
     }
 
+    // 1b. Untuk quest RECURRING: cek apakah sudah complete hari ini
+    if (quest.is_recurring) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const { data: todayCompletion } = await supabase
+        .from('quest_daily_completions')
+        .select('id, completion_date, xp_awarded')
+        .eq('quest_id', quest_id)
+        .eq('intern_id', intern.intern_id)
+        .eq('completion_date', todayStr)
+        .maybeSingle();
+      if (todayCompletion) {
+        return NextResponse.json(
+          { error: `Sudah selesai quest ini hari ini (+${todayCompletion.xp_awarded} XP). Kembali besok untuk kerjakan lagi.` },
+          { status: 409 }
+        );
+      }
+    }
+
     // 2. Verify intern adalah member grup
     const { data: membership } = await supabase
       .from('group_members')
@@ -71,6 +89,8 @@ export async function POST(req: NextRequest) {
       if (existing.status === 'in_progress') {
         return NextResponse.json({ error: 'Anda sudah start quest ini' }, { status: 409 });
       }
+      // Untuk recurring: status 'completed' tidak mungkin lagi (sudah di-reset ke 'available' oleh migration)
+      // Untuk non-recurring: status 'completed' = sudah selesai permanen
       if (existing.status === 'completed') {
         return NextResponse.json({ error: 'Anda sudah menyelesaikan quest ini' }, { status: 409 });
       }
