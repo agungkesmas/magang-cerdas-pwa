@@ -1,9 +1,13 @@
 // ============================================================
-// /api/activities/[id]/bonus-xp — Pembina kasih Bonus XP ke aktivitas self-added peserta
+// /api/activities/[id]/bonus-xp — Pembina kasih Bonus XP ke aktivitas peserta
 //
 // Aturan (paralel dengan /api/quests/bonus-xp):
 // - Hanya pembina yang BISA kasih bonus (admin tidak, untuk menjaga role separation)
-// - Aktivitas harus created_by_intern=true (self-added) — bukan aktivitas departemen/quest
+// - Aktivitas yang BISA dikasih bonus:
+//   * Aktivitas self-added (created_by_intern=true) — peserta tambah sendiri
+//   * Aktivitas departemen/individual (created_by_intern=false) — deploy oleh admin/pembina
+//   Syarat: BUKAN quest (is_quest=false) DAN BUKAN recurring (is_recurring=false)
+//   (Quest pakai sistem bonus terpisah; Recurring pakai sistem bonus +50 EXP all-complete)
 // - Aktivitas harus sudah completed (ada row di activity_completions)
 // - 1 bonus per activity_completion (UNIQUE constraint di activity_bonus_logs) — anti double-award
 // - Bonus XP min 1, max 100 (anti abuse)
@@ -58,7 +62,7 @@ export async function POST(
     // === 1. Fetch activity + completion ===
     const { data: activity, error: aErr } = await supabase
       .from('activities')
-      .select('id, title, intern_id, created_by_intern, is_quest, is_active, is_recurring')
+      .select('id, title, intern_id, created_by_intern, is_quest, is_active, is_recurring, department')
       .eq('id', activityId)
       .maybeSingle();
 
@@ -66,18 +70,18 @@ export async function POST(
       return NextResponse.json({ error: 'Aktivitas tidak ditemukan' }, { status: 404 });
     }
 
-    // === 2. Validasi: aktivitas harus self-added (created_by_intern=true) ===
-    if (!activity.created_by_intern) {
+    // === 2. Validasi: BUKAN quest ===
+    if (activity.is_quest) {
       return NextResponse.json(
-        { error: 'Bonus XP hanya untuk aktivitas yang ditambahkan peserta sendiri. Untuk aktivitas departemen, gunakan sistem quest.' },
+        { error: 'Quest menggunakan sistem bonus terpisah. Gunakan tombol Bonus XP di Quest Card di Chat Grup.' },
         { status: 400 }
       );
     }
 
-    // === 3. Validasi: bukan quest ===
-    if (activity.is_quest) {
+    // === 3. Validasi: BUKAN recurring (sudah punya sistem bonus +50 EXP all-complete) ===
+    if (activity.is_recurring) {
       return NextResponse.json(
-        { error: 'Quest menggunakan sistem bonus terpisah. Gunakan tombol Bonus XP di Quest Card.' },
+        { error: 'Aktivitas Harian Berulang tidak bisa dikasih Bonus XP individual. Sistem sudah punya bonus +50 EXP otomatis kalau peserta selesai SEMUA hari kerja di rentang.' },
         { status: 400 }
       );
     }
@@ -177,12 +181,15 @@ export async function POST(
       .eq('id', intern.id);
 
     // === 12. Insert nudge (notifikasi ke peserta) ===
+    const activityKind = activity.created_by_intern
+      ? 'aktivitas yang ditambahkan sendiri'
+      : (activity.department ? `aktivitas departemen ${activity.department}` : 'aktivitas yang diberikan pembina');
     await supabase.from('nudges').insert({
       intern_id: intern.id,
       sender_type: 'pembina',
       sender_id: pembina.pembina_id,
       sender_name: pembina.name,
-      message: `🎁 ${pembina.name} memberi Bonus XP +${bonusXp} untuk aktivitas "${activity.title}"${trimmedNote ? ` — "${trimmedNote}"` : ''}`,
+      message: `🎁 ${pembina.name} memberi Bonus XP +${bonusXp} untuk ${activityKind} "${activity.title}"${trimmedNote ? ` — "${trimmedNote}"` : ''}`,
       type: 'bonus_xp',
       created_at: new Date().toISOString()
     });

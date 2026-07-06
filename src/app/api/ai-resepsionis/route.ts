@@ -100,17 +100,18 @@ BONUS XP / GIFT DARI PEMBINA (2 jalur):
   * Pilih XP (quick 10/20/30/50 atau custom 1-100), isi catatan (opsional), klik Berikan
   * Hanya berlaku untuk Quest "Sekali Selesai" (BUKAN Harian Berulang)
   * 1 bonus per peserta per quest (anti double-award)
-- **Jalur 2 — Bonus XP untuk Aktivitas Self-Added (di Beranda → Timeline Peserta)**:
+- **Jalur 2 — Bonus XP untuk Aktivitas (di Beranda → Timeline Peserta)**:
   * Buka menu **Beranda** → di list "Grup yang Saya Bimbing", klik icon **Clock** di sebelah nama peserta
   * Akan terbuka halaman Timeline lengkap peserta (audit trail: absensi, tugas, quest, izin, sertifikat)
-  * Cari aktivitas dengan badge ungu "Self-Added" (aktivitas yang ditambahkan peserta sendiri)
+  * Cari aktivitas dengan badge ungu "Self-Added" (peserta tambah sendiri) ATAU badge biru "Departemen" (diberikan pembina/admin)
   * Tombol 🎁 **+Bonus XP** muncul di sebelah aktivitas tersebut (kalau belum dapat bonus)
+  * Syarat: aktivitas harus BUKAN quest, BUKAN recurring (recurring punya sistem bonus +50 EXP sendiri)
   * Pilih XP (quick 10/20/30/50 atau custom 1-100), isi catatan (opsional), klik Berikan
-  * Hanya untuk aktivitas self-added yang sudah completed & belum dapat bonus
+  * Hanya untuk aktivitas yang sudah completed & belum dapat bonus
   * Pembina harus dari departemen sama dengan peserta (atau Lintas Bidang)
 - Setelah bonus diberikan, peserta terima nudge notifikasi otomatis: "🎁 [Pembina] memberi Bonus XP +X untuk aktivitas 'Y'"
 - Bonus XP di atas XP default aktivitas/quest (jadi peserta bisa dapat lebih dari 1x XP per aktivitas)
-- Audit trail: semua bonus tercatat di xp_bonus_logs (quest) & activity_bonus_logs (aktivitas self-added)
+- Audit trail: semua bonus tercatat di xp_bonus_logs (quest) & activity_bonus_logs (aktivitas)
 
 ATURAN JAWABAN:
 - Pakai bahasa Indonesia, simple, profesional, ramah
@@ -274,14 +275,14 @@ function stubAnswer(dashboard: string, question: string): string {
   if (dashboard === 'pembina') {
     // Bonus XP / Gift — cek paling awal supaya tidak ketimpa "quest" atau "aktivitas"
     if (q.includes('bonus') || q.includes('gift') || q.includes('hadiah') || q.includes('kasih xp') || q.includes('beri xp') || q.includes('tambah xp') || q.includes('reward ekstra') || q.includes('apresiasi')) {
-      if (q.includes('aktivitas') || q.includes('self') || q.includes('sendiri') || q.includes('tambahan') || q.includes('manual'))
-        return 'Untuk kasih **Bonus XP ke aktivitas yang ditambahkan peserta sendiri**: buka menu **Beranda** → di list "Grup yang Saya Bimbing", klik icon **Clock** di sebelah nama peserta → terbuka halaman Timeline lengkap → cari aktivitas dengan badge ungu "Self-Added" yang sudah completed → klik tombol 🎁 **+Bonus XP** di sebelahnya. Pilih XP (quick 10/20/30/50 atau custom 1-100), isi catatan opsional, klik Berikan. Hanya untuk aktivitas yang sudah completed & belum dapat bonus. Anda harus dari departemen sama dengan peserta (atau Lintas Bidang). Peserta akan terima nudge notifikasi otomatis.';
+      if (q.includes('aktivitas') || q.includes('self') || q.includes('sendiri') || q.includes('tambahan') || q.includes('manual') || q.includes('departemen') || q.includes('tugas'))
+        return 'Untuk kasih **Bonus XP ke aktivitas** (boleh aktivitas yang ditambahkan peserta sendiri ATAU aktivitas departemen yang diberikan pembina/admin): buka menu **Beranda** → di list "Grup yang Saya Bimbing", klik icon **Clock** di sebelah nama peserta → terbuka halaman Timeline lengkap → cari aktivitas dengan badge "Self-Added" (ungu) atau "Departemen" (biru) yang sudah completed → klik tombol 🎁 **+Bonus XP** di sebelahnya. Pilih XP (quick 10/20/30/50 atau custom 1-100), isi catatan opsional, klik Berikan. Tidak berlaku untuk Quest & aktivitas Harian Berulang (mereka punya sistem bonus sendiri). Anda harus dari departemen sama dengan peserta (atau Lintas Bidang). Peserta akan terima nudge notifikasi otomatis.';
       if (q.includes('quest') || q.includes('chat'))
         return 'Untuk kasih **Bonus XP ke Quest**: buka menu **Chat Grup** → grup tempat quest di-deploy → scroll ke Quest Card → di section "Progress Peserta", untuk peserta yang sudah completed (badge hijau ✓), klik tombol 🎁 **+Bonus XP**. Pilih XP (10/20/30/50 atau custom 1-100), isi catatan opsional, klik Berikan. Hanya untuk Quest "Sekali Selesai" (bukan Harian Berulang). 1 bonus per peserta per quest.';
-      return 'Ada 2 jalur **Bonus XP (Gift)** yang bisa Anda berikan sebagai pembina:\n\n**1. Untuk Aktivitas Self-Added** (di Beranda): buka menu Beranda → di list "Grup yang Saya Bimbing", klik icon **Clock** di sebelah nama peserta → terbuka halaman Timeline → cari aktivitas dengan badge ungu "Self-Added" yang sudah completed → klik 🎁 +Bonus XP.\n\n**2. Untuk Quest** (di Chat Grup): buka chat grup → scroll ke Quest Card → di section "Progress Peserta", untuk peserta yang sudah completed, klik 🎁 +Bonus XP. Hanya untuk Quest "Sekali Selesai".\n\nBonus XP 1-100 per aktivitas. Peserta akan terima nudge notifikasi otomatis. Semua bonus tercatat di audit trail.';
+      return 'Ada 2 jalur **Bonus XP (Gift)** yang bisa Anda berikan sebagai pembina:\n\n**1. Untuk Aktivitas** (di Beranda): buka menu Beranda → di list "Grup yang Saya Bimbing", klik icon **Clock** di sebelah nama peserta → terbuka halaman Timeline → cari aktivitas dengan badge "Self-Added" (ungu) atau "Departemen" (biru) yang sudah completed → klik 🎁 +Bonus XP. Berlaku untuk aktivitas single (BUKAN quest, BUKAN Harian Berulang).\n\n**2. Untuk Quest** (di Chat Grup): buka chat grup → scroll ke Quest Card → di section "Progress Peserta", untuk peserta yang sudah completed, klik 🎁 +Bonus XP. Hanya untuk Quest "Sekali Selesai".\n\nBonus XP 1-100 per aktivitas. Peserta akan terima nudge notifikasi otomatis. Semua bonus tercatat di audit trail.';
     }
     if (q.includes('timeline') || q.includes('riwayat peserta') || q.includes('audit peserta') || (q.includes('aktivitas peserta') && !q.includes('tambah')))
-      return 'Untuk lihat **timeline lengkap peserta** (audit trail): buka menu **Beranda** → di list "Grup yang Saya Bimbing", klik icon **Clock** di sebelah nama peserta. Halaman Timeline menampilkan: absensi, tugas selesai, quest, izin/cuti, sertifikat, keanggotaan grup. **Di sini juga tempat Anda kasih Bonus XP (🎁)** ke aktivitas yang ditambahkan peserta sendiri (cari badge ungu "Self-Added" yang sudah completed). Tujuan timeline: anti-pemalsuan sertifikat — bisa dijadikan bukti riwayat magang.';
+      return 'Untuk lihat **timeline lengkap peserta** (audit trail): buka menu **Beranda** → di list "Grup yang Saya Bimbing", klik icon **Clock** di sebelah nama peserta. Halaman Timeline menampilkan: absensi, tugas selesai, quest, izin/cuti, sertifikat, keanggotaan grup. **Di sini juga tempat Anda kasih Bonus XP (🎁)** ke aktivitas peserta — cari aktivitas dengan badge "Self-Added" (ungu) atau "Departemen" (biru) yang sudah completed. Tujuan timeline: anti-pemalsuan sertifikat — bisa dijadikan bukti riwayat magang.';
     if (q.includes('deploy') || (q.includes('quest') && !q.includes('edit') && !q.includes('hapus') && !q.includes('arsip') && !q.includes('bonus')))
       return 'Untuk deploy quest: buka menu **Chat Grup** → pilih grup → klik **+ Deploy Quest**. Isi judul (klik ✨ Magic untuk AI generate deskripsi), deskripsi, XP (10/20/30/50, default 20), max slots (opsional). Mode "Sekali Selesai" (1x deadline) atau "Harian Berulang" (rentang tanggal + skip weekend + daily deadline). Setelah deploy, Anda bisa monitoring progress peserta DAN mengelola quest via tombol ⋮ di Quest Card.';
     if (q.includes('grup') || q.includes('buat grup') || q.includes('tambah orang') || q.includes('anggota'))

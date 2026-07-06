@@ -173,6 +173,13 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     // Activity completions (one-time)
     (completionsRes.data || []).forEach((c: any) => {
       const act = c.activities;
+      const isSelfAdded = act?.created_by_intern === true;
+      const isQuest = act?.is_quest === true;
+      const isRecurring = act?.is_recurring === true;
+      const hasBonus = (c.bonus_xp || 0) > 0;
+      // can_receive_bonus: BUKAN quest, BUKAN recurring, BELUM dapat bonus
+      // Berlaku untuk aktivitas self-added DAN departemen/individual
+      const canReceiveBonus = !isQuest && !isRecurring && !hasBonus;
       timeline.push({
         id: `comp-${c.id}`,
         timestamp: c.completed_at,
@@ -184,14 +191,16 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           completion_id: c.id,
           department: act?.department,
           due_date: act?.due_date,
-          is_recurring: act?.is_recurring,
-          is_self_added: act?.created_by_intern === true,
-          is_quest: act?.is_quest === true,
+          is_recurring: isRecurring,
+          is_self_added: isSelfAdded,
+          is_department_task: !isSelfAdded && !isQuest && !isRecurring,
+          is_quest: isQuest,
           xp_reward: act?.xp_reward,
           bonus_xp: c.bonus_xp || 0,
           bonus_note: c.bonus_note || null,
           bonus_at: c.bonus_at || null,
-          has_bonus: (c.bonus_xp || 0) > 0
+          has_bonus: hasBonus,
+          can_receive_bonus: canReceiveBonus
         }
       });
     });

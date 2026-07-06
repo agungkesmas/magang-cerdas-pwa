@@ -430,6 +430,9 @@ export default function InternTimelineView({
                           {item.metadata?.is_self_added && (
                             <span className="text-purple-600 font-medium bg-purple-50 px-1.5 py-0.5 rounded">Self-Added</span>
                           )}
+                          {item.metadata?.is_department_task && (
+                            <span className="text-bpjs-blue font-medium bg-bpjs-blue/10 px-1.5 py-0.5 rounded">Departemen</span>
+                          )}
                           {item.metadata?.has_bonus && (
                             <span className="text-amber-600 font-medium flex items-center gap-0.5">
                               <Gift className="w-3 h-3" /> +{item.metadata.bonus_xp} bonus
@@ -438,11 +441,10 @@ export default function InternTimelineView({
                               )}
                             </span>
                           )}
-                          {/* Tombol +Bonus XP — hanya pembina, hanya untuk aktivitas self-added yang belum dapat bonus */}
+                          {/* Tombol +Bonus XP — hanya pembina, untuk aktivitas self-added ATAU departemen
+                              yang BUKAN quest, BUKAN recurring, DAN belum dapat bonus */}
                           {viewerRole === 'pembina'
-                            && item.metadata?.is_self_added
-                            && !item.metadata?.is_quest
-                            && !item.metadata?.has_bonus
+                            && item.metadata?.can_receive_bonus
                             && item.metadata?.activity_id
                             && item.metadata?.completion_id && (
                             <button
@@ -576,7 +578,7 @@ export default function InternTimelineView({
             <div className="p-5 space-y-4">
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
                 <p className="font-medium mb-1">Aktivitas: {bonusModal.activityTitle}</p>
-                <p className="text-xs">Bonus XP ini diberikan sebagai apresiasi atas inisiatif peserta menambah aktivitas sendiri. Akan tercatat di audit trail & notifikasi ke peserta.</p>
+                <p className="text-xs">Bonus XP ini diberikan sebagai apresiasi atas kualitas pengerjaan aktivitas ini (boleh aktivitas yang ditambahkan peserta sendiri ATAU aktivitas departemen yang diberikan pembina). Akan tercatat di audit trail & notifikasi ke peserta.</p>
               </div>
 
               <div>
