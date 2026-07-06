@@ -44,6 +44,23 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerClient();
 
+    // 0. CEK: Peserta sudah check-in hari ini?
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const { data: todayCheckIn } = await supabase
+      .from('attendance')
+      .select('id')
+      .eq('intern_id', intern.intern_id)
+      .eq('type', 'Check-In')
+      .gte('timestamp', todayStart.toISOString())
+      .maybeSingle();
+    if (!todayCheckIn) {
+      return NextResponse.json(
+        { error: 'Anda belum check-in hari ini. Lakukan check-in terlebih dahulu sebelum mengerjakan aktivitas.' },
+        { status: 403 }
+      );
+    }
+
     // 1. Fetch activity
     const { data: activity, error: aErr } = await supabase
       .from('activities')
