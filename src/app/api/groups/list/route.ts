@@ -82,7 +82,8 @@ export async function GET(req: NextRequest) {
     let query = supabase
       .from('groups')
       .select('*')
-      .in('id', groupIds);
+      .in('id', groupIds)
+      .neq('group_type', 'dm');
     if (filterActive !== undefined) query = query.eq('is_active', filterActive);
     const { data: groups, error } = await query.order('created_at', { ascending: false });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
