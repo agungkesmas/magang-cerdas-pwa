@@ -3,15 +3,19 @@
 // Two-way: peserta bisa catat aktivitas tambahan yang mereka kerjakan
 // Support: xp_reward (default 20, pilihan 10/20/30/50)
 //
-// LIMIT ANTI-EXP-FARMING: maksimal 3 aktivitas self-added per hari
-// (standar industri: cegah percobaan up nilai tidak wajar)
+// LIMIT ANTI-EXP-FARMING:
+// - Maksimal 1 aktivitas self-added per hari
+// - Total harian (quest + self-added) maksimal 3
+// - Jika sudah 2 quest, hanya bisa tambah 1 self-added
+// - Jika sudah 1 self-added, hanya bisa 2 quest
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getInternToken } from '@/lib/auth';
 
-const MAX_DAILY_SELF_ACTIVITIES = 3;
+const MAX_DAILY_SELF_ACTIVITIES = 1;
+const MAX_DAILY_TOTAL = 3;
 
 export async function POST(req: NextRequest) {
   try {
@@ -63,7 +67,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 0b. CEK: Batas 3 aktivitas self-added per hari (anti EXP-farming)
+    // 0b. CEK: Batas 1 aktivitas self-added per hari
     const { count: todaySelfActivities } = await supabase
       .from('activities')
       .select('id', { count: 'exact', head: true })
@@ -75,8 +79,31 @@ export async function POST(req: NextRequest) {
     if ((todaySelfActivities || 0) >= MAX_DAILY_SELF_ACTIVITIES) {
       return NextResponse.json(
         {
-          error: `Batas penambahan aktivitas harian tercapai (${MAX_DAILY_SELF_ACTIVITIES} aktivitas/hari). Batas ini mencegah percobaan menaikkan nilai EXP secara tidak wajar. Jika ada aktivitas tambahan yang penting, minta pembina untuk menambahkannya melalui DM atau tag langsung.`,
+          error: `Batas penambahan aktivitas mandiri tercapai (maksimal ${MAX_DAILY_SELF_ACTIVITIES} per hari). Kamu masih bisa mengerjakan quest dari menu Aktivitas.`,
           limit: MAX_DAILY_SELF_ACTIVITIES,
+          remaining: 0
+        },
+        { status: 429 }
+      );
+    }
+
+    // 0c. CEK: Total harian (quest + self-added) maksimal 3
+    let questCountToday = 0;
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const { count: qc } = await supabase
+        .from('quest_daily_completions')
+        .select('id', { count: 'exact', head: true })
+        .eq('intern_id', intern.intern_id)
+        .eq('completion_date', todayStr);
+      questCountToday = qc || 0;
+    } catch {}
+    const totalToday = (todaySelfActivities || 0) + questCountToday;
+    if (totalToday >= MAX_DAILY_TOTAL) {
+      return NextResponse.json(
+        {
+          error: `Batas harian tercapai (maksimal ${MAX_DAILY_TOTAL} aktivitas: 2 quest + 1 pekerjaan tambahan). Kembali besok untuk kerjakan lagi.`,
+          limit: MAX_DAILY_TOTAL,
           remaining: 0
         },
         { status: 429 }

@@ -50,21 +50,54 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Quest sudah lewat deadline' }, { status: 400 });
     }
 
-    // 1b. Untuk quest RECURRING: cek apakah sudah complete hari ini
+    // 1b. Untuk quest RECURRING: cek apakah sudah complete hari ini + limit harian
     if (quest.is_recurring) {
       const todayStr = new Date().toISOString().split('T')[0];
-      const { data: todayCompletion } = await supabase
-        .from('quest_daily_completions')
-        .select('id, completion_date, xp_awarded')
-        .eq('quest_id', quest_id)
-        .eq('intern_id', intern.intern_id)
-        .eq('completion_date', todayStr)
-        .maybeSingle();
-      if (todayCompletion) {
-        return NextResponse.json(
-          { error: `Sudah selesai quest ini hari ini (+${todayCompletion.xp_awarded} XP). Kembali besok untuk kerjakan lagi.` },
-          { status: 409 }
-        );
+      try {
+        const { data: todayCompletion } = await supabase
+          .from('quest_daily_completions')
+          .select('id, completion_date, xp_awarded')
+          .eq('quest_id', quest_id)
+          .eq('intern_id', intern.intern_id)
+          .eq('completion_date', todayStr)
+          .maybeSingle();
+        if (todayCompletion) {
+          return NextResponse.json(
+            { error: `Sudah selesai quest ini hari ini (+${todayCompletion.xp_awarded} XP). Kembali besok untuk kerjakan lagi.` },
+            { status: 409 }
+          );
+        }
+
+        // 1c. LIMIT HARIAN: maksimal 2 quest per hari
+        const { count: questCountToday } = await supabase
+          .from('quest_daily_completions')
+          .select('id', { count: 'exact', head: true })
+          .eq('intern_id', intern.intern_id)
+          .eq('completion_date', todayStr);
+        if ((questCountToday || 0) >= 2) {
+          const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+          const todayEnd = new Date(); todayEnd.setHours(23,59,59,999);
+          const { count: selfAddedCount } = await supabase
+            .from('activities')
+            .select('id', { count: 'exact', head: true })
+            .eq('intern_id', intern.intern_id)
+            .eq('created_by_intern', true)
+            .gte('created_at', todayStart.toISOString())
+            .lte('created_at', todayEnd.toISOString());
+          const totalToday = (questCountToday || 0) + (selfAddedCount || 0);
+          if (totalToday >= 3) {
+            return NextResponse.json(
+              { error: 'Batas harian tercapai (maksimal 3 aktivitas: 2 quest + 1 pekerjaan tambahan). Kembali besok.' },
+              { status: 429 }
+            );
+          }
+          return NextResponse.json(
+            { error: 'Batas quest harian tercapai (maksimal 2 quest per hari). Kamu masih bisa menambah 1 pekerjaan tambahan dari menu Aktivitas.' },
+            { status: 429 }
+          );
+        }
+      } catch {
+        console.warn('[quests/start] quest_daily_completions belum ada — lewati cek');
       }
     }
 

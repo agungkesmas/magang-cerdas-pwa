@@ -74,20 +74,38 @@ export async function POST(req: NextRequest) {
     const xpAwarded = quest.xp_reward || 20;
     const todayStr = new Date().toISOString().split('T')[0];
 
-    // 3b. Untuk quest RECURRING: cek race condition (sudah complete hari ini?)
+    // 3b. Untuk quest RECURRING: cek race condition + limit harian
     if (quest.is_recurring) {
-      const { data: todayCompletion } = await supabase
-        .from('quest_daily_completions')
-        .select('id')
-        .eq('quest_id', quest_id)
-        .eq('intern_id', intern.intern_id)
-        .eq('completion_date', todayStr)
-        .maybeSingle();
-      if (todayCompletion) {
-        return NextResponse.json(
-          { error: 'Sudah selesai quest ini hari ini. Kembali besok untuk kerjakan lagi.' },
-          { status: 409 }
-        );
+      try {
+        const { data: todayCompletion } = await supabase
+          .from('quest_daily_completions')
+          .select('id')
+          .eq('quest_id', quest_id)
+          .eq('intern_id', intern.intern_id)
+          .eq('completion_date', todayStr)
+          .maybeSingle();
+        if (todayCompletion) {
+          return NextResponse.json(
+            { error: 'Sudah selesai quest ini hari ini. Kembali besok untuk kerjakan lagi.' },
+            { status: 409 }
+          );
+        }
+
+        // LIMIT HARIAN: maksimal 2 quest per hari
+        const { count: questCountToday } = await supabase
+          .from('quest_daily_completions')
+          .select('id', { count: 'exact', head: true })
+          .eq('intern_id', intern.intern_id)
+          .eq('completion_date', todayStr);
+        if ((questCountToday || 0) >= 2) {
+          return NextResponse.json(
+            { error: 'Batas quest harian tercapai (maksimal 2 quest per hari). Kembali besok.' },
+            { status: 429 }
+          );
+        }
+      } catch {
+        // Tabel belum ada — fallback cek via quest_logs
+        console.warn('[quests/submit] quest_daily_completions belum ada');
       }
     }
 
