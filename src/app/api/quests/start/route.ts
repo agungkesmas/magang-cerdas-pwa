@@ -85,31 +85,15 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        // 1c. LIMIT HARIAN: maksimal 2 quest per hari
+        // 1c. LIMIT HARIAN: maksimal 2 quest per hari (independent dari self-added)
         const { count: questCountToday } = await supabase
           .from('quest_daily_completions')
           .select('id', { count: 'exact', head: true })
           .eq('intern_id', intern.intern_id)
           .eq('completion_date', todayStr);
         if ((questCountToday || 0) >= 2) {
-          const todayStart = new Date(); todayStart.setHours(0,0,0,0);
-          const todayEnd = new Date(); todayEnd.setHours(23,59,59,999);
-          const { count: selfAddedCount } = await supabase
-            .from('activities')
-            .select('id', { count: 'exact', head: true })
-            .eq('intern_id', intern.intern_id)
-            .eq('created_by_intern', true)
-            .gte('created_at', todayStart.toISOString())
-            .lte('created_at', todayEnd.toISOString());
-          const totalToday = (questCountToday || 0) + (selfAddedCount || 0);
-          if (totalToday >= 3) {
-            return NextResponse.json(
-              { error: 'Batas harian tercapai (maksimal 3 aktivitas: 2 quest + 1 pekerjaan tambahan). Kembali besok.' },
-              { status: 429 }
-            );
-          }
           return NextResponse.json(
-            { error: 'Batas quest harian tercapai (maksimal 2 quest per hari). Kamu masih bisa menambah 1 pekerjaan tambahan dari menu Aktivitas.' },
+            { error: 'Batas quest harian tercapai (maksimal 2 quest per hari). Kamu masih bisa menambah 1 pekerjaan mandiri dari menu Aktivitas.' },
             { status: 429 }
           );
         }

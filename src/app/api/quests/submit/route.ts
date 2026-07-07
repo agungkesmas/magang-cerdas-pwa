@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        // LIMIT HARIAN: maksimal 2 quest per hari
+        // LIMIT HARIAN: maksimal 2 quest per hari (independent dari self-added)
         const { count: questCountToday } = await supabase
           .from('quest_daily_completions')
           .select('id', { count: 'exact', head: true })
