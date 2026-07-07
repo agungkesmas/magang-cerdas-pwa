@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import ShareButton from '@/components/shared/ShareButton';
 import {
   MapPin,
   Camera,
@@ -372,6 +373,21 @@ export default function InternAttendancePage() {
             </div>
           </div>
         </div>
+
+        {/* Share bukti absen */}
+        {checkedIn && (
+          <div className="mt-3 pt-3 border-t border-white/10 flex justify-end">
+            <ShareButton
+              data={{
+                title: 'Bukti Absen Magang BPJS',
+                text: `✅ Sudah absen magang hari ini!\n\n📍 BPJS Ketenagakerjaan Cabang Cirebon\n🟢 Check-In: ${new Date(todayAtt.find((a) => a.type === 'Check-In')?.timestamp || '').toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB${checkedOut ? `\n🔴 Check-Out: ${new Date(todayAtt.find((a) => a.type === 'Check-Out')?.timestamp || '').toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB` : ''}\n🔥 Streak: ${success?.total ? Math.floor(success.total / 30) : 0} hari beruntun\n\n#MagangBPJS #AbsenMagang #BPJSKetenagakerjaan`,
+                url: typeof window !== 'undefined' ? window.location.origin : ''
+              }}
+              label="Bagikan Absen"
+              variant="card"
+            />
+          </div>
+        )}
       </div>
 
       {/* Selfie Preview */}

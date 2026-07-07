@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
+<<<<<<< HEAD
 /**
  * SecurityWrapper — Client component untuk disable screenshot & text copy
  * Untuk dashboard Peserta Magang & BKK
@@ -22,6 +23,8 @@ import { useEffect, useState } from 'react';
  * - Otomatis re-enable setelah 30 menit
  * - Juga cek env var NEXT_PUBLIC_DISABLE_SECURE_MODE untuk debug
  */
+=======
+>>>>>>> ea33e57 (feat: tombol berbagi prestasi via WhatsApp/Web Share di 4 halaman peserta)
 export default function SecurityWrapper({ children }: { children: React.ReactNode }) {
   const [showBlurOverlay, setShowBlurOverlay] = useState(false);
 
@@ -29,7 +32,10 @@ export default function SecurityWrapper({ children }: { children: React.ReactNod
     let securityEnabled = true;
     let maintenanceCheckInterval: any = null;
 
+<<<<<<< HEAD
     // Check maintenance mode via API
+=======
+>>>>>>> ea33e57 (feat: tombol berbagi prestasi via WhatsApp/Web Share di 4 halaman peserta)
     const checkMaintenance = async () => {
       try {
         const res = await fetch('/api/settings/get');
@@ -40,30 +46,43 @@ export default function SecurityWrapper({ children }: { children: React.ReactNod
             const elapsed = Date.now() - new Date(startTime).getTime();
             const thirtyMins = 30 * 60 * 1000;
             if (elapsed < thirtyMins) {
+<<<<<<< HEAD
               // Maintenance active, within 30 min window
+=======
+>>>>>>> ea33e57 (feat: tombol berbagi prestasi via WhatsApp/Web Share di 4 halaman peserta)
               securityEnabled = false;
               removeSecurity();
               return;
             }
           }
         }
+<<<<<<< HEAD
         // Maintenance not active or expired — enable security
         securityEnabled = true;
         applySecurity();
       } catch {
         // API error — keep security on (fail-safe)
+=======
+        securityEnabled = true;
+        applySecurity();
+      } catch {
+>>>>>>> ea33e57 (feat: tombol berbagi prestasi via WhatsApp/Web Share di 4 halaman peserta)
         securityEnabled = true;
         applySecurity();
       }
     };
 
+<<<<<<< HEAD
     // Also check env var for local debug
+=======
+>>>>>>> ea33e57 (feat: tombol berbagi prestasi via WhatsApp/Web Share di 4 halaman peserta)
     const isEnvMaintenance = process.env.NEXT_PUBLIC_DISABLE_SECURE_MODE === 'true';
     if (isEnvMaintenance) {
       securityEnabled = false;
       return;
     }
 
+<<<<<<< HEAD
     // === SECURITY FUNCTIONS ===
 
     const applySecurity = () => {
@@ -78,16 +97,29 @@ export default function SecurityWrapper({ children }: { children: React.ReactNod
       document.addEventListener('keyup', handleKeyUp);
 
       // Block copy/cut/selectstart/dragstart
+=======
+    const applySecurity = () => {
+      if (!securityEnabled) return;
+      document.body.classList.add('secure-mode');
+      document.addEventListener('contextmenu', handleContextMenu);
+      document.addEventListener('keydown', handleKeyDown);
+      document.addEventListener('keyup', handleKeyUp);
+>>>>>>> ea33e57 (feat: tombol berbagi prestasi via WhatsApp/Web Share di 4 halaman peserta)
       document.addEventListener('copy', handleCopy);
       document.addEventListener('cut', handleCut);
       document.addEventListener('selectstart', handleSelectStart);
       document.addEventListener('dragstart', handleDragStart);
+<<<<<<< HEAD
 
       // Window blur (potential screenshot tool / alt-tab)
       window.addEventListener('blur', handleWindowBlur);
       window.addEventListener('focus', handleWindowFocus);
 
       // Visibility change (tab switch)
+=======
+      window.addEventListener('blur', handleWindowBlur);
+      window.addEventListener('focus', handleWindowFocus);
+>>>>>>> ea33e57 (feat: tombol berbagi prestasi via WhatsApp/Web Share di 4 halaman peserta)
       document.addEventListener('visibilitychange', handleVisibilityChange);
     };
 
@@ -106,6 +138,7 @@ export default function SecurityWrapper({ children }: { children: React.ReactNod
       setShowBlurOverlay(false);
     };
 
+<<<<<<< HEAD
     // === HANDLERS ===
 
     const handleContextMenu = (e: MouseEvent) => {
@@ -145,28 +178,55 @@ export default function SecurityWrapper({ children }: { children: React.ReactNod
       if (e.key === 'PrintScreen') {
         try { navigator.clipboard?.writeText(''); } catch {}
         // Show warning
+=======
+    const handleContextMenu = (e: MouseEvent) => { e.preventDefault(); return false; };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (ctrl && ['p', 's', 'u', 'a'].includes(e.key.toLowerCase())) { e.preventDefault(); return false; }
+      if (ctrl && ['c', 'x'].includes(e.key.toLowerCase())) {
+        const t = e.target as HTMLElement;
+        if (t.tagName !== 'INPUT' && t.tagName !== 'TEXTAREA') { e.preventDefault(); return false; }
+      }
+      if (ctrl && e.shiftKey && ['c', 'i', 'j', 's'].includes(e.key.toLowerCase())) { e.preventDefault(); return false; }
+      if (e.key === 'F12') { e.preventDefault(); return false; }
+      if (e.key === 'PrintScreen') { e.preventDefault(); try { navigator.clipboard?.writeText(''); } catch {} return false; }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'PrintScreen') {
+        try { navigator.clipboard?.writeText(''); } catch {}
+>>>>>>> ea33e57 (feat: tombol berbagi prestasi via WhatsApp/Web Share di 4 halaman peserta)
         setShowBlurOverlay(true);
         setTimeout(() => setShowBlurOverlay(false), 2000);
       }
     };
+<<<<<<< HEAD
 
+=======
+>>>>>>> ea33e57 (feat: tombol berbagi prestasi via WhatsApp/Web Share di 4 halaman peserta)
     const handleCopy = (e: ClipboardEvent) => {
       const t = e.target as HTMLElement;
       if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') return;
       e.preventDefault(); return false;
     };
+<<<<<<< HEAD
 
+=======
+>>>>>>> ea33e57 (feat: tombol berbagi prestasi via WhatsApp/Web Share di 4 halaman peserta)
     const handleCut = (e: ClipboardEvent) => {
       const t = e.target as HTMLElement;
       if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') return;
       e.preventDefault(); return false;
     };
+<<<<<<< HEAD
 
+=======
+>>>>>>> ea33e57 (feat: tombol berbagi prestasi via WhatsApp/Web Share di 4 halaman peserta)
     const handleSelectStart = (e: Event) => {
       const t = e.target as HTMLElement;
       if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') return;
       e.preventDefault(); return false;
     };
+<<<<<<< HEAD
 
     const handleDragStart = (e: DragEvent) => {
       e.preventDefault(); return false;
@@ -196,6 +256,18 @@ export default function SecurityWrapper({ children }: { children: React.ReactNod
     maintenanceCheckInterval = setInterval(checkMaintenance, 5 * 60 * 1000);
 
     // Cleanup
+=======
+    const handleDragStart = (e: DragEvent) => { e.preventDefault(); return false; };
+    const handleWindowBlur = () => { setShowBlurOverlay(true); };
+    const handleWindowFocus = () => { setShowBlurOverlay(false); };
+    const handleVisibilityChange = () => {
+      if (document.hidden) { setShowBlurOverlay(true); } else { setShowBlurOverlay(false); }
+    };
+
+    checkMaintenance();
+    maintenanceCheckInterval = setInterval(checkMaintenance, 5 * 60 * 1000);
+
+>>>>>>> ea33e57 (feat: tombol berbagi prestasi via WhatsApp/Web Share di 4 halaman peserta)
     return () => {
       removeSecurity();
       if (maintenanceCheckInterval) clearInterval(maintenanceCheckInterval);
@@ -205,12 +277,17 @@ export default function SecurityWrapper({ children }: { children: React.ReactNod
   return (
     <>
       {children}
+<<<<<<< HEAD
       {/* Blur overlay — shown when window loses focus or PrtScn detected */}
       {showBlurOverlay && (
         <div
           className="fixed inset-0 z-[9999] bg-black flex items-center justify-center"
           style={{ backdropFilter: 'blur(20px)' }}
         >
+=======
+      {showBlurOverlay && (
+        <div className="fixed inset-0 z-[9999] bg-black flex items-center justify-center" style={{ backdropFilter: 'blur(20px)' }}>
+>>>>>>> ea33e57 (feat: tombol berbagi prestasi via WhatsApp/Web Share di 4 halaman peserta)
           <div className="text-center">
             <p className="text-white text-lg font-bold mb-2">🔒 Konten Terlindungi</p>
             <p className="text-white/60 text-sm">Konten ini tidak dapat di-screenshot atau disalin.</p>

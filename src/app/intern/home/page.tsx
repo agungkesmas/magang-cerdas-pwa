@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import ShareButton from '@/components/shared/ShareButton';
 import {
   Zap,
   Flame,
@@ -106,6 +107,19 @@ export default function InternHomePage() {
               style={{ width: `${level_info.progress}%` }}
             />
           </div>
+        </div>
+
+        {/* Share button — pamer prestasi */}
+        <div className="mt-4 flex justify-end">
+          <ShareButton
+            data={{
+              title: 'Magang BPJS Ketenagakerjaan',
+              text: `🔥 lagi magang di BPJS Ketenagakerjaan Cabang Cirebon!\n\n${profile.name}\n${profile.major} • ${profile.department}\n\n⚡ ${profile.total_exp} EXP • Level ${level_info.level}\n🏆 Tier: ${profile.tier}\n📅 ${profile.time_progress}% selesai • ${profile.days_remaining} hari tersisa\n\n${profile.streak_count > 0 ? `🔥 Streak: ${profile.streak_count} hari beruntun!\n` : ''}Grup: ${profile.school_origin || 'Magang BPJS Ketenagakerjaan'}\n\n#MagangBPJS #BPJSKetenagakerjaan #MagangCerdas`,
+              url: typeof window !== 'undefined' ? window.location.origin : 'https://magang-cerdas-pwa.vercel.app'
+            }}
+            label="Bagikan Prestasi"
+            variant="default"
+          />
         </div>
       </div>
 

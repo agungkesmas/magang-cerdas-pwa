@@ -2,6 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import SecurityWrapper from '@/components/shared/SecurityWrapper';
+<<<<<<< HEAD
+=======
+import ShareButton from '@/components/shared/ShareButton';
+>>>>>>> ea33e57 (feat: tombol berbagi prestasi via WhatsApp/Web Share di 4 halaman peserta)
 import {
   Trophy,
   Lock,
@@ -329,6 +333,19 @@ export default function InternCertificatePage() {
             {downloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
             {downloading ? 'Generating PDF...' : 'Download PDF'}
           </button>
+
+          {/* Share sertifikat */}
+          <div className="mt-3 flex justify-center">
+            <ShareButton
+              data={{
+                title: 'Sertifikat Magang BPJS Ketenagakerjaan',
+                text: `🏆 Sertifikat Magang BPJS Ketenagakerjaan!\n\n${profile.name}\n${profile.major} • ${profile.department}\n\nTier: ${certificate.tier}\nEXP: ${profile.total_exp}\nPeriode: ${new Date(profile.start_date).toLocaleDateString('id-ID')} — ${new Date(profile.end_date).toLocaleDateString('id-ID')}\n\nVerification ID: ${certificate.verification_id}\nVerify: ${typeof window !== 'undefined' ? window.location.origin : ''}/verify/${certificate.verification_id}\n\n#MagangBPJS #SertifikatMagang #BPJSKetenagakerjaan`,
+                url: typeof window !== 'undefined' ? `${window.location.origin}/verify/${certificate.verification_id}` : ''
+              }}
+              label="Bagikan Sertifikat"
+              variant="default"
+            />
+          </div>
         </div>
       )}
     </div>

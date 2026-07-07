@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import ShareButton from '@/components/shared/ShareButton';
 import {
   UserCircle,
   Mail,
@@ -163,6 +164,17 @@ export default function InternProfilePage() {
               <span className="text-xs px-2 py-0.5 bg-bpjs-blue/20 text-bpjs-blue-light rounded-full font-medium">
                 {profile.department}
               </span>
+            </div>
+            <div className="mt-3 flex justify-center sm:justify-start">
+              <ShareButton
+                data={{
+                  title: 'Profil Magang BPJS',
+                  text: `👤 ${profile.name}\n🎓 ${profile.major} • ${profile.department}\n🏫 ${profile.school_origin || 'BPJS Ketenagakerjaan'}\n\n⚡ ${profile.total_exp} EXP • 🔥 ${profile.streak_count} hari streak\n\nMagang di BPJS Ketenagakerjaan Cabang Cirebon\n#MagangBPJS #BPJSKetenagakerjaan`,
+                  url: typeof window !== 'undefined' ? window.location.origin : ''
+                }}
+                label="Bagikan Profil"
+                variant="compact"
+              />
             </div>
           </div>
         </div>
