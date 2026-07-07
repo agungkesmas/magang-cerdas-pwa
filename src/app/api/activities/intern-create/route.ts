@@ -67,6 +67,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 0a. CEK: Peserta sudah check-out hari ini? (tidak bisa tambah aktivitas baru)
+    const { data: todayCheckOut } = await supabase
+      .from('attendance')
+      .select('id')
+      .eq('intern_id', intern.intern_id)
+      .eq('type', 'Check-Out')
+      .gte('timestamp', todayStart.toISOString())
+      .maybeSingle();
+    if (todayCheckOut) {
+      return NextResponse.json(
+        { error: 'Anda sudah check-out hari ini. Tidak bisa menambah aktivitas baru. Kamu masih bisa menyelesaikan aktivitas yang sudah ada.' },
+        { status: 403 }
+      );
+    }
+
     // 0b. CEK: Batas 1 aktivitas self-added per hari
     const { count: todaySelfActivities } = await supabase
       .from('activities')

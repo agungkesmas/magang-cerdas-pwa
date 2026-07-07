@@ -23,6 +23,8 @@ export async function POST(req: NextRequest) {
     // 0. CEK: Peserta sudah check-in hari ini?
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
     const { data: todayCheckIn } = await supabase
       .from('attendance')
       .select('id')
@@ -33,6 +35,21 @@ export async function POST(req: NextRequest) {
     if (!todayCheckIn) {
       return NextResponse.json(
         { error: 'Anda belum check-in hari ini. Lakukan check-in terlebih dahulu sebelum memulai quest.' },
+        { status: 403 }
+      );
+    }
+
+    // 0a. CEK: Peserta sudah check-out hari ini? (tidak bisa START quest baru, tapi masih bisa SUBMIT)
+    const { data: todayCheckOut } = await supabase
+      .from('attendance')
+      .select('id')
+      .eq('intern_id', intern.intern_id)
+      .eq('type', 'Check-Out')
+      .gte('timestamp', todayStart.toISOString())
+      .maybeSingle();
+    if (todayCheckOut) {
+      return NextResponse.json(
+        { error: 'Anda sudah check-out hari ini. Tidak bisa memulai quest baru. Kamu masih bisa menyelesaikan (submit) quest yang sudah di-start.' },
         { status: 403 }
       );
     }
