@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import SecurityWrapper from '@/components/shared/SecurityWrapper';
 import {
   CheckSquare,
   Loader2,
@@ -246,6 +247,7 @@ export default function InternActivitiesPage() {
   const questActiveCount = questAvailable.length + questInProgress.length + questCompletedToday.length + questOverdue.length;
 
   return (
+    <SecurityWrapper>
     <div className="space-y-5 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
@@ -704,6 +706,7 @@ export default function InternActivitiesPage() {
         />
       )}
     </div>
+    </SecurityWrapper>
   );
 }
 

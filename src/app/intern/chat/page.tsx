@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { MessageCircle, Users, Loader2, ArrowRight, Search, Megaphone, Sparkles } from 'lucide-react';
+import SecurityWrapper from '@/components/shared/SecurityWrapper';
 
 function isMadingGroup(g: any): boolean {
   return g.group_type === 'system' && g.name === 'All Peserta Magang';
@@ -41,6 +42,7 @@ export default function InternChatListPage() {
   }
 
   return (
+    <SecurityWrapper>
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-bold text-white" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
@@ -167,5 +169,6 @@ export default function InternChatListPage() {
         </>
       )}
     </div>
+    </SecurityWrapper>
   );
 }

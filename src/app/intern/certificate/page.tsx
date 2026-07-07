@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import SecurityWrapper from '@/components/shared/SecurityWrapper';
 import {
   Trophy,
   Lock,
@@ -102,6 +103,7 @@ export default function InternCertificatePage() {
   const logoSize = cs.logo_size || 64;
 
   return (
+    <SecurityWrapper>
     <div className="space-y-5 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold text-white" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
@@ -330,6 +332,7 @@ export default function InternCertificatePage() {
         </div>
       )}
     </div>
+    </SecurityWrapper>
   );
 }
 

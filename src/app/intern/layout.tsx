@@ -1,6 +1,5 @@
 import { getInternToken } from '@/lib/auth';
 import InternShell from '@/components/intern/InternShell';
-import SecurityWrapper from '@/components/shared/SecurityWrapper';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,10 +8,8 @@ export default async function InternLayout({ children }: { children: React.React
   if (!intern) return <>{children}</>;
 
   return (
-    <SecurityWrapper>
-      <InternShell intern={{ name: intern.name, username: intern.username }}>
-        {children}
-      </InternShell>
-    </SecurityWrapper>
+    <InternShell intern={{ name: intern.name, username: intern.username }}>
+      {children}
+    </InternShell>
   );
 }
