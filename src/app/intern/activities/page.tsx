@@ -83,32 +83,59 @@ interface RecurringHistoryItem {
   last_completed_at: string;
 }
 
+interface ActiveQuest {
+  id: string;
+  title: string;
+  description: string;
+  xp_reward: number;
+  is_recurring: boolean;
+  due_date: string | null;
+  group_id: string;
+  group_name: string | null;
+  group_department: string | null;
+  status: 'available' | 'in_progress' | 'completed_today' | 'completed_permanent' | 'overdue';
+  started_at: string | null;
+  today_xp: number | null;
+}
+
 export default function InternActivitiesPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [activeQuests, setActiveQuests] = useState<ActiveQuest[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [recurringHistory, setRecurringHistory] = useState<RecurringHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState<string | null>(null);
+  const [questActionLoading, setQuestActionLoading] = useState<string | null>(null);
   const [recentExp, setRecentExp] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState<string | null>(null);
+  const [showQuestSubmitModal, setShowQuestSubmitModal] = useState<string | null>(null);
+  const [questSubmitNotes, setQuestSubmitNotes] = useState('');
   const [completionNotes, setCompletionNotes] = useState('');
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
 
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [actRes, histRes] = await Promise.all([
+      const [actRes, histRes, questRes] = await Promise.all([
         fetch('/api/activities/list'),
-        fetch('/api/activities/history')
+        fetch('/api/activities/history'),
+        fetch('/api/intern/active-quests')
       ]);
       const actData = await actRes.json();
       const histData = await histRes.json();
-      if (actData.success) setActivities(actData.activities || []);
+      const questData = await questRes.json();
+      if (actData.success) {
+        // Filter out quests — they come from active-quests API now
+        setActivities((actData.activities || []).filter((a: Activity) => !a.is_quest));
+      }
       if (histData.success) {
         setHistory(histData.history || []);
         setRecurringHistory(histData.recurring_history || []);
+      }
+      if (questData.success) {
+        setActiveQuests(questData.quests || []);
       }
     } finally {
       setLoading(false);
@@ -150,37 +177,73 @@ export default function InternActivitiesPage() {
     }
   };
 
+  // Quest START/SUBMIT handlers — langsung dari Aktivitas (tidak perlu buka chat)
+  const handleQuestStart = async (questId: string, groupId: string) => {
+    setQuestActionLoading(questId);
+    setErrorMsg(null);
+    try {
+      const res = await fetch('/api/quests/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quest_id: questId, group_id: groupId })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      fetchAll();
+    } catch (e: any) {
+      setErrorMsg(e.message);
+      setTimeout(() => setErrorMsg(null), 5000);
+    } finally {
+      setQuestActionLoading(null);
+    }
+  };
+
+  const handleQuestSubmit = async (questId: string, groupId: string) => {
+    setQuestActionLoading(questId);
+    setErrorMsg(null);
+    try {
+      const res = await fetch('/api/quests/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quest_id: questId, group_id: groupId, submission_notes: questSubmitNotes.trim() || undefined })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setRecentExp(data.xp_gained || 20);
+      setTimeout(() => setRecentExp(null), 3000);
+      setShowQuestSubmitModal(null);
+      setQuestSubmitNotes('');
+      fetchAll();
+    } catch (e: any) {
+      setErrorMsg(e.message);
+      setTimeout(() => setErrorMsg(null), 5000);
+    } finally {
+      setQuestActionLoading(null);
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-bpjs-yellow" /></div>;
   }
 
-  // Filter logic: untuk recurring, tampilkan hanya yang is_today_in_range = true
-  // Untuk Quest (is_quest), tampilkan yang in_progress atau completed
-  // Untuk non-recurring non-quest, tampilkan semua yang assigned
-  const visibleActivities = activities.filter((a) => {
-    if (a.is_quest) return true; // Quest selalu tampil kalau sudah di-start/completed
-    if (a.is_recurring) return a.is_today_in_range !== false;
-    return true;
-  });
-  // Pending: belum selesai
-  // - Quest: status in_progress
-  // - Recurring: belum complete hari ini
-  // - Single: belum is_completed dan tidak overdue
+  // Filter logic: exclude quests (they come from active-quests API now)
+  const visibleActivities = activities.filter((a) => !a.is_quest);
   const pending = visibleActivities.filter((a) => {
-    if (a.is_quest) return a.quest_status === 'in_progress';
-    if (a.is_recurring) return !a.completed_today;
+    if (a.is_recurring) return !a.completed_today && a.is_today_in_range !== false;
     return !a.is_completed && !a.is_overdue;
   });
-  // Selesai Hari Ini: HANYA recurring yang complete hari ini (besok bisa kerjakan lagi)
-  // - Quest completed → langsung ke Riwayat (tidak di sini)
-  // - Single completed → langsung ke Riwayat (tidak di sini)
-  // - Recurring completed today → tetap di Aktif (karena besok muncul lagi)
   const completed = visibleActivities.filter((a) => {
-    if (a.is_quest) return false;
     if (a.is_recurring) return a.completed_today;
     return false;
   });
-  const overdue = visibleActivities.filter((a) => !a.is_quest && !a.is_recurring && !a.is_completed && a.is_overdue);
+  const overdue = visibleActivities.filter((a) => !a.is_recurring && !a.is_completed && a.is_overdue);
+
+  // Quest filtering
+  const questAvailable = activeQuests.filter(q => q.status === 'available');
+  const questInProgress = activeQuests.filter(q => q.status === 'in_progress');
+  const questCompletedToday = activeQuests.filter(q => q.status === 'completed_today');
+  const questOverdue = activeQuests.filter(q => q.status === 'overdue');
+  const questActiveCount = questAvailable.length + questInProgress.length + questCompletedToday.length + questOverdue.length;
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -190,7 +253,7 @@ export default function InternActivitiesPage() {
             Aktivitas Hari Ini
           </h1>
           <p className="text-sm text-white/60 mt-1">
-            {pending.length} aktif • {completed.length} selesai
+            {questActiveCount + pending.length} aktif • {questCompletedToday.length + completed.length} selesai
           </p>
         </div>
         {recentExp && (
@@ -213,7 +276,7 @@ export default function InternActivitiesPage() {
           onClick={() => setActiveTab('active')}
           className={`px-4 py-2 rounded-lg text-sm font-medium ${activeTab === 'active' ? 'bg-bpjs-yellow text-bpjs-blue-dark' : 'bg-white/5 text-white/60'}`}
         >
-          <CheckSquare className="w-4 h-4 inline mr-1" /> Aktif ({pending.length + completed.length + overdue.length})
+          <CheckSquare className="w-4 h-4 inline mr-1" /> Aktif ({questActiveCount + pending.length + completed.length + overdue.length})
         </button>
         <button
           onClick={() => setActiveTab('history')}
@@ -232,7 +295,104 @@ export default function InternActivitiesPage() {
       {/* Active tab */}
       {activeTab === 'active' && (
         <div className="space-y-4">
-          {activities.length === 0 ? (
+          {/* === QUEST HARI INI === */}
+          {activeQuests.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold text-white/80 flex items-center gap-2">
+                <Target className="w-4 h-4 text-purple-400" /> Quest ({activeQuests.length})
+              </h2>
+              {activeQuests.map((q) => (
+                <div key={q.id} className="glass-card p-4 border-purple-400/30">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-bold text-white">{q.title}</h3>
+                        <span className="text-xs px-2 py-0.5 bg-purple-500/30 text-purple-200 rounded-full font-medium flex items-center gap-1">
+                          <Target className="w-3 h-3" /> Quest
+                        </span>
+                        {q.is_recurring && (
+                          <span className="text-xs px-2 py-0.5 bg-bpjs-green/20 text-bpjs-green rounded-full font-medium">🔁 Harian</span>
+                        )}
+                        <span className="text-xs px-2 py-0.5 bg-bpjs-yellow/20 text-bpjs-yellow rounded-full font-medium flex items-center gap-1">
+                          <Zap className="w-3 h-3" /> {q.xp_reward} XP
+                        </span>
+                        {q.group_name && (
+                          <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded-full flex items-center gap-1">
+                            📌 {q.group_name}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-white/70 leading-relaxed mt-1">{q.description}</p>
+                    </div>
+                  </div>
+
+                  {/* Status & Actions */}
+                  {q.status === 'available' && (
+                    <button
+                      onClick={() => handleQuestStart(q.id, q.group_id)}
+                      disabled={questActionLoading === q.id}
+                      className="w-full mt-2 flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 rounded-lg text-sm disabled:opacity-50"
+                    >
+                      {questActionLoading === q.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Target className="w-4 h-4" />} START QUEST
+                    </button>
+                  )}
+
+                  {q.status === 'in_progress' && (
+                    showQuestSubmitModal === q.id ? (
+                      <div className="mt-3 space-y-2">
+                        <textarea
+                          rows={2}
+                          value={questSubmitNotes}
+                          onChange={(e) => setQuestSubmitNotes(e.target.value)}
+                          placeholder="Catatan hasil (opsional)..."
+                          className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-bpjs-yellow"
+                        />
+                        <div className="flex gap-2">
+                          <button onClick={() => { setShowQuestSubmitModal(null); setQuestSubmitNotes(''); }} className="flex-1 px-3 py-2 border border-white/10 text-white/60 text-sm rounded-lg">Batal</button>
+                          <button onClick={() => handleQuestSubmit(q.id, q.group_id)} disabled={questActionLoading === q.id} className="flex-1 px-3 py-2 bg-bpjs-green text-white font-bold text-sm rounded-lg disabled:opacity-50 flex items-center justify-center gap-1">
+                            {questActionLoading === q.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Submit Quest
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setShowQuestSubmitModal(q.id); setQuestSubmitNotes(''); }}
+                        className="w-full mt-2 flex items-center justify-center gap-2 bg-bpjs-green hover:bg-bpjs-green-dark text-white font-bold py-2.5 rounded-lg text-sm"
+                      >
+                        <CheckCircle2 className="w-4 h-4" /> SUBMIT QUEST
+                      </button>
+                    )
+                  )}
+
+                  {q.status === 'completed_today' && (
+                    <div className="mt-2 bg-bpjs-green/10 border border-bpjs-green/30 rounded-lg p-3 flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-bpjs-green" />
+                      <div>
+                        <p className="font-semibold text-bpjs-green text-sm">✓ Selesai hari ini!</p>
+                        <p className="text-xs text-white/60">+{q.today_xp || q.xp_reward} XP • Kembali besok untuk kerjakan lagi</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {q.status === 'completed_permanent' && (
+                    <div className="mt-2 bg-bpjs-green/10 border border-bpjs-green/30 rounded-lg p-3 flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-bpjs-green" />
+                      <p className="font-semibold text-bpjs-green text-sm">Quest Selesai!</p>
+                    </div>
+                  )}
+
+                  {q.status === 'overdue' && (
+                    <div className="mt-2 text-center text-sm text-red-400 py-2">
+                      <AlertTriangle className="w-4 h-4 inline mr-1" /> Quest sudah lewat deadline
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* === TUGAS DEPARTEMEN === */}
+          {activeQuests.length === 0 && activities.length === 0 ? (
             <div className="glass-card p-8 text-center">
               <CheckSquare className="w-12 h-12 mx-auto text-white/30 mb-3" />
               <p className="text-white/60">Belum ada aktivitas yang ditugaskan.</p>
