@@ -1,10 +1,11 @@
 // ============================================================
 // /api/activities/history — Intern's activity history (completed activities with notes)
-// Support 4 sumber:
+// Support 5 sumber:
 //   1. Per-intern single completion (mode lama)
 //   2. Department-mode single completion (activity_completions)
 //   3. Recurring daily completion (activity_daily_completions) — group by activity
-//   4. Quest completion (quest_logs + activities dengan is_quest=true) — group by activity
+//   4. Quest completion (quest_logs status=completed — non-recurring only)
+//   5. Quest daily completion (quest_daily_completions — recurring, 1 row per hari)
 // ============================================================
 
 import { NextResponse } from 'next/server';
@@ -35,7 +36,7 @@ export async function GET() {
       .order('completed_at', { ascending: false });
     if (cErr) return NextResponse.json({ error: cErr.message }, { status: 500 });
 
-    // 3. Recurring daily completions (group by activity)
+    // 3. Recurring daily completions (group by activity) — untuk aktivitas non-quest
     const { data: dailyCompletions, error: dErr } = await supabase
       .from('activity_daily_completions')
       .select('activity_id, completion_date, completion_notes, exp_awarded, bonus_exp_awarded, completed_at, activities!inner(title, description, created_at, is_recurring, start_date, end_date)')
@@ -43,9 +44,8 @@ export async function GET() {
       .order('completed_at', { ascending: false });
     if (dErr) return NextResponse.json({ error: dErr.message }, { status: 500 });
 
-    // 4. Quest completions (quest_logs status=completed + activities is_quest=true)
-    // NOTE: Jangan JOIN ke groups di sini karena ambiguous (quest_logs.group_id & activities.group_id
-    // dua-duanya ke groups). Pakai query terpisah untuk ambil group info.
+    // 4. Quest completions (quest_logs status=completed — non-recurring only)
+    // NOTE: Quest recurring pakai quest_daily_completions (source #5)
     let questCompletions: any[] = [];
     try {
       const { data: qData, error: qErr } = await supabase
@@ -58,29 +58,60 @@ export async function GET() {
           submitted_at,
           submission_notes,
           xp_awarded,
-          activities!inner(title, description, created_at, is_quest, due_date, xp_reward)
+          activities!inner(title, description, created_at, is_quest, is_recurring, due_date, xp_reward)
         `)
         .eq('intern_id', intern.intern_id)
         .eq('status', 'completed')
         .order('submitted_at', { ascending: false });
       if (qErr) {
         console.error('[activities/history] quest_logs query error:', qErr);
-        // Jangan throw — tetap return history lain (single, recurring)
       } else {
-        questCompletions = qData || [];
+        // Filter: hanya non-recurring (recurring pakai quest_daily_completions)
+        questCompletions = (qData || []).filter((q: any) => !q.activities?.is_recurring);
       }
     } catch (qException) {
       console.error('[activities/history] quest_logs exception:', qException);
     }
 
+    // 5. Quest daily completions (recurring — 1 row per hari per quest)
+    let questDailyCompletions: any[] = [];
+    try {
+      const { data: qdcData, error: qdcErr } = await supabase
+        .from('quest_daily_completions')
+        .select(`
+          id,
+          quest_id,
+          group_id,
+          completion_date,
+          submission_notes,
+          xp_awarded,
+          submitted_at,
+          activities!inner(title, description, created_at, is_quest, is_recurring, due_date, xp_reward)
+        `)
+        .eq('intern_id', intern.intern_id)
+        .order('submitted_at', { ascending: false });
+      if (qdcErr) {
+        console.error('[activities/history] quest_daily_completions query error:', qdcErr);
+      } else {
+        questDailyCompletions = qdcData || [];
+      }
+    } catch (qdcException) {
+      console.error('[activities/history] quest_daily_completions exception:', qdcException);
+    }
+
     // Ambil group info terpisah (kalau ada quest completions)
-    const groupIds = [...new Set(questCompletions.map((q: any) => q.group_id).filter(Boolean))];
+    const allGroupIds = [
+      ...new Set([
+        ...questCompletions.map((q: any) => q.group_id).filter(Boolean),
+        ...questDailyCompletions.map((q: any) => q.group_id).filter(Boolean)
+      ])
+    ];
     let groupMap: Record<string, { name: string; department: string | null }> = {};
-    if (groupIds.length > 0) {
+    if (allGroupIds.length > 0) {
       const { data: groupData } = await supabase
         .from('groups')
         .select('id, name, department')
-        .in('id', groupIds);
+        .in('id', allGroupIds);
       (groupData || []).forEach((g: any) => {
         groupMap[g.id] = { name: g.name, department: g.department };
       });
@@ -93,7 +124,7 @@ export async function GET() {
     const history: any[] = [];
 
     (ownActivities || []).forEach((a: any) => {
-      if (!a.is_recurring) { // recurring punya entry sendiri di bawah
+      if (!a.is_recurring) {
         history.push({
           id: a.id,
           activity_id: a.id,
@@ -127,8 +158,7 @@ export async function GET() {
       }
     });
 
-    // Tambah Quest completions sebagai single entries dengan badge Quest
-    // NOTE: Tidak perlu anti-duplicate check karena deptCompletions sudah skip Quest (is_quest=true)
+    // 4a. Tambah Quest completions (non-recurring only)
     (questCompletions || []).forEach((q: any) => {
       const act = q.activities as any;
       if (!act || !act.is_quest) return;
@@ -153,7 +183,32 @@ export async function GET() {
       });
     });
 
-    // Group recurring completions by activity
+    // 5a. Tambah Quest daily completions (recurring — 1 entri per hari)
+    (questDailyCompletions || []).forEach((qdc: any) => {
+      const act = qdc.activities as any;
+      if (!act || !act.is_quest) return;
+
+      const grp = qdc.group_id ? groupMap[qdc.group_id] : null;
+
+      history.push({
+        id: `qdc-${qdc.id}`,
+        activity_id: qdc.quest_id,
+        title: act.title,
+        description: act.description,
+        mode: 'quest',
+        completion_notes: qdc.submission_notes,
+        completed_at: qdc.submitted_at,
+        created_at: act.created_at,
+        source: 'quest_recurring',
+        exp_gained: qdc.xp_awarded || act.xp_reward || 20,
+        group_name: grp?.name || null,
+        group_department: grp?.department || null,
+        deadline: act.due_date || null,
+        completion_date: qdc.completion_date
+      });
+    });
+
+    // Group recurring completions by activity (untuk aktivitas non-quest)
     const recurringGroups: Record<string, any> = {};
     (dailyCompletions || []).forEach((c: any) => {
       const act = c.activities as any;
@@ -185,16 +240,15 @@ export async function GET() {
     });
 
     const recurringHistory = Object.values(recurringGroups);
-    // Sort recurring by last_completed_at
     recurringHistory.sort((a: any, b: any) => new Date(b.last_completed_at).getTime() - new Date(a.last_completed_at).getTime());
 
-    // Sort single history
+    // Sort single history (includes quest + quest_daily)
     history.sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime());
 
     return NextResponse.json({
       success: true,
-      history, // single completions (includes quest)
-      recurring_history: recurringHistory // recurring completions (grouped)
+      history,
+      recurring_history: recurringHistory
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
