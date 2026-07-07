@@ -137,8 +137,11 @@ export default function PembinaHomePage() {
   }
 
   const visibleGroups = groups.filter(g => g.group_type !== 'dm');
-  const totalPembina = visibleGroups.reduce((sum, g) => sum + (g.pembina_count || 0), 0);
-  const totalPeserta = visibleGroups.reduce((sum, g) => sum + (g.peserta_count || 0), 0);
+  // Fix: jangan SUM count dari semua grup (bakal dobel karena peserta sama ada di multiple grup)
+  // totalPeserta: pakai myInterns.length (sudah deduplikasi oleh API my-interns)
+  // totalPembina: pakai Math.max dari pembina_count (grup "Diskusi Magang All" berisi semua pembina = jumlah unik)
+  const totalPeserta = myInterns.length;
+  const totalPembina = Math.max(...visibleGroups.map(g => g.pembina_count || 0), 0);
 
   return (
     <div className="space-y-6">
