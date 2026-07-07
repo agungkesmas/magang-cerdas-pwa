@@ -219,9 +219,19 @@ export default function BKKHomePage() {
       <div className="flex justify-end">
         <ShareButton
           data={{
-            title: 'Kerjasama Magang BPJS Ketenagakerjaan',
-            text: `🏫 ${data?.teacher?.schools?.[0] || 'Sekolah kami'} berkolaborasi dengan BPJS Ketenagakerjaan Cabang Cirebon!\n\n👥 ${stats.total_interns} peserta magang (${stats.active_interns} aktif)\n⚡ Rata-rata ${stats.avg_exp} EXP\n🏆 ${stats.certified_count} sertifikat terbit\n📅 ${stats.near_end_count} peserta akan selesai < 14 hari\n\nKerjasama BKK — BPJS Ketenagakerjaan\n#MagangBPJS #BKK #BPJSKetenagakerjaan #MagangCerdas`,
-            url: typeof window !== 'undefined' ? window.location.origin : ''
+            name: data?.teacher?.schools?.[0] || 'Sekolah Kami',
+            major: 'BKK',
+            department: 'BPJS Ketenagakerjaan',
+            totalExp: stats.avg_exp || 0,
+            level: 1,
+            tier: '',
+            timeProgress: 0,
+            daysRemaining: 0,
+            streak: 0,
+            type: 'bkk-home',
+            totalInterns: stats.total_interns,
+            certifiedCount: stats.certified_count,
+            avgExp: stats.avg_exp
           }}
           label="Bagikan Prestasi Sekolah"
           variant="default"

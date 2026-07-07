@@ -122,9 +122,19 @@ function BKKCertsContent() {
         <div className="flex justify-end">
           <ShareButton
             data={{
-              title: 'Sertifikat Magang BPJS',
-              text: `🏆 ${certified.length} peserta magang dari sekolah kami telah mendapatkan sertifikat resmi dari BPJS Ketenagakerjaan Cabang Cirebon!\n\nProgram MAGANG-CERDAS — kerjasama BKK dengan BPJS Ketenagakerjaan.\n\n#MagangBPJS #SertifikatMagang #BPJSKetenagakerjaan #BKK`,
-              url: typeof window !== 'undefined' ? window.location.origin : ''
+              name: 'Sekolah Kami',
+              major: 'BKK',
+              department: 'BPJS Ketenagakerjaan',
+              totalExp: 0,
+              level: 1,
+              tier: '',
+              timeProgress: 0,
+              daysRemaining: 0,
+              streak: 0,
+              type: 'bkk-cert',
+              totalInterns: interns.length,
+              certifiedCount: certified.length,
+              avgExp: 0
             }}
             label="Bagikan Capaian"
             variant="card"

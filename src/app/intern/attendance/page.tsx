@@ -379,9 +379,16 @@ export default function InternAttendancePage() {
           <div className="mt-3 pt-3 border-t border-white/10 flex justify-end">
             <ShareButton
               data={{
-                title: 'Bukti Absen Magang BPJS',
-                text: `✅ Sudah absen magang hari ini!\n\n📍 BPJS Ketenagakerjaan Cabang Cirebon\n🟢 Check-In: ${new Date(todayAtt.find((a) => a.type === 'Check-In')?.timestamp || '').toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB${checkedOut ? `\n🔴 Check-Out: ${new Date(todayAtt.find((a) => a.type === 'Check-Out')?.timestamp || '').toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB` : ''}\n🔥 Streak: ${success?.total ? Math.floor(success.total / 30) : 0} hari beruntun\n\n#MagangBPJS #AbsenMagang #BPJSKetenagakerjaan`,
-                url: typeof window !== 'undefined' ? window.location.origin : ''
+                name: 'Peserta Magang',
+                major: 'BPJS',
+                department: 'Ketenagakerjaan',
+                totalExp: success?.total || 0,
+                level: Math.floor((success?.total || 0) / 100) + 1,
+                tier: 'Participation',
+                timeProgress: 0,
+                daysRemaining: 0,
+                streak: 0,
+                type: 'checkin'
               }}
               label="Bagikan Absen"
               variant="card"

@@ -335,9 +335,17 @@ export default function InternCertificatePage() {
           <div className="mt-3 flex justify-center">
             <ShareButton
               data={{
-                title: 'Sertifikat Magang BPJS Ketenagakerjaan',
-                text: `🏆 Sertifikat Magang BPJS Ketenagakerjaan!\n\n${profile.name}\n${profile.major} • ${profile.department}\n\nTier: ${certificate.tier}\nEXP: ${profile.total_exp}\nPeriode: ${new Date(profile.start_date).toLocaleDateString('id-ID')} — ${new Date(profile.end_date).toLocaleDateString('id-ID')}\n\nVerification ID: ${certificate.verification_id}\nVerify: ${typeof window !== 'undefined' ? window.location.origin : ''}/verify/${certificate.verification_id}\n\n#MagangBPJS #SertifikatMagang #BPJSKetenagakerjaan`,
-                url: typeof window !== 'undefined' ? `${window.location.origin}/verify/${certificate.verification_id}` : ''
+                name: profile.name,
+                major: profile.major,
+                department: profile.department,
+                totalExp: profile.total_exp,
+                level: Math.floor(profile.total_exp / 100) + 1,
+                tier: certificate.tier,
+                timeProgress: 0,
+                daysRemaining: 0,
+                streak: 0,
+                type: 'certificate',
+                verificationId: certificate.verification_id
               }}
               label="Bagikan Sertifikat"
               variant="default"

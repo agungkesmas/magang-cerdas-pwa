@@ -166,9 +166,16 @@ export default function BKKProfilePage() {
             <div className="mt-2">
               <ShareButton
                 data={{
-                  title: 'Guru BKK — Pembimbing Magang',
-                  text: `👨‍🏫 ${profile.name}\n🏫 Guru BKK\n\nMembimbing peserta magang di BPJS Ketenagakerjaan Cabang Cirebon melalui program MAGANG-CERDAS.\n\n#BKK #MagangBPJS #BPJSKetenagakerjaan #PembimbingSekolah`,
-                  url: typeof window !== 'undefined' ? window.location.origin : ''
+                  name: profile.name,
+                  major: 'Guru BKK',
+                  department: 'Pembimbing Sekolah',
+                  totalExp: 0,
+                  level: 1,
+                  tier: '',
+                  timeProgress: 0,
+                  daysRemaining: 0,
+                  streak: 0,
+                  type: 'profile'
                 }}
                 label="Bagikan Profil"
                 variant="compact"

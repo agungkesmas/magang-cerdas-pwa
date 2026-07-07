@@ -168,9 +168,17 @@ export default function InternProfilePage() {
             <div className="mt-3 flex justify-center sm:justify-start">
               <ShareButton
                 data={{
-                  title: 'Profil Magang BPJS',
-                  text: `👤 ${profile.name}\n🎓 ${profile.major} • ${profile.department}\n🏫 ${profile.school_origin || 'BPJS Ketenagakerjaan'}\n\n⚡ ${profile.total_exp} EXP • 🔥 ${profile.streak_count} hari streak\n\nMagang di BPJS Ketenagakerjaan Cabang Cirebon\n#MagangBPJS #BPJSKetenagakerjaan`,
-                  url: typeof window !== 'undefined' ? window.location.origin : ''
+                  name: profile.name,
+                  major: profile.major,
+                  department: profile.department,
+                  school: profile.school_origin || undefined,
+                  totalExp: profile.total_exp,
+                  level: Math.floor(profile.total_exp / 100) + 1,
+                  tier: 'Participation',
+                  timeProgress: 0,
+                  daysRemaining: 0,
+                  streak: profile.streak_count,
+                  type: 'profile'
                 }}
                 label="Bagikan Profil"
                 variant="compact"
