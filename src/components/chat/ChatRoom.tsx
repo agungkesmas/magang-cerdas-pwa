@@ -34,6 +34,7 @@ interface ChatMessage {
   quest_id: string | null;
   quest: any;
   my_quest_log: any;
+  my_daily_completion?: any;
   quest_logs: any[];
   created_at: string;
   attachment_url?: string | null;
@@ -374,6 +375,7 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
                       <QuestCard
                         quest={msg.quest}
                         myQuestLog={msg.my_quest_log}
+                        myDailyCompletion={msg.my_daily_completion}
                         questLogs={msg.quest_logs}
                         userRole={userRole}
                         onStart={() => handleStartQuest(msg.quest_id!)}
