@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     const xpAwarded = quest.xp_reward || 20;
     const todayStr = new Date().toISOString().split('T')[0];
 
-    // 3b. Untuk quest RECURRING: cek race condition + limit harian
+    // 3b. Untuk quest RECURRING: cek race condition + limit + jeda 3 jam
     if (quest.is_recurring) {
       try {
         const { data: todayCompletion } = await supabase
@@ -91,20 +91,77 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        // LIMIT HARIAN: maksimal 2 quest per hari (independent dari self-added)
+        // LIMIT: quest max 2, total max 3
         const { count: questCountToday } = await supabase
           .from('quest_daily_completions')
           .select('id', { count: 'exact', head: true })
           .eq('intern_id', intern.intern_id)
           .eq('completion_date', todayStr);
+        const ts2 = new Date(); ts2.setHours(0,0,0,0);
+        const te2 = new Date(); te2.setHours(23,59,59,999);
+        const { count: selfAddedCount } = await supabase
+          .from('activities')
+          .select('id', { count: 'exact', head: true })
+          .eq('intern_id', intern.intern_id)
+          .eq('created_by_intern', true)
+          .gte('created_at', ts2.toISOString())
+          .lte('created_at', te2.toISOString());
+        const totalN = (questCountToday || 0) + (selfAddedCount || 0);
+
         if ((questCountToday || 0) >= 2) {
           return NextResponse.json(
             { error: 'Batas quest harian tercapai (maksimal 2 quest per hari). Kembali besok.' },
             { status: 429 }
           );
         }
+        if (totalN >= 3) {
+          return NextResponse.json(
+            { error: 'Batas harian tercapai (maksimal 3 aktivitas per hari). Kembali besok.' },
+            { status: 429 }
+          );
+        }
+
+        // JEDA 3 JAM untuk aktivitas ke-3
+        if (totalN >= 2) {
+          let latestTime: Date | null = null;
+          const { data: lq } = await supabase
+            .from('quest_daily_completions')
+            .select('submitted_at')
+            .eq('intern_id', intern.intern_id)
+            .eq('completion_date', todayStr)
+            .order('submitted_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (lq?.submitted_at) latestTime = new Date(lq.submitted_at);
+          const { data: ls } = await supabase
+            .from('activities')
+            .select('created_at')
+            .eq('intern_id', intern.intern_id)
+            .eq('created_by_intern', true)
+            .gte('created_at', ts2.toISOString())
+            .lte('created_at', te2.toISOString())
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (ls?.created_at) {
+            const st = new Date(ls.created_at);
+            if (!latestTime || st > latestTime) latestTime = st;
+          }
+          if (latestTime) {
+            const elapsed = Date.now() - latestTime.getTime();
+            const threeHours = 3 * 60 * 60 * 1000;
+            if (elapsed < threeHours) {
+              const remaining = Math.ceil((threeHours - elapsed) / (60 * 1000));
+              const hrs = Math.floor(remaining / 60);
+              const mns = remaining % 60;
+              return NextResponse.json(
+                { error: `Aktivitas ke-3 harus menunggu jeda 3 jam dari aktivitas sebelumnya. Tunggu ${hrs} jam ${mns} menit lagi.` },
+                { status: 429 }
+              );
+            }
+          }
+        }
       } catch {
-        // Tabel belum ada — fallback cek via quest_logs
         console.warn('[quests/submit] quest_daily_completions belum ada');
       }
     }

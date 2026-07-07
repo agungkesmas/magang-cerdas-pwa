@@ -1,19 +1,20 @@
 // ============================================================
 // /api/activities/intern-create — Intern tambah aktivitas sendiri
-// Two-way: peserta bisa catat aktivitas tambahan yang mereka kerjakan
-// Support: xp_reward (default 20, pilihan 10/20/30/50)
 //
 // LIMIT ANTI-EXP-FARMING:
-// - Maksimal 1 aktivitas self-added per hari (independent dari quest)
-// - Quest punya limit sendiri: maksimal 2 per hari (di API quests/start)
-// - Tidak ada total limit — masing-masing independent
+// - Self-added: maksimal 2 per hari
+// - Quest: maksimal 2 per hari (di API quests/start)
+// - Total (quest + self-added): maksimal 3 per hari
+// - Aktivitas ke-3: harus ada jeda 3 jam dari aktivitas ke-2
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getInternToken } from '@/lib/auth';
 
-const MAX_DAILY_SELF_ACTIVITIES = 1;
+const MAX_DAILY_SELF_ACTIVITIES = 2;
+const MAX_DAILY_TOTAL = 3;
+const THIRD_ACTIVITY_COOLDOWN_MS = 3 * 60 * 60 * 1000; // 3 jam
 
 export async function POST(req: NextRequest) {
   try {
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 0b. CEK: Batas 1 aktivitas self-added per hari (independent dari quest)
+    // 0b. CEK: Batas self-added + total + jeda 3 jam
     const { count: todaySelfActivities } = await supabase
       .from('activities')
       .select('id', { count: 'exact', head: true })
@@ -89,15 +90,78 @@ export async function POST(req: NextRequest) {
       .gte('created_at', todayStart.toISOString())
       .lte('created_at', todayEnd.toISOString());
 
-    if ((todaySelfActivities || 0) >= MAX_DAILY_SELF_ACTIVITIES) {
+    // Cek quest count hari ini
+    let questCountToday = 0;
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const { count: qc } = await supabase
+        .from('quest_daily_completions')
+        .select('id', { count: 'exact', head: true })
+        .eq('intern_id', intern.intern_id)
+        .eq('completion_date', todayStr);
+      questCountToday = qc || 0;
+    } catch {}
+
+    const selfN = todaySelfActivities || 0;
+    const questN = questCountToday;
+    const totalN = selfN + questN;
+
+    // Self-added max 2
+    if (selfN >= MAX_DAILY_SELF_ACTIVITIES) {
       return NextResponse.json(
-        {
-          error: `Batas penambahan aktivitas mandiri tercapai (maksimal ${MAX_DAILY_SELF_ACTIVITIES} per hari). Kamu masih bisa mengerjakan quest dari menu Aktivitas.`,
-          limit: MAX_DAILY_SELF_ACTIVITIES,
-          remaining: 0
-        },
+        { error: `Batas penambahan aktivitas mandiri tercapai (maksimal ${MAX_DAILY_SELF_ACTIVITIES} per hari).` + (questN < 2 ? ' Kamu masih bisa mengerjakan quest.' : '') },
         { status: 429 }
       );
+    }
+    // Total max 3
+    if (totalN >= MAX_DAILY_TOTAL) {
+      return NextResponse.json(
+        { error: `Batas harian tercapai (maksimal ${MAX_DAILY_TOTAL} aktivitas per hari). Kembali besok.` },
+        { status: 429 }
+      );
+    }
+
+    // JEDA 3 JAM untuk aktivitas ke-3
+    if (totalN >= 2) {
+      let latestTime: Date | null = null;
+      try {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const { data: lq } = await supabase
+          .from('quest_daily_completions')
+          .select('submitted_at')
+          .eq('intern_id', intern.intern_id)
+          .eq('completion_date', todayStr)
+          .order('submitted_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (lq?.submitted_at) latestTime = new Date(lq.submitted_at);
+      } catch {}
+      const { data: ls } = await supabase
+        .from('activities')
+        .select('created_at')
+        .eq('intern_id', intern.intern_id)
+        .eq('created_by_intern', true)
+        .gte('created_at', todayStart.toISOString())
+        .lte('created_at', todayEnd.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (ls?.created_at) {
+        const st = new Date(ls.created_at);
+        if (!latestTime || st > latestTime) latestTime = st;
+      }
+      if (latestTime) {
+        const elapsed = Date.now() - latestTime.getTime();
+        if (elapsed < THIRD_ACTIVITY_COOLDOWN_MS) {
+          const remaining = Math.ceil((THIRD_ACTIVITY_COOLDOWN_MS - elapsed) / (60 * 1000));
+          const hrs = Math.floor(remaining / 60);
+          const mns = remaining % 60;
+          return NextResponse.json(
+            { error: `Aktivitas ke-3 harus menunggu jeda 3 jam dari aktivitas sebelumnya. Tunggu ${hrs} jam ${mns} menit lagi.` },
+            { status: 429 }
+          );
+        }
+      }
     }
 
     const { data, error } = await supabase

@@ -67,13 +67,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Quest sudah lewat deadline' }, { status: 400 });
     }
 
-    // 1b. Untuk quest RECURRING: cek apakah sudah complete hari ini + limit harian
+    // 1b. Untuk quest RECURRING: cek sudah complete + limit harian + jeda 3 jam
     if (quest.is_recurring) {
       const todayStr = new Date().toISOString().split('T')[0];
       try {
         const { data: todayCompletion } = await supabase
           .from('quest_daily_completions')
-          .select('id, completion_date, xp_awarded')
+          .select('id, completion_date, xp_awarded, submitted_at')
           .eq('quest_id', quest_id)
           .eq('intern_id', intern.intern_id)
           .eq('completion_date', todayStr)
@@ -85,17 +85,80 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        // 1c. LIMIT HARIAN: maksimal 2 quest per hari (independent dari self-added)
+        // 1c. LIMIT: quest max 2, self-added max 2, total max 3
         const { count: questCountToday } = await supabase
           .from('quest_daily_completions')
           .select('id', { count: 'exact', head: true })
           .eq('intern_id', intern.intern_id)
           .eq('completion_date', todayStr);
-        if ((questCountToday || 0) >= 2) {
+        const ts = new Date(); ts.setHours(0,0,0,0);
+        const te = new Date(); te.setHours(23,59,59,999);
+        const { count: selfAddedCount } = await supabase
+          .from('activities')
+          .select('id', { count: 'exact', head: true })
+          .eq('intern_id', intern.intern_id)
+          .eq('created_by_intern', true)
+          .gte('created_at', ts.toISOString())
+          .lte('created_at', te.toISOString());
+        const questN = questCountToday || 0;
+        const selfN = selfAddedCount || 0;
+        const totalN = questN + selfN;
+
+        if (questN >= 2) {
           return NextResponse.json(
-            { error: 'Batas quest harian tercapai (maksimal 2 quest per hari). Kamu masih bisa menambah 1 pekerjaan mandiri dari menu Aktivitas.' },
+            { error: 'Batas quest harian tercapai (maksimal 2 quest per hari).' + (selfN < 2 ? ' Kamu masih bisa menambah pekerjaan mandiri.' : '') },
             { status: 429 }
           );
+        }
+        if (totalN >= 3) {
+          return NextResponse.json(
+            { error: 'Batas harian tercapai (maksimal 3 aktivitas per hari). Kembali besok.' },
+            { status: 429 }
+          );
+        }
+
+        // 1d. JEDA 3 JAM untuk aktivitas ke-3 (kalau sudah 2 total)
+        if (totalN >= 2) {
+          // Cari timestamp aktivitas ke-2 (terbaru)
+          let latestActivityTime: Date | null = null;
+          // Cek quest terbaru
+          const { data: latestQuest } = await supabase
+            .from('quest_daily_completions')
+            .select('submitted_at')
+            .eq('intern_id', intern.intern_id)
+            .eq('completion_date', todayStr)
+            .order('submitted_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (latestQuest?.submitted_at) latestActivityTime = new Date(latestQuest.submitted_at);
+          // Cek self-added terbaru
+          const { data: latestSelf } = await supabase
+            .from('activities')
+            .select('created_at')
+            .eq('intern_id', intern.intern_id)
+            .eq('created_by_intern', true)
+            .gte('created_at', ts.toISOString())
+            .lte('created_at', te.toISOString())
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (latestSelf?.created_at) {
+            const selfTime = new Date(latestSelf.created_at);
+            if (!latestActivityTime || selfTime > latestActivityTime) latestActivityTime = selfTime;
+          }
+          if (latestActivityTime) {
+            const elapsed = Date.now() - latestActivityTime.getTime();
+            const threeHours = 3 * 60 * 60 * 1000;
+            if (elapsed < threeHours) {
+              const remaining = Math.ceil((threeHours - elapsed) / (60 * 1000));
+              const hours = Math.floor(remaining / 60);
+              const mins = remaining % 60;
+              return NextResponse.json(
+                { error: `Aktivitas ke-3 harus menunggu jeda 3 jam dari aktivitas sebelumnya. Tunggu ${hours} jam ${mins} menit lagi.` },
+                { status: 429 }
+              );
+            }
+          }
         }
       } catch {
         console.warn('[quests/start] quest_daily_completions belum ada — lewati cek');
