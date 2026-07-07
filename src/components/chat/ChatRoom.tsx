@@ -348,6 +348,13 @@ export default function ChatRoom({ groupId, userRole, backHref }: ChatRoomProps)
           ) : (
             messages.map((msg) => {
               if (msg.message_type === 'system') {
+                // HIDE quest activity system messages (🔵✅✨) — info sudah ada di Quest Card
+                // KEEP: 🎁 bonus XP, 📦 archive, 🗑️ delete, ♻️ restore, 🚫 force-cancel, 📝 edit
+                if (msg.content.includes('memulai quest') ||
+                    msg.content.includes('menyelesaikan quest') ||
+                    msg.content.includes('mendeploy quest baru')) {
+                  return null;
+                }
                 return (
                   <div key={msg.id} className="text-center">
                     <span className="inline-block text-xs px-3 py-1 bg-gray-100 text-gray-600 rounded-full">

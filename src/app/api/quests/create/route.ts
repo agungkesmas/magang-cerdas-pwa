@@ -146,17 +146,8 @@ export async function POST(req: NextRequest) {
       .single();
     if (cErr) return NextResponse.json({ error: cErr.message }, { status: 500 });
 
-    // Insert system message
-    const recurringInfo = is_recurring ? ` (🔁 Harian ${parsedStartDate} → ${parsedEndDate})` : '';
-    const roleLabel = admin ? 'Admin' : 'Pembina';
-    await supabase.from('chat_messages').insert({
-      group_id,
-      sender_type: 'system',
-      sender_id: senderId,
-      sender_name: 'Sistem',
-      message_type: 'system',
-      content: `✨ ${roleLabel} ${senderName} mendeploy quest baru: "${title.trim()}" (+${xp} XP)${recurringInfo}`
-    });
+    // (REMOVED) System message "✨ X mendeploy quest baru" — Quest Card itu sendiri sudah jadi notifikasi
+    // Peserta akan langsung lihat Quest Card baru muncul di chat
 
     return NextResponse.json({ success: true, quest: activity, chat_message: chatMsg });
   } catch (e: any) {

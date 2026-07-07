@@ -136,15 +136,8 @@ export async function POST(req: NextRequest) {
         .eq('id', quest_id);
     }
 
-    // 7. Insert system message di chat
-    await supabase.from('chat_messages').insert({
-      group_id,
-      sender_type: 'system',
-      sender_id: intern.intern_id,
-      sender_name: 'Sistem',
-      message_type: 'system',
-      content: `🔵 ${intern.name} memulai quest "${quest.title}"`
-    });
+    // 7. (REMOVED) System message "🔵 X memulai quest" — info sudah ada di Quest Card "Progress Peserta"
+    // Aktivitas tetap tercatat di quest_logs untuk audit trail
 
     return NextResponse.json({ success: true, status: 'in_progress' });
   } catch (e: any) {

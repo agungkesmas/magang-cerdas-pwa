@@ -173,15 +173,8 @@ export async function POST(req: NextRequest) {
     const newTotalExp = (internData?.total_exp || 0) + xpAwarded;
     await supabase.from('interns').update({ total_exp: newTotalExp }).eq('id', intern.intern_id);
 
-    // 6. Insert system message di chat
-    await supabase.from('chat_messages').insert({
-      group_id,
-      sender_type: 'system',
-      sender_id: intern.intern_id,
-      sender_name: 'Sistem',
-      message_type: 'system',
-      content: `✅ ${intern.name} menyelesaikan quest "${quest.title}" (+${xpAwarded} XP)`
-    });
+    // 6. (REMOVED) System message "✅ X menyelesaikan quest" — info sudah ada di Quest Card "Progress Peserta"
+    // Aktivitas tetap tercatat di quest_logs / quest_daily_completions untuk audit trail
 
     return NextResponse.json({
       success: true,
