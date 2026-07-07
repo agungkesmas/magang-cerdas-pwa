@@ -2,10 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import SecurityWrapper from '@/components/shared/SecurityWrapper';
-<<<<<<< HEAD
-=======
 import ShareButton from '@/components/shared/ShareButton';
->>>>>>> ea33e57 (feat: tombol berbagi prestasi via WhatsApp/Web Share di 4 halaman peserta)
 import {
   Trophy,
   Lock,
