@@ -172,6 +172,39 @@ ATURAN JAWABAN:
 
 Jika user bertanya di luar konteks, jawab singkat: "Maaf, saya hanya melayani pertanyaan seputar dashboard peserta magang. Ada yang bisa saya bantu terkait check-in, tugas, quest, chat grup, atau sertifikat?"`,
 
+  // Common knowledge untuk semua dashboard
+  common_bpjs_knowledge: `
+
+INFO MANFAAT PROGRAM BPJS KETENAGAKERJAAN (untuk semua dashboard):
+BPJS Ketenagakerjaan mengelola 4 program jaminan sosial ketenagakerjaan:
+1. JKK (Jaminan Kecelakaan Kerja) — perlindungan saat kecelakaan kerja: biaya medis, santunan cacat, santunan kematian
+2. JKM (Jaminan Kematian) — santunan untuk ahli waris peserta yang meninggal (bukan karena kecelakaan kerja)
+3. JHT (Jaminan Hari Tua) — tabungan hari tua, bisa diambil saat pensiun, mengundurkan diri (min 5 tahun iuran), PHK, atau meninggal
+4. JP (Jaminan Pensiun) — pensiun bulanan saat usia pensiun (56 tahun), iuran dari 1% pekerja + 2% pemberi kerja
+
+PESERTA BPJS KETENAGAKERJAAN:
+- Pebeker penerima upah (PU): karyawan yang dibayar oleh pemberi kerja
+- Pekerja bukan penerima upah (PU): freelancer, wiraswasta, petani, nelayan, dll
+
+CARA DAFTAR:
+- PU: otomatis didaftarkan pemberi kerja
+- PU: daftar mandiri via JMO app, kantor BPJTK, atau mitra layanan
+
+KLAIM:
+- JKK & JKM: langsung ke kantor BPJTK dengan dokumen pendukung
+- JHT: klaim via JMO app (saldo ≥ 10 tahun atau kondisi khusus)
+- JP: otomatis saat usia pensiun
+
+APLIKASI JMO (Jamsostek Mobile):
+- App resmi BPJS Ketenagakerjaan untuk peserta
+- Cek saldo JHT/JP, klaim JHT, update data, cek status kepesertaan
+- Download di Play Store / App Store
+
+LINK PENTING:
+- Website: bpjsketenagakerjaan.go.id
+- Call center: 175
+- JMO app: Jamsostek Mobile di Play Store/App Store`,
+
   // ============================================================
   // BKK — Guru Bursa Kerja Khusus (5 menu)
   // ============================================================
@@ -269,6 +302,8 @@ function stubAnswer(dashboard: string, question: string): string {
       return 'Menu **Quest** (admin) menampilkan SEMUA quest yang pernah di-deploy oleh pembina mana saja. Bisa filter (Semua/Aktif/Lewat Deadline/Diarsipkan), cari, dan kelola: Edit (judul/deskripsi/deadline/max_slots/XP — XP hanya kalau belum ada peserta ambil), Archive, Restore, atau **Hapus Permanen** (wajib ketik "HAPUS", ditolak kalau ada submission). Semua aksi tercatat di audit log + broadcast system message ke chat grup.';
     if (q.includes('leaderboard') || q.includes('peringkat') || q.includes('top peserta') || q.includes('juara'))
       return 'Panel **Leaderboard** tampil di atas daftar peserta di menu **Peserta Magang**. Top 10 peserta aktif berdasarkan EXP, dengan filter departemen. Bisa di-collapse. Catatan: sertifikat diterbitkan berdasarkan completion & durasi magang, BUKAN peringkat leaderboard — jadi admin melihat leaderboard hanya untuk oversight, tidak mempengaruhi penerbitan sertifikat.';
+    if (q.includes('jkk') || q.includes('jht') || q.includes('jam') || q.includes('jp') || q.includes('pensiun') || q.includes('kecelakaan kerja') || q.includes('hari tua') || q.includes('manfaat bpjs') || q.includes('program bpjs'))
+      return '**BPJS Ketenagakerjaan** mengelola 4 program jaminan:\n\n1. **JKK** (Jaminan Kecelakaan Kerja) — perlindungan saat kecelakaan kerja: biaya medis, santunan cacat/kematian.\n2. **JKM** (Jaminan Kematian) — santunan ahli waris peserta meninggal.\n3. **JHT** (Jaminan Hari Tua) — tabungan hari tua, klaim via JMO app saat pensiun/PHK/resign (min 5 thn).\n4. **JP** (Jaminan Pensiun) — pensiun bulanan usia 56 thn.\n\nDaftar: pemberi kerja (PU) atau mandiri via JMO (BPBU). Call center: **175**.';
     return 'Maaf, saya hanya melayani pertanyaan seputar menu di dashboard ini. Coba tanya tentang: Peserta Magang (dengan Leaderboard), Permintaan Magang, Riwayat Aktivitas Peserta, Quest, Kehadiran, Chat Grup (broadcast/Deploy Quest), Kelola Grup, Sertifikat (Auto-Create/Verifikasi), Pembina, Institusi & BKK, atau Pengaturan (Kantor/AI Provider/Keamanan & Data/Kepala Cabang/Hari Libur/Sertifikat).';
   }
 
@@ -312,6 +347,8 @@ function stubAnswer(dashboard: string, question: string): string {
       return 'Menu **Beranda** menampilkan ringkasan statistik: grup dibimbing, total peserta, total pembina. Ada list "Grup yang Saya Bimbing" dengan tombol per peserta: icon **Clock** (timeline + kasih Bonus XP untuk aktivitas self-added), icon **Target** (assign tugas individual), tombol **DM** (chat 1-on-1), tombol **Tag** (flag peserta), tombol **🎁** (Quick Gift Modal — 3 klik kasih Bonus XP). Ada juga section **"Peserta Lain (Collaborator)"** — peserta di luar bimbingan Anda yang ada di grup yang sama (mis. "Diskusi Magang All"). Bisa kasih 🎁 gift cross-department kalau peserta lain divisi bantu pekerjaan Anda. Section "Persetujuan Check-in/out" kalau ada check-in peserta di hari libur yang perlu di-approve.';
     if (q.includes('peserta lain') || q.includes('collaborator') || q.includes('cross') || q.includes('divisi lain') || q.includes('departemen lain'))
       return '**Section "Peserta Lain (Collaborator)"** di menu **Beranda** menampilkan peserta di luar bimbingan Anda yang ada di grup yang sama (mis. "Diskusi Magang All"). Bisa kasih 🎁 Bonus XP ke mereka kalau bantu pekerjaan Anda — syarat: ada minimal 1 grup yang sama. Badge departemen (biru) menandakan peserta cross-department. Tombol tersedia: 🎁 Gift, Clock (timeline), DM (chat 1-on-1).';
+    if (q.includes('jkk') || q.includes('jht') || q.includes('jam') || q.includes('jp') || q.includes('pensiun') || q.includes('kecelakaan kerja') || q.includes('hari tua') || q.includes('manfaat bpjs') || q.includes('program bpjs'))
+      return '**BPJS Ketenagakerjaan** mengelola 4 program jaminan:\n\n1. **JKK** (Jaminan Kecelakaan Kerja) — biaya medis, santunan cacat/kematian.\n2. **JKM** (Jaminan Kematian) — santunan ahli waris.\n3. **JHT** (Jaminan Hari Tua) — tabungan hari tua, klaim via JMO.\n4. **JP** (Jaminan Pensiun) — pensiun bulanan usia 56 thn.\n\nCall center: **175**. App JMO: Jamsostek Mobile.';
     return 'Maaf, saya hanya melayani pertanyaan seputar dashboard pembina. Coba tanya tentang: Beranda, Grup Saya, Chat Grup, Deploy Quest, Edit/Hapus Quest, Quest Saya, **Bonus XP (Gift)**, Timeline Peserta, Tag Peserta, kirim foto, atau Clear File.';
   }
 
@@ -345,6 +382,8 @@ function stubAnswer(dashboard: string, question: string): string {
       return 'Untuk edit profil: menu **Profil**. Yang bisa diedit: foto profil (max 3MB), email, WhatsApp, nomor telepon lain. Yang TIDAK bisa diubah (hubungi admin): username, nama, password, jurusan, departemen, institusi, periode magang, EXP, streak.';
     if (q.includes('home') || q.includes('beranda') || q.includes('dashboard'))
       return 'Menu **Home** menampilkan: avatar + LEVEL badge, EXP bar, Waktu Magang progress (hari tersisa), Tier saat ini, Streak hari, status Check-In hari ini, kartu Survival Kit Academy, Leaderboard Top 5, Notifikasi terbaru (nudges). Bell icon pojok kanan → link ke Vault.';
+    if (q.includes('jkk') || q.includes('jht') || q.includes('jam') || q.includes('jp') || q.includes('pensiun') || q.includes('kecelakaan kerja') || q.includes('hari tua') || q.includes('manfaat bpjs') || q.includes('program bpjs'))
+      return '**BPJS Ketenagakerjaan** mengelola 4 program jaminan:\n\n1. **JKK** (Jaminan Kecelakaan Kerja) — perlindungan saat kecelakaan kerja.\n2. **JKM** (Jaminan Kematian) — santunan ahli waris.\n3. **JHT** (Jaminan Hari Tua) — tabungan hari tua, klaim via JMO app.\n4. **JP** (Jaminan Pensiun) — pensiun bulanan usia 56 thn.\n\nKamu lagi magang di BPJS Ketenagakerjaan — pelajari programnya, ini ilmu berharga! App JMO: Jamsostek Mobile. Call center: **175**.';
     return 'Maaf, saya hanya melayani pertanyaan seputar menu di dashboard ini. Coba tanya tentang: Check-In, Aktivitas, Chat Grup, Quest, Vault/Sertifikat, Survival Kit, atau Profil.';
   }
 
@@ -368,6 +407,8 @@ function stubAnswer(dashboard: string, question: string): string {
       return 'Ya, BKK bisa membimbing multi-sekolah (many-to-many). Di Beranda, semua sekolah ditampilkan sebagai pill. Di Peserta Magang, ada filter by sekolah kalau >1. Privacy: BKK hanya lihat peserta dari sekolah yang dibimbing.';
     if (q.includes('beranda') || q.includes('home') || q.includes('dashboard'))
       return 'Menu **Beranda** menampilkan: welcome header (nama + sekolah), quick actions (Ajukan Magang/Lihat Peserta/Arsip Sertifikat), summary Permintaan Magang, 4 StatCards (Total Peserta, Rata-rata EXP, Sertifikat Terbit, Akan Selesai <14 hari), Leaderboard Top 5, Akan Selesai Soon, Sertifikat Baru Terbit, info privacy.';
+    if (q.includes('jkk') || q.includes('jht') || q.includes('jam') || q.includes('jp') || q.includes('pensiun') || q.includes('kecelakaan kerja') || q.includes('hari tua') || q.includes('manfaat bpjs') || q.includes('program bpjs'))
+      return '**BPJS Ketenagakerjaan** mengelola 4 program jaminan: JKK (kecelakaan kerja), JKM (kematian), JHT (hari tua), JP (pensiun). Peserta daftar via pemberi kerja atau mandiri via JMO app. Call center: **175**.';
     return 'Maaf, saya hanya melayani pertanyaan seputar dashboard BKK. Coba tanya tentang: Beranda, Permintaan Magang, Peserta Magang, Sertifikat, Profil, ID BKK, atau Privacy BKK.';
   }
 
