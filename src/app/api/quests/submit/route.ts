@@ -93,33 +93,50 @@ export async function POST(req: NextRequest) {
 
     if (quest.is_recurring) {
       // 4a. RECURRING: INSERT ke quest_daily_completions (1 row per hari)
-      const { data: dailyCompletion, error: dErr } = await supabase
-        .from('quest_daily_completions')
-        .insert({
-          quest_id,
-          intern_id: intern.intern_id,
-          group_id,
-          completion_date: todayStr,
-          submission_notes: submission_notes?.trim() || null,
-          xp_awarded: xpAwarded,
-          submitted_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-      if (dErr) {
-        if (dErr.code === '23505') {
-          return NextResponse.json(
-            { error: 'Sudah selesai quest ini hari ini (race condition). Reload halaman.' },
-            { status: 409 }
-          );
+      // Fallback kalau tabel belum ada (migration belum di-run): pakai quest_logs langsung
+      let dailyInsertSuccess = false;
+      try {
+        const { data: dailyCompletion, error: dErr } = await supabase
+          .from('quest_daily_completions')
+          .insert({
+            quest_id,
+            intern_id: intern.intern_id,
+            group_id,
+            completion_date: todayStr,
+            submission_notes: submission_notes?.trim() || null,
+            xp_awarded: xpAwarded,
+            submitted_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+        if (dErr) {
+          if (dErr.code === '23505') {
+            return NextResponse.json(
+              { error: 'Sudah selesai quest ini hari ini (race condition). Reload halaman.' },
+              { status: 409 }
+            );
+          }
+          // Tabel belum ada (code 42P01) atau error lain — fallback ke quest_logs
+          console.warn('[quests/submit] quest_daily_completions error, fallback to quest_logs:', dErr.message);
+        } else {
+          dailyInsertSuccess = true;
         }
-        return NextResponse.json({ error: dErr.message }, { status: 500 });
+      } catch (err) {
+        console.warn('[quests/submit] quest_daily_completions exception, fallback:', err);
       }
 
       // 4b. Reset quest_log status ke 'available' supaya besok bisa START lagi
+      // Kalau daily_insert success: status='available' (clean state)
+      // Kalau fallback: status='available' juga (supaya besok bisa START, walau tanpa audit trail harian)
       await supabase
         .from('quest_logs')
-        .update({ status: 'available', started_at: null })
+        .update({
+          status: 'available',
+          started_at: null,
+          submitted_at: new Date().toISOString(),
+          submission_notes: submission_notes?.trim() || null,
+          xp_awarded: xpAwarded
+        })
         .eq('id', log.id);
     } else {
       // 4c. NON-RECURRING: Update quest_log: completed (permanen)

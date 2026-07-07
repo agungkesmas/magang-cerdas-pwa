@@ -89,12 +89,14 @@ export async function POST(req: NextRequest) {
       if (existing.status === 'in_progress') {
         return NextResponse.json({ error: 'Anda sudah start quest ini' }, { status: 409 });
       }
-      // Untuk recurring: status 'completed' tidak mungkin lagi (sudah di-reset ke 'available' oleh migration)
-      // Untuk non-recurring: status 'completed' = sudah selesai permanen
-      if (existing.status === 'completed') {
+      // SELF-HEALING untuk quest recurring:
+      // Kalau status='completed' (legacy dari kode lama sebelum fix, ATAU migration belum di-run),
+      // auto-reset ke 'in_progress' supaya bisa mulai lagi.
+      // Untuk non-recurring: status='completed' = permanen, tolak.
+      if (existing.status === 'completed' && !quest.is_recurring) {
         return NextResponse.json({ error: 'Anda sudah menyelesaikan quest ini' }, { status: 409 });
       }
-      // Kalau status 'cancelled' atau 'available', allow re-start
+      // Untuk recurring (status='completed' legacy atau 'available'/'cancelled'): allow re-start
       await supabase
         .from('quest_logs')
         .update({ status: 'in_progress', started_at: new Date().toISOString() })
