@@ -390,7 +390,7 @@ function CertificatePreview({ profile, certSettings }: { profile: any; certSetti
                 <img
                   src={logoUrl}
                   alt="Logo"
-                  style={{ height: `${previewLogoSize}px`, width: 'auto', filter: 'blur(3px)' }}
+                  style={{ height: `${previewLogoSize}px`, width: 'auto', filter: 'blur(5px)' }}
                   className="object-contain"
                   onError={(e) => { (e.target as HTMLImageElement).src = '/bpjs-ketenagakerjaan-logo.png'; }}
                 />
@@ -398,13 +398,13 @@ function CertificatePreview({ profile, certSettings }: { profile: any; certSetti
                 <img
                   src="/bpjs-ketenagakerjaan-logo.png"
                   alt="BPJS Ketenagakerjaan"
-                  style={{ height: `${previewLogoSize}px`, width: 'auto', filter: 'blur(3px)' }}
+                  style={{ height: `${previewLogoSize}px`, width: 'auto', filter: 'blur(5px)' }}
                   className="object-contain"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
                     const parent = (e.target as HTMLImageElement).parentElement;
                     if (parent) {
-                      parent.innerHTML = '<div class="font-bold text-bpjs-blue-dark text-sm leading-tight">BPJS KETENAGAKERJAAN</div><div class="text-[10px] text-gray-500">CABANG CIREBON</div>';
+                      parent.innerHTML = '<div class="font-bold text-bpjs-blue-dark text-sm leading-tight" style="filter: blur(4px)">BPJS KETENAGAKERJAAN</div><div class="text-[10px] text-gray-500" style="filter: blur(3px)">CABANG CIREBON</div>';
                     }
                   }}
                 />
@@ -428,7 +428,7 @@ function CertificatePreview({ profile, certSettings }: { profile: any; certSetti
               {profile.school_origin || 'Institusi'} • {profile.major}
             </p>
             <p className="text-xs text-gray-700 mt-2">
-              telah menyelesaikan program magang di <span className="font-semibold text-bpjs-blue-dark">BPJS Ketenagakerjaan Cabang Cirebon</span> pada departemen <span className="font-semibold text-bpjs-blue-dark">{profile.department}</span>
+              telah menyelesaikan program magang di <span className="font-semibold text-bpjs-blue-dark" style={{ filter: 'blur(3px)' }}>BPJS Ketenagakerjaan Cabang Cirebon</span> pada departemen <span className="font-semibold text-bpjs-blue-dark">{profile.department}</span>
             </p>
             <p className="text-xs font-semibold text-gray-800 mt-1">
               {new Date(profile.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} — {new Date(profile.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -485,7 +485,7 @@ function CertificatePreview({ profile, certSettings }: { profile: any; certSetti
               <div className="font-mono text-[11px] font-bold text-gray-400">MC-XXXX-XXXXXX</div>
               <div className="text-[9px] text-gray-400 mt-0.5">Scan QR untuk verifikasi online</div>
             </div>
-            <div className="text-center">
+            <div className="text-center" style={{ filter: 'blur(4px)' }}>
               <div className="h-8 mb-1 w-32 bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
               <div className="border-t border-gray-300 pt-0.5 min-w-[140px]">
                 <div className="text-[10px] font-bold text-gray-400">Kepala Cabang</div>
