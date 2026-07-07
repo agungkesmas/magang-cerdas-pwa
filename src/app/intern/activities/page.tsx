@@ -779,14 +779,11 @@ function InternAddActivityModal({ onClose, onSuccess }: { onClose: () => void; o
           </div>
           <div>
             <label className="block text-sm font-medium text-white/80 mb-1">XP Reward</label>
-            <select value={form.xp_reward} onChange={(e) => setForm({ ...form, xp_reward: e.target.value })}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-bpjs-yellow">
-              <option value="10" className="bg-agent-card">10 XP (Easy)</option>
-              <option value="20" className="bg-agent-card">20 XP (Medium)</option>
-              <option value="30" className="bg-agent-card">30 XP (Hard)</option>
-              <option value="50" className="bg-agent-card">50 XP (Expert)</option>
-            </select>
-            <p className="text-[10px] text-white/40 mt-1">XP akan didapat setelah aktivitas ditandai selesai. Pembina bisa beri Bonus XP tambahan jika kerja Anda istimewa.</p>
+            <div className="px-3 py-2 border border-white/10 bg-white/5 rounded-lg text-white flex items-center gap-2">
+              <Zap className="w-4 h-4 text-bpjs-yellow" />
+              <span className="font-semibold">20 XP</span>
+              <span className="text-xs text-white/40 ml-auto">Fixed — pembina bisa beri Bonus XP tambahan</span>
+            </div>
           </div>
           {/* Bidang terkait — peserta kasih sinyal aktivitas ini berhubungan dengan bidang X */}
           <div>
