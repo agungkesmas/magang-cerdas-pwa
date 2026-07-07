@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import ShareButton from '@/components/shared/ShareButton';
 import {
   Users,
   Award,
@@ -211,6 +212,19 @@ export default function BKKHomePage() {
           value={stats.near_end_count}
           color="orange"
           sub="< 14 hari lagi"
+        />
+      </div>
+
+      {/* Share prestasi sekolah */}
+      <div className="flex justify-end">
+        <ShareButton
+          data={{
+            title: 'Kerjasama Magang BPJS Ketenagakerjaan',
+            text: `🏫 ${data?.teacher?.schools?.[0] || 'Sekolah kami'} berkolaborasi dengan BPJS Ketenagakerjaan Cabang Cirebon!\n\n👥 ${stats.total_interns} peserta magang (${stats.active_interns} aktif)\n⚡ Rata-rata ${stats.avg_exp} EXP\n🏆 ${stats.certified_count} sertifikat terbit\n📅 ${stats.near_end_count} peserta akan selesai < 14 hari\n\nKerjasama BKK — BPJS Ketenagakerjaan\n#MagangBPJS #BKK #BPJSKetenagakerjaan #MagangCerdas`,
+            url: typeof window !== 'undefined' ? window.location.origin : ''
+          }}
+          label="Bagikan Prestasi Sekolah"
+          variant="default"
         />
       </div>
 

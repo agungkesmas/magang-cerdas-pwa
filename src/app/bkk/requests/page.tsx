@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import SecurityWrapper from '@/components/shared/SecurityWrapper';
 import {
   Send,
   Inbox,
@@ -105,6 +106,7 @@ export default function BKKRequestsPage() {
   }
 
   return (
+    <SecurityWrapper>
     <div className="space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -230,6 +232,7 @@ export default function BKKRequestsPage() {
         />
       )}
     </div>
+    </SecurityWrapper>
   );
 }
 

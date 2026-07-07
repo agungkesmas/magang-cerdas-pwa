@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import ShareButton from '@/components/shared/ShareButton';
 import {
   UserCircle,
   Mail,
@@ -162,6 +163,17 @@ export default function BKKProfilePage() {
                 Login terakhir: {new Date(profile.last_login_at).toLocaleString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </p>
             )}
+            <div className="mt-2">
+              <ShareButton
+                data={{
+                  title: 'Guru BKK — Pembimbing Magang',
+                  text: `👨‍🏫 ${profile.name}\n🏫 Guru BKK\n\nMembimbing peserta magang di BPJS Ketenagakerjaan Cabang Cirebon melalui program MAGANG-CERDAS.\n\n#BKK #MagangBPJS #BPJSKetenagakerjaan #PembimbingSekolah`,
+                  url: typeof window !== 'undefined' ? window.location.origin : ''
+                }}
+                label="Bagikan Profil"
+                variant="compact"
+              />
+            </div>
           </div>
         </div>
 

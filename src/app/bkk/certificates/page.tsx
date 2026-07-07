@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import ShareButton from '@/components/shared/ShareButton';
 import {
   Award,
   Loader2,
@@ -103,7 +104,7 @@ function BKKCertsContent() {
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex items-center gap-2 mb-1">
             <Star className="w-5 h-5 text-amber-500" />
-            <span className="text-xs text-gray-500">Siap Diterbitkan (tier Competent+)</span>
+            <span className="text-xs text-gray-500">Siap Diterbitkan</span>
           </div>
           <div className="text-2xl font-bold text-gray-900">{pending.length}</div>
         </div>
@@ -115,6 +116,21 @@ function BKKCertsContent() {
           <div className="text-2xl font-bold text-gray-900">{interns.length - certified.length - pending.length}</div>
         </div>
       </div>
+
+      {/* Share capaian */}
+      {certified.length > 0 && (
+        <div className="flex justify-end">
+          <ShareButton
+            data={{
+              title: 'Sertifikat Magang BPJS',
+              text: `🏆 ${certified.length} peserta magang dari sekolah kami telah mendapatkan sertifikat resmi dari BPJS Ketenagakerjaan Cabang Cirebon!\n\nProgram MAGANG-CERDAS — kerjasama BKK dengan BPJS Ketenagakerjaan.\n\n#MagangBPJS #SertifikatMagang #BPJSKetenagakerjaan #BKK`,
+              url: typeof window !== 'undefined' ? window.location.origin : ''
+            }}
+            label="Bagikan Capaian"
+            variant="card"
+          />
+        </div>
+      )}
 
       {/* Search + Filter */}
       <div className="flex flex-wrap gap-2 items-center">
