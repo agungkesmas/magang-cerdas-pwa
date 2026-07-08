@@ -10,8 +10,15 @@ import {
   FileText,
   XCircle,
   AlertCircle,
-  ShieldCheck
+  ShieldCheck,
+  AlertTriangle,
+  ShieldAlert,
+  Flag,
+  ScanSearch,
+  ZoomIn,
+  X
 } from 'lucide-react';
+import { fetchFresh } from '@/lib/fresh-fetch';
 
 interface AttendanceRow {
   id: string;
@@ -72,17 +79,24 @@ export default function AdminAttendancePage() {
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [approvedLeaveToday, setApprovedLeaveToday] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'check-in' | 'check-out'>('all');
+  const [filter, setFilter] = useState<'all' | 'check-in' | 'check-out' | 'suspicious'>('all');
   const [reviewing, setReviewing] = useState<string | null>(null);
   const [rejectNotes, setRejectNotes] = useState<Record<string, string>>({});
+  // Suspicious detection state
+  const [suspiciousPatterns, setSuspiciousPatterns] = useState<any[]>([]);
+  const [scanningPatterns, setScanningPatterns] = useState(false);
+  const [zoomPhoto, setZoomPhoto] = useState<string | null>(null);
+  const [flagging, setFlagging] = useState<string | null>(null);
+  const [flagModal, setFlagModal] = useState<{ attId: string; internName: string } | null>(null);
+  const [flagReason, setFlagReason] = useState('');
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
       const [attRes, internRes, leaveRes] = await Promise.all([
-        fetch('/api/attendance/list?limit=100'),
-        fetch('/api/interns/list'),
-        fetch('/api/leave/list')
+        fetchFresh('/api/attendance/list?limit=100'),
+        fetchFresh('/api/interns/list'),
+        fetchFresh('/api/leave/list')
       ]);
       const attData = await attRes.json();
       const internData = await internRes.json();
@@ -180,13 +194,73 @@ export default function AdminAttendancePage() {
     }
   };
 
-  const filtered = filter === 'all' ? records : records.filter((r) => r.type.toLowerCase() === filter);
+  const filtered = filter === 'all'
+    ? records
+    : filter === 'suspicious'
+      ? records.filter((r: any) => r.is_suspicious)
+      : records.filter((r) => r.type.toLowerCase() === filter);
   const pendingLeaves = leaveRequests.filter((lr) => lr.status === 'pending');
   const todayOnLeave = leaveRequests.filter((lr) => {
     if (lr.status !== 'approved') return false;
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
     return today >= lr.start_date && today <= lr.end_date;
   });
+
+  // ============================================================
+  // SUSPICIOUS DETECTION — scan pattern mencurigakan
+  // ============================================================
+  const handleScanPatterns = async () => {
+    setScanningPatterns(true);
+    try {
+      const res = await fetchFresh('/api/attendance/detect-suspicious');
+      const data = await res.json();
+      if (data.success) {
+        setSuspiciousPatterns(data.patterns || []);
+        if (data.patterns?.length === 0) {
+          alert('✅ Tidak ada pattern mencurigakan terdeteksi dalam 14 hari terakhir.');
+        }
+      } else {
+        alert('Error: ' + data.error);
+      }
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    } finally {
+      setScanningPatterns(false);
+    }
+  };
+
+  const handleFlagSuspicious = async (attId: string, reason: string) => {
+    setFlagging(attId);
+    try {
+      const res = await fetch('/api/attendance/flag-suspicious', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attendance_id: attId, reason })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      alert(`✅ ${data.message}`);
+      setFlagModal(null);
+      setFlagReason('');
+      fetchAll();
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    } finally {
+      setFlagging(null);
+    }
+  };
+
+  const handleUnflagSuspicious = async (attId: string) => {
+    if (!confirm('Hapus flag mencurigakan? Nudge sudah terkirim tidak bisa di-recall.')) return;
+    try {
+      const res = await fetch(`/api/attendance/flag-suspicious?attendance_id=${attId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      fetchAll();
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -332,20 +406,65 @@ export default function AdminAttendancePage() {
         </div>
       )}
 
-      {/* Filter */}
-      <div className="flex gap-2">
-        {(['all', 'check-in', 'check-out'] as const).map((f) => (
+      {/* Filter & Scan Suspicious */}
+      <div className="flex flex-wrap items-center gap-2">
+        {(['all', 'check-in', 'check-out', 'suspicious'] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
             className={`px-3 py-1.5 rounded-md text-sm font-medium ${
-              filter === f ? 'bg-bpjs-blue text-white' : 'bg-white border border-gray-200 text-gray-700'
+              filter === f
+                ? f === 'suspicious' ? 'bg-red-500 text-white' : 'bg-bpjs-blue text-white'
+                : 'bg-white border border-gray-200 text-gray-700'
             }`}
           >
-            {f === 'all' ? 'Semua' : f === 'check-in' ? 'Check-In' : 'Check-Out'}
+            {f === 'all' ? 'Semua' : f === 'check-in' ? 'Check-In' : f === 'check-out' ? 'Check-Out' : `⚠️ Mencurigakan (${records.filter((r: any) => r.is_suspicious).length})`}
           </button>
         ))}
+        <button
+          onClick={handleScanPatterns}
+          disabled={scanningPatterns}
+          className="ml-auto inline-flex items-center gap-1.5 bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium px-3 py-1.5 rounded-md disabled:opacity-50"
+          title="Scan pattern mencurigakan (GPS/timestamp konsisten)"
+        >
+          <ScanSearch className={`w-4 h-4 ${scanningPatterns ? 'animate-spin' : ''}`} />
+          {scanningPatterns ? 'Scanning...' : 'Scan Pattern'}
+        </button>
       </div>
+
+      {/* Suspicious Patterns Detected */}
+      {suspiciousPatterns.length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <ShieldAlert className="w-5 h-5 text-red-600" />
+            <h2 className="font-semibold text-red-900">
+              Pattern Mencurigakan Terdeteksi ({suspiciousPatterns.length})
+            </h2>
+          </div>
+          <div className="space-y-2">
+            {suspiciousPatterns.map((p, i) => (
+              <div key={i} className="bg-white rounded-lg p-3 border border-red-100">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-gray-900">{p.intern_name}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                        p.severity === 'high' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {p.severity === 'high' ? '🔴 Tinggi' : '🟡 Sedang'}
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                        {p.pattern_type}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">{p.description}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Records */}
       {loading ? (
@@ -367,12 +486,13 @@ export default function AdminAttendancePage() {
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Tipe</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Waktu</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Lokasi</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Foto</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Foto (klik zoom)</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filtered.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50">
+                {filtered.map((r: any) => (
+                  <tr key={r.id} className={`hover:bg-gray-50 ${(r.is_suspicious) ? 'bg-red-50' : ''}`}>
                     <td className="px-4 py-3">
                       <div className="font-medium text-gray-900">{r.intern?.name || 'Unknown'}</div>
                       <div className="text-xs text-gray-500">{r.intern?.department}</div>
@@ -407,17 +527,112 @@ export default function AdminAttendancePage() {
                     </td>
                     <td className="px-4 py-3">
                       {r.photo_url ? (
-                        <a href={r.photo_url} target="_blank" rel="noopener noreferrer">
-                          <img src={r.photo_url} alt="Selfie" className="w-10 h-10 rounded object-cover" />
-                        </a>
+                        <button
+                          onClick={() => setZoomPhoto(r.photo_url)}
+                          className="relative group"
+                          title="Klik untuk zoom"
+                        >
+                          <img src={r.photo_url} alt="Selfie" className="w-16 h-16 rounded object-cover border-2 border-gray-200 group-hover:border-bpjs-blue" />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 rounded flex items-center justify-center transition-colors">
+                            <ZoomIn className="w-4 h-4 text-white opacity-0 group-hover:opacity-100" />
+                          </div>
+                        </button>
                       ) : (
                         <span className="text-gray-400 text-xs">No photo</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {r.is_suspicious ? (
+                        <div className="flex flex-col gap-1">
+                          <span className="inline-flex items-center gap-1 text-red-700 bg-red-100 px-2 py-0.5 rounded-full text-xs font-medium">
+                            <AlertTriangle className="w-3 h-3" /> Mencurigakan
+                          </span>
+                          {r.suspicious_reason && (
+                            <span className="text-[10px] text-red-600 italic max-w-[200px] truncate" title={r.suspicious_reason}>
+                              {r.suspicious_reason}
+                            </span>
+                          )}
+                          <button
+                            onClick={() => handleUnflagSuspicious(r.id)}
+                            className="text-[10px] text-gray-500 hover:text-gray-700 underline"
+                          >
+                            Hapus flag
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setFlagModal({ attId: r.id, internName: r.intern?.name || 'Unknown' })}
+                          className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 hover:bg-amber-100 px-2 py-1 rounded-md text-xs font-medium border border-amber-200"
+                          title="Tandai foto ini mencurigakan"
+                        >
+                          <Flag className="w-3 h-3" /> Tandai
+                        </button>
                       )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Zoom Photo Modal */}
+      {zoomPhoto && (
+        <div
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          onClick={() => setZoomPhoto(null)}
+        >
+          <button className="absolute top-4 right-4 text-white p-2 bg-white/10 hover:bg-white/20 rounded-lg">
+            <X className="w-6 h-6" />
+          </button>
+          <img
+            src={zoomPhoto}
+            alt="Selfie zoom"
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
+      {/* Flag Modal — input alasan */}
+      {flagModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600" />
+              <h3 className="font-bold text-gray-900">Tandai Foto Mencurigakan</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-3">
+              Foto <strong>{flagModal.internName}</strong> akan ditandai mencurigakan.
+              Peserta akan otomatis dapat nudge peringatan.
+            </p>
+            <textarea
+              value={flagReason}
+              onChange={(e) => setFlagReason(e.target.value)}
+              placeholder="Alasan (opsional): mis. 'foto tidak jelas', 'beda orang', 'seperti screenshot'..."
+              className="w-full p-2 border border-gray-200 rounded-md text-sm h-20 mb-3"
+              maxLength={200}
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => { setFlagModal(null); setFlagReason(''); }}
+                className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-md"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => handleFlagSuspicious(flagModal.attId, flagReason)}
+                disabled={flagging === flagModal.attId}
+                className="px-3 py-1.5 text-sm bg-red-500 hover:bg-red-600 text-white rounded-md disabled:opacity-50"
+              >
+                {flagging === flagModal.attId ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  '🚩 Tandai & Kirim Nudge'
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
