@@ -237,25 +237,21 @@ export async function POST(req: NextRequest) {
         .gte('timestamp', monthAgo.toISOString());
       const lateThisMonth = monthCIs?.length || 0;
 
-      // Pesan berjenjang — penuh kasih, edukatif
+      // Pesan berjenjang — SINGKAT, penuh kasih, edukatif
       let msg = '';
       if (lateTier === 'light') {
-        msg = `Hai! Kamu check-in jam ${wibHourStr} WIB — sedikit telat ya? Tenang, EXP hari ini masih 75% (${expToGrant} dari 20). `;
+        msg = `Sedikit telat ya! EXP hari ini 75% (${expToGrant} dari 20). Besok lebih awal ya, semangat! ✨`;
       } else if (lateTier === 'moderate') {
-        msg = `Halo! Kamu check-in jam ${wibHourStr} WIB — terlambat sekitar setengah jam. EXP hari ini 50% (${expToGrant} dari 20). `;
+        msg = `Telat setengah jam. EXP 50% (${expToGrant} dari 20). Besok berangkat lebih pagi ya! 🙌`;
       } else {
-        msg = `Halo! Kamu check-in jam ${wibHourStr} WIB — sudah lebih dari 1 jam dari jadwal. EXP hari ini 25% (${expToGrant} dari 20). `;
+        msg = `Telat lebih 1 jam. EXP 25% (${expToGrant} dari 20). Kalau ada kendala, hubungi admin ya — mereka siap bantu. 💪`;
       }
 
-      // Escalation berdasarkan frekuensi
+      // Escalation SINGKAT berdasarkan frekuensi
       if (lateThisMonth >= 5) {
-        msg += `\n\nAku perhatikan kamu sudah ${lateThisMonth}x terlambat bulan ini. Mungkin ada kendala yang perlu dibahas? Jangan ragu hubungi admin BPJS ya — mereka pasti ngerti dan siap bantu cari solusi. Jangan menyerah, setiap hari baru selalu ada kesempatan untuk lebih baik! 💪`;
+        msg += `\n\n⚠️ Sudah ${lateThisMonth}x telat bulan ini. Yuk hubungi admin BPJS untuk diskusi solusi.`;
       } else if (lateThisWeek >= 3) {
-        msg += `\n\nMinggu ini sudah ${lateThisWeek}x telat. Kalau ada kendala transport atau jadwal, coba diskusi sama admin ya — mereka pasti bantu. Besok coba berangkat lebih pagi, semangat! 🙌`;
-      } else if (lateTier === 'heavy') {
-        msg += `\n\nKalau ada kendala transport atau memang jauh dari kantor, coba cari solusi ya — mungkin berangkat lebih pagi? Setiap usaha kamu pasti dihargai. Besok baru hari baru, semangat! ✨`;
-      } else {
-        msg += `\n\nTetap semangat ya! Besok coba datang lebih awal — kamu pasti bisa! ✨`;
+        msg += `\n\n📌 Sudah ${lateThisWeek}x telat minggu ini. Ada kendala? Coba diskusi sama admin ya.`;
       }
 
       lateEducation = {
