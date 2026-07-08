@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import AIResepsionist from '@/components/shared/AIResepsionist';
+import PWACacheCleanup from '@/components/shared/PWACacheCleanup';
 import {
   Users,
   CheckSquare,
@@ -172,6 +173,9 @@ export default function AdminShell({
 
       {/* AI Resepsionis */}
       <AIResepsionist dashboard="admin" welcomeName={admin.name?.split(' ')[0]} accentColor="blue" />
+
+      {/* PWA Cache Cleanup — auto-detect & clear stale cache */}
+      <PWACacheCleanup />
     </div>
   );
 }

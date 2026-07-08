@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import AIResepsionist from '@/components/shared/AIResepsionist';
+import PWACacheCleanup from '@/components/shared/PWACacheCleanup';
 import {
   Home,
   MapPin,
@@ -193,6 +194,9 @@ export default function InternShell({
       {!pathname.startsWith('/intern/chat/') && (
         <AIResepsionist dashboard="intern" welcomeName={intern.name?.split(' ')[0]} accentColor="purple" bottomOffset="bottom-20" />
       )}
+
+      {/* PWA Cache Cleanup — auto-detect & clear stale cache */}
+      <PWACacheCleanup />
     </div>
   );
 }

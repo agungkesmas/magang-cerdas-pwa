@@ -16,6 +16,7 @@ import {
   Target
 } from 'lucide-react';
 import AIResepsionist from '@/components/shared/AIResepsionist';
+import PWACacheCleanup from '@/components/shared/PWACacheCleanup';
 
 const NAV = [
   { href: '/pembina/home', label: 'Beranda', icon: Home },
@@ -130,6 +131,9 @@ export default function PembinaShell({
       {!pathname.startsWith('/pembina/chat/') && (
         <AIResepsionist dashboard="pembina" welcomeName={pembina.name?.split(' ')[0]} accentColor="purple" />
       )}
+
+      {/* PWA Cache Cleanup — auto-detect & clear stale cache */}
+      <PWACacheCleanup />
     </div>
   );
 }

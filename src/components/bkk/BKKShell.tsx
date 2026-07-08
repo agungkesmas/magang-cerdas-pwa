@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import AIResepsionist from '@/components/shared/AIResepsionist';
+import PWACacheCleanup from '@/components/shared/PWACacheCleanup';
 import { Home, Users, LogOut, GraduationCap, Menu, X, UserCircle, Award, Send } from 'lucide-react';
 
 const NAV = [
@@ -139,6 +140,9 @@ export default function BKKShell({
 
       {/* AI Resepsionis */}
       <AIResepsionist dashboard="bkk" welcomeName={teacher.name?.split(' ')[0]} accentColor="green" />
+
+      {/* PWA Cache Cleanup — auto-detect & clear stale cache */}
+      <PWACacheCleanup />
     </div>
   );
 }

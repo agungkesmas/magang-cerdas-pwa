@@ -2,11 +2,93 @@ const withPWAInit = require('@ducanh2912/next-pwa').default;
 
 const withPWA = withPWAInit({
   dest: 'public',
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
+  cacheOnFrontendNav: true,
+  aggressiveFrontEndNavCaching: false, // disable aggressive caching — cause API cache stuck
   reloadOnOnline: true,
   disable: process.env.NODE_ENV === 'development',
-  workboxOptions: { disableDevLogs: true }
+  workboxOptions: {
+    disableDevLogs: true,
+    runtimeCaching: [
+      // ============================================================
+      // CRITICAL: JANGAN cache API routes — selalu fetch dari network
+      // Bug lama: aggressiveFrontEndNavCaching=true + default Workbox
+      // cache API /api/groups/list dll selama 24 jam. Akibatnya user
+      // lihat data stale (grup lama) walaupun server sudah return data baru.
+      // ============================================================
+      {
+        urlPattern: /\/api\/.*/i,
+        handler: 'NetworkOnly', // JANGAN cache API — selalu network
+      },
+      // Start URL — NetworkFirst supaya kalau online, selalu ambil terbaru
+      {
+        urlPattern: /^\/$/i,
+        handler: 'NetworkFirst',
+        options: {
+          cacheName: 'start-url',
+          networkTimeoutSeconds: 5,
+          expiration: { maxEntries: 1, maxAgeSeconds: 300 } // 5 menit saja
+        }
+      },
+      // Static JS chunks — CacheFirst (hashed filenames, aman di-cache lama)
+      {
+        urlPattern: /\/_next\/static\/.+\.js$/i,
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'next-static-js-assets',
+          expiration: { maxEntries: 64, maxAgeSeconds: 86400 }
+        }
+      },
+      // Static CSS — StaleWhileRevalidate
+      {
+        urlPattern: /\.(?:css)$/i,
+        handler: 'StaleWhileRevalidate',
+        options: {
+          cacheName: 'static-style-assets',
+          expiration: { maxEntries: 32, maxAgeSeconds: 86400 }
+        }
+      },
+      // Images — StaleWhileRevalidate
+      {
+        urlPattern: /\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,
+        handler: 'StaleWhileRevalidate',
+        options: {
+          cacheName: 'static-image-assets',
+          expiration: { maxEntries: 64, maxAgeSeconds: 2592000 }
+        }
+      },
+      // Fonts Google
+      {
+        urlPattern: /^https:\/\/fonts\.(?:gstatic)\.com\/.*/i,
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'google-fonts-webfonts',
+          expiration: { maxEntries: 4, maxAgeSeconds: 31536000 }
+        }
+      },
+      {
+        urlPattern: /^https:\/\/fonts\.(?:googleapis)\.com\/.*/i,
+        handler: 'StaleWhileRevalidate',
+        options: {
+          cacheName: 'google-fonts-stylesheets',
+          expiration: { maxEntries: 4, maxAgeSeconds: 604800 }
+        }
+      },
+      // ============================================================
+      // HALAMAN (pages) — NetworkFirst dengan TTL 5 menit (bukan 24 jam!)
+      // Supaya kalau ada deploy baru, user dapet update dalam 5 menit
+      // tanpa perlu hard refresh.
+      // ============================================================
+      {
+        urlPattern: ({ url, sameOrigin }) => sameOrigin && !url.pathname.startsWith('/api/'),
+        handler: 'NetworkFirst',
+        options: {
+          cacheName: 'pages',
+          networkTimeoutSeconds: 5,
+          expiration: { maxEntries: 32, maxAgeSeconds: 300 } // 5 menit (dari 24 jam)
+        }
+      }
+    ]
+  }
 });
 
 /** @type {import('next').NextConfig} */
