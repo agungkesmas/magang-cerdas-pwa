@@ -58,8 +58,8 @@ export async function POST(req: NextRequest) {
       .eq('id', 1)
       .single();
 
-    const officeLat = settings?.office_lat ?? parseFloat(process.env.NEXT_PUBLIC_GEOLOC_OFFICE_LAT || '-6.7418620');
-    const officeLng = settings?.office_lng ?? parseFloat(process.env.NEXT_PUBLIC_GEOLOC_OFFICE_LNG || '108.5420607');
+    const officeLat = settings?.office_lat ?? parseFloat(process.env.NEXT_PUBLIC_GEOLOC_OFFICE_LAT || '-6.7386200');
+    const officeLng = settings?.office_lng ?? parseFloat(process.env.NEXT_PUBLIC_GEOLOC_OFFICE_LNG || '108.5372200');
     const radius = settings?.geofence_radius_meters ?? 150;
 
     const distance = haversineDistance(latitude, longitude, officeLat, officeLng);

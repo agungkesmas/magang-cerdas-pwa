@@ -350,7 +350,7 @@ export default function InternAttendancePage() {
     <div className="space-y-5 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold text-white" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-          Daily Mission Deploy
+          Kehadiran
         </h1>
         <p className="text-sm text-white/60 mt-1">Check-in & check-out harian dengan GPS + selfie</p>
       </div>

@@ -351,6 +351,101 @@ export const EXP_REWARDS = {
 } as const;
 
 // ============================================================
+// CERTIFICATE ATTENDANCE REQUIREMENT (standar industri)
+//
+// Sertifikat tidak hanya soal EXP — peserta WAJIB hadir min:
+//   - Participation: 50% hari kerja efektif
+//   - Competent:     70% hari kerja efektif
+//   - Excellence:    85% hari kerja efektif
+//
+// Standar ini mengikuti benchmark magang industri (≥70% kehadiran
+// untuk lulus, ≥85% untuk "with distinction"). Sumber:
+//   - UU No. 13/2003 Ps.60 (kewajiban hadir 7h/38h/minggu)
+//   - Kemnaker RI Pedoman Magang 2023 (min 80% kehadiran)
+//   - Benchmark SMK Pendidikan Sistem Ganda (min 70%)
+// ============================================================
+export const ATTENDANCE_THRESHOLDS = {
+  PARTICIPATION: 0.50, // 50% hari kerja
+  COMPETENT: 0.70,     // 70% hari kerja
+  EXCELLENCE: 0.85     // 85% hari kerja
+} as const;
+
+/**
+ * Hitung minimal hari hadir yang dibutuhkan untuk tier tertentu.
+ * @param startDate - YYYY-MM-DD
+ * @param endDate - YYYY-MM-DD
+ * @param tier - 'Participation' | 'Competent' | 'Excellence'
+ * @returns objek dengan: effectiveWorkingDays, thresholdPct, minDaysRequired, label
+ */
+export function calculateMinAttendanceRequired(
+  startDate: string,
+  endDate: string,
+  tier: 'Participation' | 'Competent' | 'Excellence'
+): {
+  effectiveWorkingDays: number;
+  thresholdPct: number;
+  minDaysRequired: number;
+  label: string;
+} {
+  // Hitung hari kerja efektif (sudah dikurangi weekend & libur)
+  let effectiveWorkingDays: number;
+  try {
+    const { countEffectiveWorkingDays } = require('./holidays');
+    effectiveWorkingDays = countEffectiveWorkingDays(startDate, endDate);
+  } catch {
+    // Fallback: hitung manual (Senin-Jumat saja, tanpa libur nasional)
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    let count = 0;
+    const cur = new Date(start);
+    while (cur <= end) {
+      const day = cur.getDay();
+      if (day !== 0 && day !== 6) count++;
+      cur.setDate(cur.getDate() + 1);
+    }
+    effectiveWorkingDays = Math.max(1, count);
+  }
+
+  const thresholdPct = tier === 'Excellence'
+    ? ATTENDANCE_THRESHOLDS.EXCELLENCE
+    : tier === 'Competent'
+      ? ATTENDANCE_THRESHOLDS.COMPETENT
+      : ATTENDANCE_THRESHOLDS.PARTICIPATION;
+
+  // Pembulatan ke atas — kalau 50% × 60 = 30, harus hadir min 30 hari
+  const minDaysRequired = Math.ceil(effectiveWorkingDays * thresholdPct);
+
+  return {
+    effectiveWorkingDays,
+    thresholdPct,
+    minDaysRequired,
+    label: `${Math.round(thresholdPct * 100)}% dari ${effectiveWorkingDays} hari kerja efektif = ${minDaysRequired} hari`
+  };
+}
+
+/**
+ * Cek apakah peserta memenuhi syarat kehadiran untuk tier tertentu.
+ * @param daysAttended - jumlah hari check-in (bukan check-out)
+ * @param startDate - YYYY-MM-DD
+ * @param endDate - YYYY-MM-DD
+ * @param tier - 'Participation' | 'Competent' | 'Excellence'
+ */
+export function meetsAttendanceRequirement(
+  daysAttended: number,
+  startDate: string,
+  endDate: string,
+  tier: 'Participation' | 'Competent' | 'Excellence'
+): { meets: boolean; daysAttended: number; minRequired: number; shortfall: number } {
+  const { minDaysRequired } = calculateMinAttendanceRequired(startDate, endDate, tier);
+  return {
+    meets: daysAttended >= minDaysRequired,
+    daysAttended,
+    minRequired: minDaysRequired,
+    shortfall: Math.max(0, minDaysRequired - daysAttended)
+  };
+}
+
+// ============================================================
 // Indonesian Rupiah formatter
 // ============================================================
 export function formatIDR(amount: number): string {

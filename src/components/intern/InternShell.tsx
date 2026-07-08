@@ -21,10 +21,10 @@ import {
 
 const NAV_ALL = [
   { href: '/intern/home', label: 'Home', icon: Home },
-  { href: '/intern/attendance', label: 'Check-In', icon: MapPin },
+  { href: '/intern/attendance', label: 'Kehadiran', icon: MapPin },
   { href: '/intern/activities', label: 'Aktivitas', icon: CheckSquare },
   { href: '/intern/chat', label: 'Chat Grup', icon: MessageCircle },
-  { href: '/intern/certificate', label: 'Vault', icon: Trophy },
+  { href: '/intern/certificate', label: 'Sertifikat', icon: Trophy },
   { href: '/intern/profile', label: 'Profil', icon: UserCircle }
 ];
 

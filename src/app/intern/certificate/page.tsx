@@ -108,12 +108,12 @@ export default function InternCertificatePage() {
     <div className="space-y-5 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold text-white" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-          Certificate Vault
+          Sertifikat Magang
         </h1>
         <p className="text-sm text-white/60 mt-1">Hall of Fame & Sertifikat Magang Anda</p>
       </div>
 
-      {/* Vault status */}
+      {/* Sertifikat status */}
       {!isUnlocked && (
         <div className="glass-card p-6 text-center relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-bpjs-yellow/5 to-transparent"></div>
@@ -121,6 +121,7 @@ export default function InternCertificatePage() {
             <div className="w-20 h-20 mx-auto mb-3 bg-white/5 rounded-2xl flex items-center justify-center">
               <Lock className="w-10 h-10 text-white/40" />
             </div>
+<<<<<<< HEAD
             <h3 className="text-lg font-bold text-white mb-1">Vault Terkunci</h3>
             <p className="text-sm text-white/60 mb-3">
               Capai <span className="text-bpjs-yellow font-bold">tier Competent</span> (25% dari maksimal EXP magang Anda) untuk membuka Vault
@@ -153,7 +154,49 @@ export default function InternCertificatePage() {
                   </>
                 );
               })()}
+=======
+            <h3 className="text-lg font-bold text-white mb-1">Sertifikat Belum Diterbitkan</h3>
+            <p className="text-sm text-white/60 mb-4">
+              Admin akan menerbitkan sertifikat Anda setelah masa magang selesai, dengan syarat:
+            </p>
+
+            {/* Syarat EXP */}
+            <div className="max-w-md mx-auto mb-3 text-left">
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="text-white/70 flex items-center gap-1">
+                  <Zap className="w-3 h-3 text-bpjs-yellow" /> EXP ({profile.total_exp})
+                </span>
+                <span className="text-bpjs-yellow">Tier: {profile.tier || 'Participation'}</span>
+              </div>
+              <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-bpjs-yellow to-amber-500"
+                  style={{ width: `${Math.min(100, ((profile.total_exp || 0) / 1750) * 100)}%` }}
+                />
+              </div>
+>>>>>>> 76dd82f (feat(geofence+cert+rename): koreksi koordinat presisi + syarat kehadiran sertifikat + rename menu)
             </div>
+
+            {/* Syarat Kehadiran */}
+            <div className="max-w-md mx-auto mb-3 text-left">
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="text-white/70 flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3 text-bpjs-green" /> Kehadiran
+                </span>
+                <span className="text-white/50 text-[10px]">
+                  Tier {profile.tier || 'Participation'}: min {profile.tier === 'Excellence' ? '85%' : profile.tier === 'Competent' ? '70%' : '50%'} hari kerja
+                </span>
+              </div>
+              <div className="text-[11px] text-white/50 leading-relaxed">
+                Rajin check-in setiap hari kerja. Peserta dengan kehadiran rendah
+                TIDAK bisa diterbitkan sertifikatnya, walau EXP sudah cukup.
+              </div>
+            </div>
+
+            <p className="text-xs text-white/40 mt-4">
+              💡 Tier estimasi dari EXP & kehadiran Anda. Sertifikat resmi hanya
+              diterbitkan admin di akhir masa magang.
+            </p>
           </div>
         </div>
       )}
