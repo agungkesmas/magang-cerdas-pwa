@@ -58,8 +58,7 @@ export async function POST() {
       .from('groups')
       .update({
         name: 'Mading Pengumuman',
-        description: 'Grup sistem — pengumuman resmi dari admin & pembina BPJS Ketenagakerjaan (broadcast ke semua peserta aktif)',
-        updated_at: new Date().toISOString()
+        description: 'Grup sistem — pengumuman resmi dari admin & pembina BPJS Ketenagakerjaan (broadcast ke semua peserta aktif)'
       })
       .eq('id', oldGroup.id)
       .select()

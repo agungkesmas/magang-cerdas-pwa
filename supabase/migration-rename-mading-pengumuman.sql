@@ -25,11 +25,11 @@
 
 -- Step 1: Rename group "All Peserta Magang" → "Mading Pengumuman"
 -- (hanya kalau grup lama masih ada, dan grup baru belum ada)
+-- Catatan: tabel groups tidak punya kolom updated_at di schema existing
 UPDATE groups
 SET
   name = 'Mading Pengumuman',
-  description = 'Grup sistem — pengumuman resmi dari admin & pembina BPJS Ketenagakerjaan (broadcast ke semua peserta aktif)',
-  updated_at = NOW()
+  description = 'Grup sistem — pengumuman resmi dari admin & pembina BPJS Ketenagakerjaan (broadcast ke semua peserta aktif)'
 WHERE group_type = 'system'
   AND name = 'All Peserta Magang'
   AND department IS NULL;
