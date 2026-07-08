@@ -139,7 +139,6 @@ export async function GET() {
       // ============================================================
       const boundaryAtts = atts.filter((a) => {
         if (a.distance_meters === null) return false;
-        // Dalam 5m dari boundary 200m
         return a.distance_meters >= 195 && a.distance_meters <= 200;
       });
       if (boundaryAtts.length >= 2) {
@@ -150,6 +149,86 @@ export async function GET() {
           description: `${boundaryAtts.length} check-in di tepi geofence (195-200m). Mungkin nyoba boundary.`,
           affected_attendance_ids: boundaryAtts.map((g) => g.id),
           severity: 'medium'
+        });
+      }
+
+      // ============================================================
+      // Pattern 4: Sering terlambat (is_late=true ≥3x dalam 14 hari)
+      // ============================================================
+      const lateAtts = atts.filter((a: any) => a.is_late === true);
+      if (lateAtts.length >= 3) {
+        // Ambil jam-jam terlambat untuk info
+        const lateTimes = lateAtts.map((a: any) => {
+          const wibTime = new Date(a.timestamp).toLocaleString('id-ID', {
+            timeZone: 'Asia/Jakarta',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          });
+          return wibTime;
+        });
+        patterns.push({
+          intern_id: internId,
+          intern_name: intern.name,
+          pattern_type: 'frequent_late',
+          description: `Sering terlambat check-in: ${lateAtts.length}x dalam 14 hari terakhir. Jam terlambat: ${lateTimes.join(', ')}. Patut diberi peringatan edukasi.`,
+          affected_attendance_ids: lateAtts.map((g: any) => g.id),
+          severity: lateAtts.length >= 5 ? 'high' : 'medium'
+        });
+      }
+
+      // ============================================================
+      // Pattern 5: Sering lupa absen pulang (check-in tanpa check-out ≥3x)
+      // ============================================================
+      // Cek dari records: cari tanggal yang ada Check-In tapi tidak ada Check-Out
+      const ciDates = new Set<string>();
+      const coDates = new Set<string>();
+      atts.forEach((a: any) => {
+        const dStr = new Date(a.timestamp).toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+        if (a.type === 'Check-In') ciDates.add(dStr);
+        // Untuk check-out, perlu fetch terpisah karena query hanya Check-In
+      });
+
+      // Fetch check-out records untuk intern ini (14 hari terakhir)
+      const { data: coRecords } = await supabase
+        .from('attendance')
+        .select('id, timestamp')
+        .eq('intern_id', internId)
+        .eq('type', 'Check-Out')
+        .gte('timestamp', fourteenDaysAgo.toISOString());
+
+      (coRecords || []).forEach((co: any) => {
+        const dStr = new Date(co.timestamp).toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+        coDates.add(dStr);
+      });
+
+      const forgotCheckoutDates: string[] = [];
+      ciDates.forEach(d => {
+        if (!coDates.has(d)) forgotCheckoutDates.push(d);
+      });
+
+      if (forgotCheckoutDates.length >= 3) {
+        patterns.push({
+          intern_id: internId,
+          intern_name: intern.name,
+          pattern_type: 'frequent_missing_checkout',
+          description: `Sering lupa absen pulang: ${forgotCheckoutDates.length}x dalam 14 hari terakhir (tanggal: ${forgotCheckoutDates.slice(0, 5).join(', ')}${forgotCheckoutDates.length > 5 ? '...' : ''}). Perlu edukasi disiplin absen.`,
+          affected_attendance_ids: [],
+          severity: forgotCheckoutDates.length >= 5 ? 'high' : 'medium'
+        });
+      }
+
+      // ============================================================
+      // Pattern 6: Tidak absen sama sekali (0 check-in dalam 7 hari terakhir)
+      // ============================================================
+      if (atts.length === 0) {
+        patterns.push({
+          intern_id: internId,
+          intern_name: intern.name,
+          pattern_type: 'no_attendance_7days',
+          description: `Tidak ada check-in sama sekali dalam 14 hari terakhir. Peserta mungkin tidak aktif magang atau bermasalah.`,
+          affected_attendance_ids: [],
+          severity: 'high'
         });
       }
     }
