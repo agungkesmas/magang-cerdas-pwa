@@ -73,10 +73,12 @@ function InternList() {
     if (filter === 'active') return i.is_active;
     if (filter === 'completed') return i.certificate_unlocked;
     if (filter === 'at_risk') {
+      // At-risk: 0 check-in dalam 7 hari terakhir (bukan berdasarkan total duration)
       const att = i.attendance;
-      const dur = i.duration_days || 1;
-      const attRate = att && att.check_in_count > 0 ? att.check_in_count / Math.max(1, dur) : 0;
-      return i.is_active && (attRate < 0.5 || (i.total_exp || 0) < 100);
+      const lastAtt = att?.last_attendance;
+      if (!lastAtt) return i.is_active; // never checked in
+      const daysSinceLast = (Date.now() - new Date(lastAtt).getTime()) / 86400000;
+      return i.is_active && daysSinceLast > 7;
     }
     return true;
   }).filter((i: any) => {
@@ -191,11 +193,10 @@ function InternList() {
       ) : (
         <div className="grid gap-3">
           {filtered.map((intern: any) => {
-            // At-risk check
+            // At-risk: 0 check-in dalam 7 hari terakhir
             const att = intern.attendance;
-            const dur = intern.duration_days || 1;
-            const attRate = att && att.check_in_count > 0 ? att.check_in_count / Math.max(1, dur) : 0;
-            const isAtRisk = intern.is_active && (attRate < 0.5 || (intern.total_exp || 0) < 100);
+            const lastAtt = att?.last_attendance;
+            const isAtRisk = intern.is_active && (!lastAtt || (Date.now() - new Date(lastAtt).getTime()) / 86400000 > 7);
 
             return (
             <div

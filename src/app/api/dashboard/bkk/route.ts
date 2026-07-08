@@ -161,14 +161,23 @@ export async function GET() {
       };
     }
 
-    // At-risk: peserta dengan attendance <70% atau EXP rendah
+    // At-risk: HANYA peserta aktif yang 0 check-in dalam 7 hari terakhir
+    // (bukan berdasarkan total duration — itu bikin semua orang kena flag di awal magang)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const { data: recentAtt } = await supabase
+      .from('attendance')
+      .select('intern_id')
+      .eq('type', 'Check-In')
+      .gte('timestamp', sevenDaysAgo.toISOString())
+      .in('intern_id', activeInternIds);
+    const recentCiIds = new Set((recentAtt || []).map((a: any) => a.intern_id));
+
     const atRiskCount = internsEnriched.filter(i => {
       if (!i.is_active) return false;
-      const att = (i as any).attendance;
-      const attRate = att && att.check_in_count > 0
-        ? att.check_in_count / Math.max(1, internshipDuration(i.start_date, i.end_date))
-        : 0;
-      return attRate < 0.5 || (i.total_exp || 0) < 100;
+      // Hanya flag kalau magang sudah mulah (start_date <= today) dan 0 check-in 7 hari
+      const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+      return i.start_date <= todayStr && !recentCiIds.has(i.id);
     }).length;
 
     return NextResponse.json({

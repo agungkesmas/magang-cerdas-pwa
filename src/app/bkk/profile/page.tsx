@@ -12,7 +12,8 @@ import {
   Save,
   Check,
   AlertCircle,
-  Calendar
+  Calendar,
+  Camera
 } from 'lucide-react';
 
 interface ProfileData {
@@ -49,8 +50,30 @@ export default function BKKProfilePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Upload foto BKK belum tersedia — sembunyikan UI camera
-  // (dihapus dead code handleUploadPhoto, fileInputRef, Camera icon)
+  // Upload foto profil BKK
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleUploadPhoto = async (file: File) => {
+    if (file.size > 3 * 1024 * 1024) { setMsg({ type: 'error', text: 'Maksimal 3MB' }); return; }
+    if (!file.type.startsWith('image/')) { setMsg({ type: 'error', text: 'File harus gambar' }); return; }
+    setUploading(true); setMsg(null);
+    try {
+      const fd = new FormData();
+      fd.append('photo', file);
+      const res = await fetch('/api/bkk/upload-photo', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setMsg({ type: 'success', text: 'Foto profil diperbarui!' });
+      const profRes = await fetch('/api/bkk/profile');
+      const profData = await profRes.json();
+      if (profData.success) setProfile(profData.profile);
+    } catch (e: any) {
+      setMsg({ type: 'error', text: e.message });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSavePhone = async () => {
     setSaving(true); setMsg(null);
@@ -130,8 +153,32 @@ export default function BKKProfilePage() {
       {/* Profile info */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6">
         <div className="flex items-start gap-4 mb-5">
-          <div className="w-16 h-16 rounded-2xl bg-bpjs-green/10 flex items-center justify-center flex-shrink-0">
-            <UserCircle className="w-10 h-10 text-bpjs-green" />
+          <div className="relative">
+            {profile.photo_url ? (
+              <img src={profile.photo_url} alt={profile.name} className="w-16 h-16 rounded-2xl object-cover" />
+            ) : (
+              <div className="w-16 h-16 rounded-2xl bg-bpjs-green/10 flex items-center justify-center flex-shrink-0">
+                <UserCircle className="w-10 h-10 text-bpjs-green" />
+              </div>
+            )}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="absolute -bottom-1 -right-1 w-7 h-7 bg-bpjs-green text-white rounded-full flex items-center justify-center shadow-md hover:bg-bpjs-green-dark disabled:opacity-50"
+              title="Ganti foto profil"
+            >
+              {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleUploadPhoto(file);
+              }}
+            />
           </div>
           <div>
             <h2 className="text-xl font-bold text-gray-900">{profile.name}</h2>
