@@ -50,6 +50,8 @@ export async function GET() {
         is_within_geofence,
         is_suspicious,
         auto_flag_reason,
+        is_late,
+        is_early,
         interns!inner(name, department)
       `)
       .eq('type', 'Check-In')
@@ -68,6 +70,29 @@ export async function GET() {
     });
 
     const patterns: SuspiciousPattern[] = [];
+
+    // ============================================================
+    // Pattern 6 FIRST: Cek peserta aktif yang TIDAK PUNYA record sama sekali
+    // (mereka tidak akan muncul di byIntern)
+    // ============================================================
+    const { data: activeInterns } = await supabase
+      .from('interns')
+      .select('id, name, department')
+      .eq('is_active', true);
+
+    (activeInterns || []).forEach((intern: any) => {
+      if (!byIntern[intern.id]) {
+        // Peserta aktif tapi 0 check-in dalam 14 hari
+        patterns.push({
+          intern_id: intern.id,
+          intern_name: intern.name,
+          pattern_type: 'no_attendance_14days',
+          description: `Tidak ada check-in sama sekali dalam 14 hari terakhir. Peserta mungkin tidak aktif magang atau bermasalah.`,
+          affected_attendance_ids: [],
+          severity: 'high'
+        });
+      }
+    });
 
     for (const [internId, atts] of Object.entries(byIntern)) {
       if (atts.length < 3) continue;
@@ -215,20 +240,6 @@ export async function GET() {
           description: `Sering lupa absen pulang: ${forgotCheckoutDates.length}x dalam 14 hari terakhir (tanggal: ${forgotCheckoutDates.slice(0, 5).join(', ')}${forgotCheckoutDates.length > 5 ? '...' : ''}). Perlu edukasi disiplin absen.`,
           affected_attendance_ids: [],
           severity: forgotCheckoutDates.length >= 5 ? 'high' : 'medium'
-        });
-      }
-
-      // ============================================================
-      // Pattern 6: Tidak absen sama sekali (0 check-in dalam 7 hari terakhir)
-      // ============================================================
-      if (atts.length === 0) {
-        patterns.push({
-          intern_id: internId,
-          intern_name: intern.name,
-          pattern_type: 'no_attendance_7days',
-          description: `Tidak ada check-in sama sekali dalam 14 hari terakhir. Peserta mungkin tidak aktif magang atau bermasalah.`,
-          affected_attendance_ids: [],
-          severity: 'high'
         });
       }
     }

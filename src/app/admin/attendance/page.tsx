@@ -154,7 +154,7 @@ export default function AdminAttendancePage() {
   );
 
   const handleNudge = async (internId: string, name: string) => {
-    if (!confirm(`Kirim nudge ke ${name}?`)) return;
+    if (!confirm(`Kirim pengingat ke ${name}?`)) return;
     await fetch('/api/nudge/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -164,7 +164,7 @@ export default function AdminAttendancePage() {
         type: 'check_in_reminder'
       })
     });
-    alert(`Nudge terkirim ke ${name}!`);
+    alert(`Pengingat terkirim ke ${name}!`);
   };
 
   const handleApprove = async (id: string) => {
@@ -321,7 +321,7 @@ export default function AdminAttendancePage() {
   };
 
   const handleUnflagSuspicious = async (attId: string) => {
-    if (!confirm('Hapus flag mencurigakan? Nudge sudah terkirim tidak bisa di-recall.')) return;
+    if (!confirm('Hapus flag mencurigakan? Pengingat sudah terkirim tidak bisa di-recall.')) return;
     try {
       const res = await fetch(`/api/attendance/flag-suspicious?attendance_id=${attId}`, { method: 'DELETE' });
       const data = await res.json();
@@ -485,7 +485,7 @@ export default function AdminAttendancePage() {
       {/* Izin Pulang Cepat Pending — admin approve/reject */}
       <EarlyLeaveApprovals />
 
-      {/* Nudge needed */}
+      {/* Ingatkan yang belum absen */}
       {notCheckedIn.length > 0 && (
         <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-3">
@@ -506,7 +506,7 @@ export default function AdminAttendancePage() {
                   className="inline-flex items-center gap-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold px-2 py-1 rounded-md"
                 >
                   <Bell className="w-3 h-3" />
-                  Nudge
+                  Ingatkan
                 </button>
               </div>
             ))}
@@ -535,7 +535,7 @@ export default function AdminAttendancePage() {
                   className="inline-flex items-center gap-1 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-md"
                 >
                   <Bell className="w-3 h-3" />
-                  Nudge
+                  Ingatkan
                 </button>
               </div>
             ))}
@@ -834,7 +834,7 @@ export default function AdminAttendancePage() {
                 {flagging === flagModal.attId ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  '🚩 Tandai & Kirim Nudge'
+                  '🚩 Tandai & Kirim Pengingat'
                 )}
               </button>
             </div>
