@@ -257,13 +257,18 @@ export default function AdminAttendancePage() {
     });
   }
 
-  const filtered = filter === 'all'
+  const filtered = (filter === 'all'
     ? [...records, ...missingCheckOuts]
     : filter === 'suspicious'
       ? records.filter((r: any) => r.is_suspicious)
       : filter === 'check-out'
         ? [...records.filter((r) => r.type.toLowerCase() === 'check-out'), ...missingCheckOuts]
-        : records.filter((r) => r.type.toLowerCase() === filter);
+        : records.filter((r) => r.type.toLowerCase() === filter)
+  ).sort((a: any, b: any) => {
+    // Sort by timestamp descending (terbaru di atas)
+    // Virtual rows (is_missing) pakai timestamp 23:59 di tanggal tersebut
+    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+  });
   const pendingLeaves = leaveRequests.filter((lr) => lr.status === 'pending');
   const todayOnLeave = leaveRequests.filter((lr) => {
     if (lr.status !== 'approved') return false;
