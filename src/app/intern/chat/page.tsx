@@ -6,7 +6,8 @@ import { MessageCircle, Users, Loader2, ArrowRight, Search, Megaphone, Sparkles 
 import SecurityWrapper from '@/components/shared/SecurityWrapper';
 
 function isMadingGroup(g: any): boolean {
-  return g.group_type === 'system' && g.name === 'All Peserta Magang';
+  // Kompatibel dengan nama baru 'Mading Pengumuman' dan nama lama 'All Peserta Magang'
+  return g.group_type === 'system' && (g.name === 'Mading Pengumuman' || g.name === 'All Peserta Magang');
 }
 
 export default function InternChatListPage() {

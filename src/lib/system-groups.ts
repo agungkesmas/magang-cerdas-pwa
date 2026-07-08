@@ -2,15 +2,16 @@
 // system-groups.ts — Auto-sync interns & pembina to system groups
 // ============================================================
 // System groups:
-//   - "All Peserta Magang" (all active interns)
+//   - "Mading Pengumuman" (all active interns — broadcast channel)
+//     [Nama lama: "All Peserta Magang" — kompatibel untuk instalasi lama]
 //   - "Magang - Pelayanan" (interns in Pelayanan)
 //   - "Magang - Pemasaran" (interns in Pemasaran)
 //   - "Magang - Keuangan" (interns in Keuangan)
 //
 // Rules:
-//   - Intern created → add to "All" + department group
-//   - Intern archived → remove from "All" + department group
-//   - Intern restored → re-add to "All" + department group
+//   - Intern created → add to Mading + department group
+//   - Intern archived → remove from Mading + department group
+//   - Intern restored → re-add to Mading + department group
 //   - Intern department changed → remove from old dept, add to new dept
 // ============================================================
 
@@ -30,7 +31,8 @@ async function getSystemGroups(supabase: ReturnType<typeof createServerClient>) 
 
   const cache: any = {};
   for (const g of data || []) {
-    if (g.name === 'All Peserta Magang') cache.all = g.id;
+    // Cari grup broadcast (Mading Pengumuman) — kompatibel dengan nama lama 'All Peserta Magang'
+    if (g.name === 'Mading Pengumuman' || g.name === 'All Peserta Magang') cache.all = g.id;
     else if (g.department === 'Pelayanan') cache.pelayanan = g.id;
     else if (g.department === 'Pemasaran') cache.pemasaran = g.id;
     else if (g.department === 'Keuangan') cache.keuangan = g.id;

@@ -10,7 +10,8 @@ import {
   Search,
   UserCog,
   Building2,
-  Megaphone
+  Megaphone,
+  Sparkles
 } from 'lucide-react';
 
 interface Group {
@@ -23,6 +24,13 @@ interface Group {
   is_active: boolean;
   pembina_count: number;
   peserta_count: number;
+}
+
+// Deteksi grup Mading (broadcast channel — semua peserta)
+// Kompatibel dengan nama baru 'Mading Pengumuman' dan nama lama 'All Peserta Magang'
+function isMadingGroup(g: Group): boolean {
+  return g.group_type === 'system' && !g.department &&
+    (g.name === 'Mading Pengumuman' || g.name === 'All Peserta Magang');
 }
 
 export default function AdminChatListPage() {
@@ -51,11 +59,11 @@ export default function AdminChatListPage() {
     return matchSearch && matchFilter && g.is_active;
   });
 
-  // Sort: system groups first (so admin sees broadcast channels up top)
+  // Sort: Mading group first, then other system groups, then manual
   const sorted = [...filtered].sort((a, b) => {
-    if (a.group_type === 'system' && b.group_type !== 'system') return -1;
-    if (a.group_type !== 'system' && b.group_type === 'system') return 1;
-    return 0;
+    const aRank = isMadingGroup(a) ? 0 : (a.group_type === 'system' ? 1 : 2);
+    const bRank = isMadingGroup(b) ? 0 : (b.group_type === 'system' ? 1 : 2);
+    return aRank - bRank;
   });
 
   if (loading) {
@@ -86,7 +94,7 @@ export default function AdminChatListPage() {
         <div className="text-sm text-gray-700">
           <p className="font-semibold text-bpjs-blue mb-1">Cara kirim pengumuman / broadcast:</p>
           <ol className="list-decimal list-inside space-y-1 text-gray-600">
-            <li>Pilih grup sistem (mis. <strong>All Peserta Magang</strong>) untuk broadcast ke semua peserta</li>
+            <li>Pilih grup <strong>Mading Pengumuman</strong> (broadcast ke semua peserta magang aktif)</li>
             <li>Atau pilih grup departemen (mis. <strong>Magang - Pemasaran</strong>) untuk pengumuman departemen</li>
             <li>Tulis pesan / upload file → peserta terima realtime di chat grup mereka</li>
           </ol>
@@ -132,37 +140,59 @@ export default function AdminChatListPage() {
         <div className="grid gap-3">
           {sorted.map((g) => {
             const isSystem = g.group_type === 'system';
+            const isMading = isMadingGroup(g);
+            // Label tampilan: untuk grup All Peserta Magang (legacy), tampilkan 'Mading Pengumuman'
+            const displayName = isMading && g.name === 'All Peserta Magang' ? 'Mading Pengumuman' : g.name;
             return (
               <Link
                 key={g.id}
                 href={`/admin/chat/${g.id}`}
-                className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-bpjs-blue/30 transition-all"
+                className={`rounded-xl border p-4 hover:shadow-md transition-all relative overflow-hidden ${
+                  isMading
+                    ? 'bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-300 hover:border-amber-400'
+                    : isSystem
+                      ? 'bg-white border-gray-200 hover:border-bpjs-blue/30'
+                      : 'bg-white border-gray-200 hover:border-bpjs-blue/30'
+                }`}
               >
+                {isMading && (
+                  <div className="absolute top-0 right-0 bg-amber-500 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-bl-lg uppercase tracking-wider flex items-center gap-1">
+                    <Sparkles className="w-2.5 h-2.5" /> Broadcast
+                  </div>
+                )}
                 <div className="flex items-center gap-3">
                   <div
                     className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                      isSystem
-                        ? 'bg-gradient-to-br from-bpjs-blue/15 to-bpjs-blue/5'
-                        : 'bg-gradient-to-br from-gray-100 to-gray-50'
+                      isMading
+                        ? 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-md shadow-amber-500/30'
+                        : isSystem
+                          ? 'bg-gradient-to-br from-bpjs-blue/15 to-bpjs-blue/5'
+                          : 'bg-gradient-to-br from-gray-100 to-gray-50'
                     }`}
                   >
-                    {isSystem ? (
-                      <Megaphone className="w-6 h-6 text-bpjs-blue" />
+                    {isMading ? (
+                      <Megaphone className="w-6 h-6 text-white" />
+                    ) : isSystem ? (
+                      <MessageCircle className="w-6 h-6 text-bpjs-blue" />
                     ) : (
                       <MessageCircle className="w-6 h-6 text-gray-600" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-900 leading-tight">{g.name}</h3>
+                    <h3 className={`font-bold leading-tight ${isMading ? 'text-amber-900' : 'text-gray-900'}`}>
+                      {displayName}
+                    </h3>
                     <div className="flex items-center gap-2 flex-wrap mt-0.5">
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                          isSystem
-                            ? 'bg-bpjs-blue/10 text-bpjs-blue'
-                            : 'bg-gray-100 text-gray-600'
+                          isMading
+                            ? 'bg-amber-200 text-amber-900'
+                            : isSystem
+                              ? 'bg-bpjs-blue/10 text-bpjs-blue'
+                              : 'bg-gray-100 text-gray-600'
                         }`}
                       >
-                        {isSystem ? 'Sistem' : g.group_type}
+                        {isMading ? 'Mading' : isSystem ? 'Sistem' : g.group_type}
                       </span>
                       {g.department && (
                         <span className="text-[10px] px-1.5 py-0.5 bg-bpjs-yellow/20 text-bpjs-blue-dark rounded-full">
@@ -171,9 +201,11 @@ export default function AdminChatListPage() {
                       )}
                     </div>
                     {g.description && (
-                      <p className="text-xs text-gray-500 truncate">{g.description}</p>
+                      <p className={`text-xs truncate ${isMading ? 'text-amber-700' : 'text-gray-500'}`}>
+                        {isMading ? 'Pengumuman resmi dari admin & pembina BPJS Ketenagakerjaan' : g.description}
+                      </p>
                     )}
-                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                    <div className={`flex items-center gap-3 text-xs mt-1 ${isMading ? 'text-amber-700' : 'text-gray-500'}`}>
                       <span className="flex items-center gap-1">
                         <UserCog className="w-3 h-3" /> {g.pembina_count} pembina
                       </span>
@@ -182,7 +214,7 @@ export default function AdminChatListPage() {
                       </span>
                     </div>
                   </div>
-                  <ArrowRight className="w-5 h-5 text-gray-400" />
+                  <ArrowRight className={`w-5 h-5 ${isMading ? 'text-amber-500' : 'text-gray-400'}`} />
                 </div>
               </Link>
             );

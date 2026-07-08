@@ -2,7 +2,7 @@
 -- Migration: System Groups (All + Per Department)
 -- ============================================================
 -- TUJUAN: Create 4 system groups yang selalu ada:
--- 1. "All Peserta Magang" — berisi semua peserta aktif
+-- 1. "Mading Pengumuman" — berisi semua peserta aktif (broadcast channel)
 -- 2. "Magang - Pelayanan" — peserta departemen Pelayanan
 -- 3. "Magang - Pemasaran" — peserta departemen Pemasaran
 -- 4. "Magang - Keuangan" — peserta departemen Keuangan
@@ -19,7 +19,7 @@
 -- Step 1: Insert 4 system groups (idempotent — tidak duplikat kalau di-run ulang)
 INSERT INTO groups (name, description, group_type, department, created_by_type, created_by_name, is_active)
 SELECT * FROM (VALUES
-  ('All Peserta Magang', 'Grup sistem — berisi semua peserta magang aktif (auto-managed)', 'system', NULL, 'system', 'SYSTEM', true),
+  ('Mading Pengumuman', 'Grup sistem — pengumuman resmi dari admin & pembina BPJS Ketenagakerjaan (broadcast ke semua peserta aktif)', 'system', NULL, 'system', 'SYSTEM', true),
   ('Magang - Pelayanan', 'Grup sistem — peserta magang departemen Pelayanan (auto-managed)', 'system', 'Pelayanan', 'system', 'SYSTEM', true),
   ('Magang - Pemasaran', 'Grup sistem — peserta magang departemen Pemasaran (auto-managed)', 'system', 'Pemasaran', 'system', 'SYSTEM', true),
   ('Magang - Keuangan', 'Grup sistem — peserta magang departemen Keuangan (auto-managed)', 'system', 'Keuangan', 'system', 'SYSTEM', true)
@@ -29,12 +29,12 @@ WHERE NOT EXISTS (
 );
 
 -- Step 2: Sync existing active interns to system groups
--- Add to "All Peserta Magang"
+-- Add to "Mading Pengumuman"
 INSERT INTO group_members (group_id, user_type, user_id, role, added_by_type, added_by_id, joined_at)
 SELECT g.id, 'peserta', i.id, 'member', 'system', NULL, NOW()
 FROM interns i
 CROSS JOIN groups g
-WHERE g.group_type = 'system' AND g.name = 'All Peserta Magang'
+WHERE g.group_type = 'system' AND g.name = 'Mading Pengumuman'
   AND i.is_active = true
   AND NOT EXISTS (
     SELECT 1 FROM group_members gm
