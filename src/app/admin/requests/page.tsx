@@ -5,7 +5,6 @@ import {
   Inbox,
   Loader2,
   ChevronLeft,
-  Clock,
   CheckCircle2,
   XCircle,
   Eye,
@@ -14,15 +13,15 @@ import {
   Building2,
   FileText,
   Mail,
-  Phone,
   Send,
   PartyPopper,
   MessageSquare,
   ExternalLink,
-  Filter,
   Search,
   Check,
-  UserCheck
+  UserCheck,
+  Paperclip,
+  Download
 } from 'lucide-react';
 
 interface Request {
@@ -40,6 +39,7 @@ interface Request {
   cover_letter: string | null;
   additional_notes: string | null;
   attachment_url: string | null;
+  student_list_url?: string | null;
   status: 'draft' | 'submitted' | 'under_review' | 'accepted' | 'rejected' | 'completed' | 'cancelled';
   review_notes: string | null;
   accepted_slots: number | null;
@@ -488,6 +488,16 @@ function RespondModal({ action, request, loading, onClose, onSubmit }: {
     complete: 'Tandai Magang Selesai'
   }[action];
 
+  // Default reply templates
+  const defaultReplies: Record<string, string> = {
+    accept: `Permintaan magang DITERIMA. ${request.accepted_slots || acceptedSlots} slot telah disetujui.\n\nLangkah selanjutnya untuk BKK:\n1. Buka menu "Peserta Magang" untuk lihat/daftarkan siswa\n2. Klik "Batch Upload" untuk upload daftar siswa via Excel\n3. Download/print Kartu Kredensial (username + password per siswa)\n4. Bagikan kartu ke masing-masing siswa\n5. Siswa login di /intern/login dan check-in di hari pertama\n\nTanggal & departemen penempatan dapat ditentukan nanti oleh admin.`,
+    reject: `Mohon maaf, permintaan magang DITOLAK. `,
+    review: `Permintaan magang sedang direview. Mohon tunggu konfirmasi selanjutnya.`,
+    complete: `Magang telah ditandai SELESAI. Terima kasih atas kerjasamanya.`,
+  };
+
+  const useDefaultReply = () => setReviewNotes(defaultReplies[action] || '');
+
   const submit = () => {
     const payload: any = {};
     if (reviewNotes.trim()) payload.review_notes = reviewNotes.trim();
@@ -516,6 +526,21 @@ function RespondModal({ action, request, loading, onClose, onSubmit }: {
             <p className="text-xs text-gray-500">{request.school_name}</p>
             <p className="font-semibold text-sm text-gray-900">{request.request_title}</p>
             <p className="text-xs text-gray-600 mt-1">{request.requested_slots} peserta diminta</p>
+            {/* Links to surat & Excel siswa */}
+            <div className="mt-2 flex gap-3 flex-wrap">
+              {request.attachment_url && (
+                <a href={request.attachment_url} target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-bpjs-blue hover:underline flex items-center gap-1">
+                  <Paperclip className="w-3 h-3" /> Surat Resmi (PDF)
+                </a>
+              )}
+              {request.student_list_url && (
+                <a href={request.student_list_url} target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-bpjs-green hover:underline flex items-center gap-1">
+                  <Download className="w-3 h-3" /> Daftar Siswa (Excel)
+                </a>
+              )}
+            </div>
           </div>
 
           {action === 'accept' && (
@@ -533,38 +558,63 @@ function RespondModal({ action, request, loading, onClose, onSubmit }: {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Mulai Ditetapkan</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Tanggal Mulai <span className="text-gray-400 font-normal">(opsional — bisa nanti)</span>
+                  </label>
                   <input type="date" value={actualStart} onChange={(e) => setActualStart(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Selesai Ditetapkan</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Tanggal Selesai <span className="text-gray-400 font-normal">(opsional — bisa nanti)</span>
+                  </label>
                   <input type="date" value={actualEnd} onChange={(e) => setActualEnd(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Departemen Penempatan</label>
-                <input
-                  type="text"
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Departemen Penempatan <span className="text-gray-400 font-normal">(opsional — bisa nanti)</span>
+                </label>
+                <select
                   value={assignedDepts}
                   onChange={(e) => setAssignedDepts(e.target.value)}
-                  placeholder="Pelayanan, Pemasaran, Keuangan"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
-                />
+                >
+                  <option value="">— Belum Ditempatkan —</option>
+                  <option value="Pelayanan">Pelayanan</option>
+                  <option value="Pemasaran">Pemasaran</option>
+                  <option value="Keuangan">Keuangan</option>
+                  <option value="Pelayanan, Pemasaran">Pelayanan & Pemasaran</option>
+                  <option value="Pelayanan, Keuangan">Pelayanan & Keuangan</option>
+                  <option value="Pemasaran, Keuangan">Pemasaran & Keuangan</option>
+                  <option value="Pelayanan, Pemasaran, Keuangan">Semua Departemen</option>
+                </select>
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  Bisa dikosongkan — assign nanti via menu Peserta Magang
+                </p>
               </div>
             </>
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">
-              {action === 'reject' ? 'Alasan Penolakan *' : 'Catatan untuk BKK (opsional)'}
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold text-gray-700">
+                {action === 'reject' ? 'Alasan Penolakan *' : 'Balasan ke BKK'}
+              </label>
+              <button
+                type="button"
+                onClick={useDefaultReply}
+                className="text-[10px] text-bpjs-blue hover:underline"
+              >
+                📝 Gunakan Template
+              </button>
+            </div>
             <textarea
               value={reviewNotes}
               onChange={(e) => setReviewNotes(e.target.value)}
-              rows={4}
+              rows={5}
               placeholder={
                 action === 'reject' ? 'Jelaskan alasan penolakan...' :
-                action === 'accept' ? 'Contoh: Silakan kirim berkas PKS ke kantor kami...' :
+                action === 'accept' ? 'Balasan ke BKK (klik "Gunakan Template" untuk isi otomatis)...' :
                 'Catatan tambahan...'
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"

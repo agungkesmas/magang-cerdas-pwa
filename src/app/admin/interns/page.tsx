@@ -1062,13 +1062,22 @@ function AddInternModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Departemen *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Departemen {editing ? '' : '*'}
+              {editing && <span className="text-gray-400 font-normal text-xs"> (ubah kapan saja — EXP tidak terpengaruh)</span>}
+            </label>
             <select value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white">
+              <option value="Belum Ditempatkan">— Belum Ditempatkan —</option>
               <option value="Pelayanan">Pelayanan</option>
               <option value="Pemasaran">Pemasaran</option>
               <option value="Keuangan">Keuangan</option>
             </select>
+            {editing && form.department !== editing.department && (
+              <p className="text-[10px] text-amber-600 mt-1">
+                ⚠️ Mengubah departemen akan re-sync ke grup departemen baru. EXP & tier tetap utuh.
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
