@@ -32,11 +32,18 @@ export default function AttendanceRecap() {
     correction_date: '',
     type: 'Check-In' as 'Check-In' | 'Check-Out',
     reason: '',
-    promise_not_repeat: false
+    promise_not_repeat: false,
+    actual_time: '08:00'
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Early leave (izin pulang cepat) state
+  const [showEarlyLeaveForm, setShowEarlyLeaveForm] = useState(false);
+  const [earlyLeaveReason, setEarlyLeaveReason] = useState('');
+  const [earlyLeaveAttId, setEarlyLeaveAttId] = useState<string | null>(null);
+  const [earlyLeaveSubmitting, setEarlyLeaveSubmitting] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -88,7 +95,7 @@ export default function AttendanceRecap() {
       if (!res.ok) throw new Error(data.error);
       setSuccess(data.message);
       setShowForm(false);
-      setFormData({ correction_date: '', type: 'Check-In', reason: '', promise_not_repeat: false });
+      setFormData({ correction_date: '', type: 'Check-In', reason: '', promise_not_repeat: false, actual_time: '08:00' });
       fetchData();
     } catch (err: any) {
       setError(err.message);
@@ -96,6 +103,43 @@ export default function AttendanceRecap() {
       setSubmitting(false);
     }
   };
+
+  // ============================================================
+  // Early leave (izin pulang cepat) handler
+  // ============================================================
+  const handleEarlyLeaveSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!earlyLeaveAttId) return;
+    if (earlyLeaveReason.trim().length < 10) {
+      alert('Alasan minimal 10 karakter');
+      return;
+    }
+    setEarlyLeaveSubmitting(true);
+    try {
+      const res = await fetch('/api/attendance/early-leave/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attendance_id: earlyLeaveAttId, reason: earlyLeaveReason })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      alert(`✅ ${data.message}`);
+      setShowEarlyLeaveForm(false);
+      setEarlyLeaveReason('');
+      setEarlyLeaveAttId(null);
+      fetchData();
+    } catch (err: any) {
+      alert('Error: ' + err.message);
+    } finally {
+      setEarlyLeaveSubmitting(false);
+    }
+  };
+
+  // Cek apakah hari ini ada check-out is_early yang belum diajukan izin
+  const todayEarlyCheckout = days.find(d => {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+    return d.date === today && d.check_out?.is_early && !d.correction_pending;
+  });
 
   const getDayStatus = (day: DayRecord) => {
     const hasCI = !!day.check_in;
@@ -173,6 +217,64 @@ export default function AttendanceRecap() {
         <span>❌ Tidak Absen</span>
       </div>
 
+      {/* Izin Pulang Cepat — muncul kalau check-out hari ini is_early */}
+      {todayEarlyCheckout && (
+        <div className="mb-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+          <div className="flex items-start gap-2">
+            <span className="text-lg">🏠</span>
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-amber-300">
+                Anda pulang lebih awal hari ini
+                ({todayEarlyCheckout.check_out ? formatTime(todayEarlyCheckout.check_out.timestamp) : ''} WIB)
+              </p>
+              <p className="text-[10px] text-white/60 mt-0.5">
+                Ajukan izin pulang cepat dengan alasan yang valid. Admin akan review.
+              </p>
+              <button
+                onClick={() => {
+                  setEarlyLeaveAttId(todayEarlyCheckout.check_out?.id || null);
+                  setShowEarlyLeaveForm(true);
+                }}
+                className="mt-2 inline-flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium px-2.5 py-1 rounded-lg"
+              >
+                <FileEdit className="w-3 h-3" /> Ajukan Izin Pulang Cepat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Form Izin Pulang Cepat */}
+      {showEarlyLeaveForm && (
+        <form onSubmit={handleEarlyLeaveSubmit} className="mb-3 p-3 bg-amber-500/10 rounded-lg space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold text-amber-300">Izin Pulang Cepat</h4>
+            <button type="button" onClick={() => setShowEarlyLeaveForm(false)} className="text-white/50 hover:text-white">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div>
+            <label className="block text-xs text-white/70 mb-1">Alasan Pulang Cepat * (min. 10 karakter)</label>
+            <textarea
+              required
+              minLength={10}
+              maxLength={300}
+              value={earlyLeaveReason}
+              onChange={(e) => setEarlyLeaveReason(e.target.value)}
+              placeholder="Mis. Ada urusan keluarga mendesak / janji dokter / dll..."
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white h-20 resize-none"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={earlyLeaveSubmitting}
+            className="w-full bg-amber-500 text-white font-bold py-2.5 rounded-lg text-sm disabled:opacity-50"
+          >
+            {earlyLeaveSubmitting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Kirim Pengajuan Izin'}
+          </button>
+        </form>
+      )}
+
       {/* Form Koreksi */}
       {showForm && (
         <form onSubmit={handleSubmit} className="mb-3 p-3 bg-white/5 rounded-lg space-y-3">
@@ -206,7 +308,7 @@ export default function AttendanceRecap() {
                 <button
                   key={t}
                   type="button"
-                  onClick={() => setFormData({ ...formData, type: t })}
+                  onClick={() => setFormData({ ...formData, type: t, actual_time: t === 'Check-In' ? '08:00' : '17:00' })}
                   className={`flex-1 py-2 rounded-lg text-xs font-medium ${
                     formData.type === t
                       ? 'bg-bpjs-yellow text-bpjs-blue-dark'
@@ -217,6 +319,22 @@ export default function AttendanceRecap() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs text-white/70 mb-1">
+              Jam Sebenarnya * {formData.type === 'Check-In' ? '(masuk kantor)' : '(pulang kantor)'}
+            </label>
+            <input
+              type="time"
+              required
+              value={formData.actual_time}
+              onChange={(e) => setFormData({ ...formData, actual_time: e.target.value })}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+            />
+            <p className="text-[10px] text-white/40 mt-0.5">
+              Isi jam sebenarnya saat Anda masuk/pulang hari itu. Contoh: 07:45 atau 17:30
+            </p>
           </div>
 
           <div>

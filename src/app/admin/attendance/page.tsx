@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { fetchFresh } from '@/lib/fresh-fetch';
 import CorrectionApprovals from '@/components/admin/CorrectionApprovals';
+import EarlyLeaveApprovals from '@/components/admin/EarlyLeaveApprovals';
 
 interface AttendanceRow {
   id: string;
@@ -425,6 +426,9 @@ export default function AdminAttendancePage() {
 
       {/* Koreksi Absen Pending — admin approve/reject */}
       <CorrectionApprovals />
+
+      {/* Izin Pulang Cepat Pending — admin approve/reject */}
+      <EarlyLeaveApprovals />
 
       {/* Nudge needed */}
       {notCheckedIn.length > 0 && (

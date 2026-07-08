@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
         type,
         reason,
         status,
+        actual_time,
         interns!inner(name, username)
       `)
       .eq('id', correction_id)
@@ -88,25 +89,35 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Buat timestamp default: Check-In = 08:00 WIB, Check-Out = 17:00 WIB
-    const defaultTime = correction.type === 'Check-In' ? '08:00:00' : '17:00:00';
-    const attTimestamp = new Date(`${dateStr}T${defaultTime}+07:00`).toISOString();
+    // Buat timestamp dari actual_time yang diinput peserta
+    // Format: correction_date + actual_time (HH:MM) + WIB timezone
+    const actualTimeStr = correction.actual_time || (correction.type === 'Check-In' ? '08:00:00' : '17:00:00');
+    const attTimestamp = new Date(`${dateStr}T${actualTimeStr}:00+07:00`).toISOString();
 
-    // Insert attendance record
+    // Hitung is_late/is_early dari actual_time
+    const [actHour, actMin] = actualTimeStr.split(':').map((n: string) => parseInt(n, 10));
+    const actTotalMin = actHour * 60 + actMin;
+    const CHECKIN_DEADLINE = 8 * 60;  // 08:00
+    const CHECKOUT_EARLIEST = 17 * 60; // 17:00
+    const isLate = correction.type === 'Check-In' && actTotalMin > CHECKIN_DEADLINE;
+    const isEarly = correction.type === 'Check-Out' && actTotalMin < CHECKOUT_EARLIEST;
+
+    // Insert attendance record dengan actual_time sebagai timestamp
     const { error: attErr } = await supabase
       .from('attendance')
       .insert({
         intern_id: correction.intern_id,
         type: correction.type,
+        timestamp: attTimestamp,
         latitude: null,
         longitude: null,
         distance_meters: 0,
         photo_url: null,
         is_within_geofence: true,
-        notes: `Koreksi absen diapprove oleh admin. Alasan peserta: ${correction.reason.substring(0, 100)}`,
+        notes: `Koreksi absen diapprove admin. Jam sebenarnya: ${actualTimeStr}. Alasan: ${correction.reason.substring(0, 100)}`,
         is_holiday_checkin: false,
-        is_late: false,
-        is_early: false,
+        is_late: isLate,
+        is_early: isEarly,
         approval_status: 'approved',
         is_correction: true,
         correction_id: correction.id
@@ -132,8 +143,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: updateErr.message }, { status: 500 });
     }
 
+    // ============================================================
+    // PUNISHMENT: EXP 50% untuk koreksi ke-4 dan ke-5 per bulan
+    // Hitung jumlah koreksi bulan ini (termasuk yang ini)
+    // ============================================================
+    const monthStart = dateStr.substring(0, 8) + '01';
+    const monthEnd = dateStr.substring(0, 8) + '31';
+    const { count: monthCount } = await supabase
+      .from('attendance_corrections')
+      .select('id', { count: 'exact', head: true })
+      .eq('intern_id', correction.intern_id)
+      .gte('correction_date', monthStart)
+      .lte('correction_date', monthEnd)
+      .neq('status', 'rejected');
+
+    const totalThisMonth = (monthCount || 0); // sudah include yang ini (just approved)
+    const baseExp = correction.type === 'Check-In' ? EXP_REWARDS.CHECK_IN : EXP_REWARDS.CHECK_OUT;
+    const expMultiplier = totalThisMonth >= 4 ? 0.5 : 1.0; // ke-4 dan ke-5: 50%
+    const expGain = Math.round(baseExp * expMultiplier);
+    const expNote = expMultiplier < 1
+      ? ` (EXP dipotong 50% — ini koreksi ke-${totalThisMonth} bulan ini)`
+      : '';
+
     // Grant EXP
-    const expGain = correction.type === 'Check-In' ? EXP_REWARDS.CHECK_IN : EXP_REWARDS.CHECK_OUT;
     const { data: internData } = await supabase
       .from('interns')
       .select('total_exp, streak_count')
@@ -143,7 +175,6 @@ export async function POST(req: NextRequest) {
     if (internData) {
       const newExp = (internData.total_exp || 0) + expGain;
       const updates: any = { total_exp: newExp };
-      // Kalau Check-In correction, increment streak
       if (correction.type === 'Check-In') {
         updates.streak_count = (internData.streak_count || 0) + 1;
       }
@@ -154,7 +185,7 @@ export async function POST(req: NextRequest) {
     const intern = correction.interns as any;
     await supabase.from('nudges').insert({
       intern_id: correction.intern_id,
-      message: `✅ Koreksi ${correction.type} untuk tanggal ${dateStr} Anda DISETUJUI oleh admin. Record absen telah ditambahkan (+${expGain} EXP). Catatan admin: ${review_notes?.trim() || 'Diapprove'}.`,
+      message: `✅ Koreksi ${correction.type} tanggal ${dateStr} jam ${actualTimeStr} DISETUJUI. Record absen ditambahkan (+${expGain} EXP${expNote}). ${isLate ? '⚠️ Tercatat terlambat. ' : ''}${isEarly ? '🏠 Tercatat pulang awal. ' : ''}Catatan admin: ${review_notes?.trim() || 'Diapprove'}.`,
       type: 'correction_approved',
       created_by_type: 'admin',
       created_by_id: admin.sub,

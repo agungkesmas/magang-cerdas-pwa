@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { correction_date, type, reason, promise_not_repeat } = await req.json();
+    const { correction_date, type, reason, promise_not_repeat, actual_time } = await req.json();
 
     // Validasi input
     if (!correction_date || !type || !reason) {
@@ -37,6 +37,10 @@ export async function POST(req: NextRequest) {
     }
     if (reason.trim().length < 10) {
       return NextResponse.json({ error: 'Alasan minimal 10 karakter' }, { status: 400 });
+    }
+    // actual_time WAJIB diisi (format HH:MM, mis. "07:45" atau "17:30")
+    if (!actual_time || !/^\d{2}:\d{2}$/.test(actual_time)) {
+      return NextResponse.json({ error: 'Jam sebenarnya wajib diisi (format HH:MM, mis. 07:45)' }, { status: 400 });
     }
 
     const supabase = createServerClient();
@@ -109,11 +113,17 @@ export async function POST(req: NextRequest) {
       .lte('correction_date', monthEnd)
       .neq('status', 'rejected'); // yang rejected tidak dihitung
 
-    if ((monthCount || 0) >= 5) {
+    const currentCount = monthCount || 0;
+    if (currentCount >= 5) {
       return NextResponse.json({
         error: 'Anda sudah mengajukan 5 koreksi bulan ini (batas maksimal). Hubungi admin kalau ada keperluan mendesak.'
       }, { status: 429 });
     }
+
+    // Punishment warning: koreksi ke-4 dan ke-5 dapat EXP 50%
+    const expPenaltyNote = currentCount >= 3
+      ? ` (Catatan: ini koreksi ke-${currentCount + 1} bulan ini — EXP yang didapat akan dipotong 50% sebagai pengingat disiplin)`
+      : '';
 
     // Insert koreksi
     const { data: correction, error } = await supabase
@@ -124,6 +134,7 @@ export async function POST(req: NextRequest) {
         type,
         reason: reason.trim(),
         promise_not_repeat: true,
+        actual_time,
         status: 'pending'
       })
       .select()
@@ -136,7 +147,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       correction,
-      message: `Koreksi ${type} untuk tanggal ${correction_date} berhasil diajukan. Menunggu persetujuan admin. Anda akan mendapat notifikasi setelah diproses.`
+      message: `Koreksi ${type} untuk tanggal ${correction_date} jam ${actual_time} berhasil diajukan. Menunggu persetujuan admin.${expPenaltyNote}`
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
