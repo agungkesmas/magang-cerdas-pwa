@@ -8,6 +8,139 @@ import { NextRequest, NextResponse } from 'next/server';
 import { callLLM, LLMMessage } from '@/lib/llm';
 
 // ============================================================
+// KNOWLEDGE BASE — Manfaat Program BPJS Ketenagakerjaan
+// Update 2026-07-08: tambah KB BPJS untuk semua dashboard Si Pandai
+// Sumber: UU No. 40 Tahun 2004, PP No. 44 Tahun 2015,
+//         Perpres No. 64 Tahun 2020, website bpjsketenagakerjaan.go.id
+// ============================================================
+
+const BPJS_KB = `KNOWLEDGE BASE — BPJS KETENAGAKERJAAN (BPJTK)
+BPJS Ketenagakerjaan adalah Badan Penyelenggara Jaminan Sosial yang
+menyelenggarakan program jaminan sosial bagi Tenaga Kerja. Berdiri sejak
+1 Januari 2014 berdasarkan UU No. 40 Tahun 2004. Ada 5 program jaminan:
+
+=== 1. JHT (Jaminan Hari Tua) ===
+Tujuan: tabungan hari tua, dibayar saat usia pensiun / tidak bekerja lagi.
+- Iuran: 5,7% upah (2% ditanggung pekerja, 3,7% ditanggung employer)
+- Manfaat: saldo JHT bisa dicairkan saat:
+  * Usia 56 tahun (pensiun), ATAU
+  * Usia 50 tahun + 5 tahun menjadi peserta + tidak bekerja, ATAU
+  * Mengundurkan diri/Cape tiba-tiba + saldo > Rp10jt, ATAU
+  * Pekerja keluar negeri + kontrak kerja selesai, ATAU
+  * Meninggal dunia (ahli waris), ATAU
+  * Cacat total tetap
+- Cara klaim: datang ke kantor BPJTK / kantor cabang dengan dokumen
+  (KTP, NPWP, kartu peserta, surat keterangan berhenti kerja),
+  atau aplikasi JMO (Jaminan Mobile) untuk pencairan sebagian/penuh.
+
+=== 2. JKK (Jaminan Kecelakaan Kerja) ===
+Tujuan: perlindungan untuk pekerja yang mengalami kecelakaan kerja ATAU
+penyakit akibat kerja (PAK).
+- Iuran: 0,24% - 1,74% upah (ditanggung PENUH oleh employer, variasi
+  tingkat risiko tempat kerja)
+- Manfaat:
+  * Biaya pengobatan tanpa batas (sesuai kebutuhan medis)
+  * Santunan harian = 100% upah rata-rata selama max 12 bulan
+  * Santunan cacat = 80% upah, seumur hidup kalau total tetap
+  * Santunan kematian = 48 bulan upah untuk ahli waris
+  * Biaya rehabilitasi prostesis/alat bantu
+- Cara klaim: lapor ke employer → employer laporkan ke BPJTK dalam
+  2x24 jam → proses klaim (bisa pakai aplikasi JMO/e-JK).
+
+=== 3. JKM (Jaminan Kematian) ===
+Tujuan: santunan kematian untuk ahli waris pekerja yang meninggal
+(BUKAN karena kecelakaan kerja — itu masuk JKK).
+- Iuran: 0,3% upah (ditanggung PENUH oleh employer)
+- Manfaat: santunan sebesar Rp48.000.000 (48 juta rupiah) untuk
+  ahli waris (janda/duda, anak, orang tua — sesuai urutan)
+- Cara klaim: ahli waris datang ke kantor BPJTK dengan dokumen
+  (KTP ahli waris, KK, akta kematian, kartu peserta).
+- Tambahan: ada manfaat pemakaman Rp2.000.000 + beasiswa anak
+  (Rp200.000/bulan selama SD, Rp300.000/bulan SMP, dst).
+
+=== 4. JP (Jaminan Pensiun) ===
+Tujuan: pensiun bulanan seumur hidup setelah usia pensiun.
+- Iuran: 3% upah (1% pekerja, 2% employer), upah max Rp10.547.400 (2024)
+- Syarat: minimal 15 tahun iuran + usia 56 tahun (naik bertahap ke 57
+  di 2025, dst sampai 65 tahun).
+- Manfaat: pensiun bulanan seumur hidup:
+  * Pensiun usia (penuh): saat usia pensiun
+  * Pensiun cacat: cacat total tetap
+  * Pensiun janda/duda: ahli waris pensiun
+  * Pensiun anak: ahli waris di bawah 18 tahun
+- Jumlah pensiun dihitung dari akumulasi iuran + hasil pengembangan
+  + umur harapan hidup. Minimal Rp350.000/bulan (2024).
+
+=== 5. JKL (Jaminan Kehilangan Pekerjaan) ===
+Tujuan: bantuan sementara untuk pekerja yang kehilangan pekerjaan
+(PHK) - PROGRAM BARU sejak 2024.
+- Iuran: 0,46% upah (0,24% pekerja + 0,22% employer) — dari gaji
+  KOMponen tetap (bukan tunjangan variabel)
+- Syarat:
+  * Peserta minimal 12 bulan iuran berturut-turut dalam 24 bulan
+  * PHK terjadi (bukan mengundurkan diri)
+- Manfaat:
+  * Santunan bulanan = 45% dari upah rata-rata, max 3 bulan
+  * Akses ke informasi lowongan kerja
+  * Pelatihan kerja
+- Cara klaim: lapor ke BPJTK setelah PHK, tunjukkan surat PHK.
+
+=== APLIKASI JMO (Jaminan Mobile) ===
+JMO adalah aplikasi resmi BPJS Ketenagakerjaan untuk:
+- Cek saldo JHT & JP
+- Pengajuan pencairan JHT (sebagian/penuh)
+- Klaim JKK online (lapor kecelakaan kerja)
+- Klaim JKM online
+- Download kartu peserta
+- Cek status kepesertaan
+Download di Play Store / App Store.
+
+=== KANTOR CABANG CIREBON ===
+- Alamat: Jl. Dr. Cipto Mangunkusumo No. 1, Cirebon
+- Layanan: kepesertaan, klaim JHT/JP/JKK/JKM, JKL
+- Jam: Senin-Jumat 08:00-16:00 WIB
+
+=== ATURAN MENJAWAB BPJS ===
+- Untuk pertanyaan spesifik detail (mis. "berapa iuran JKK untuk
+  perusahaan konstruksi"), arahkan user HUBUNGI customer service
+  BPJS Ketenagakerjaan di 175 atau datang ke kantor cabang.
+- Untuk detail dokumen klaim, arahkan ke aplikasi JMO atau kantor.
+- JANGAN berikan angka iuran yang TIDAK yakin — sebut range umum saja.
+- Tetap ramah dan bantu user memahami konsep dasar setiap program.`;
+
+const BPJS_KB_ADMIN_CONTEXT = `CATATAN UNTUK ADMIN:
+- Magang-cerdas PWA berjalan di BPJTK Cabang Cirebon
+- Banyak quest/aktivitas peserta terkait pengelolaan berkas JHT, JKK, JP
+  (klaim fisik di kantor) — peserta belajar alur administrasi klaim
+- JMO (aplikasi mobile) = platform digital untuk klaim mandiri
+- Peserta magang TIDAK terdaftar sebagai peserta BPJTK (status magang),
+  tapi mereka belajar SISTEM klaim supaya nanti siap kerja`;
+
+const BPJS_KB_INTERN_CONTEXT = `CATATAN UNTUK PESERTA MAGANG:
+- Selama magang, kamu akan banyak belajar alur pengelolaan berkas klaim
+  JHT, JKK, JP di kantor BPJTK Cabang Cirebon
+- Quest seperti "Pengorganisasian Berkas JHT", "Edukasi JMO" sudah dirancang
+  untuk bantu kamu paham alur kerja asli BPJS
+- JMO = aplikasi resmi BPJS Ketenagakerjaan untuk klaim mandiri (cek saldo,
+  cair JHT, klaim JKK online)
+- Setelah lulus magang & kerja resmi, kamu OTOMATIS jadi peserta BPJTK
+  (wajib) dan dapat manfaat JHT, JKK, JKM, JP, JKL`;
+
+const BPJS_KB_PEMBINA_CONTEXT = `CATATAN UNTUK PEMBINA:
+- Sebagai staff BPJTK, kamu sudah paham program BPJS Ketenagakerjaan
+- Quest yang kamu deploy ke peserta seringkali terkait pengelolaan
+  berkas klaim (JHT, JKK, JP) — bantu peserta memahami alur asli
+- Si Pandai bisa bantu kamu jelaskan konsep program ke peserta,
+  tapi untuk detail teknis tetap rujuk ke prosedur internal BPJTK`;
+
+const BPJS_KB_BKK_CONTEXT = `CATATAN UNTUK BKK:
+- Sebagai guru BKK, kamu membimbing siswa magang di BPJTK Cabang Cirebon
+- BPJTK menyelenggarakan 5 program: JHT, JKK, JKM, JP, JKL
+- Informasi ini berguna untuk edukasi siswa sebelum magang
+- Untuk info pendaftaran peserta BPJTK resmi (bukan magang),
+  arahkan ke customer service 175 atau kantor cabang`;
+
+// ============================================================
 // SYSTEM PROMPTS — akurat, detil, per dashboard
 // AUDIT 2026-07-03: semua fitur sudah diverifikasi vs source code
 // ============================================================
@@ -21,6 +154,11 @@ const SYSTEM_PROMPTS: Record<string, string> = {
 PERAN:
 - Menyambut admin BPJTK & membantu menjelaskan fitur dashboard
 - Menjawab pertanyaan terkait menu dashboard admin saja
+- Bisa juga menjawab pertanyaan dasar tentang program BPJS Ketenagakerjaan (JHT, JKK, JKM, JP, JKL) sebagai konteks magang
+
+${BPJS_KB}
+
+${BPJS_KB_ADMIN_CONTEXT}
 
 MENU DASHBOARD ADMIN (11 menu):
 1. **Peserta Magang** — kelola akun peserta magang. Tambah individual (auto-generate username + password), Batch Upload Excel/CSV (max 100 peserta, ada template & download hasil). Saat batch upload dengan nama sekolah baru (misal "SMK Al Hidayah"), sistem **otomatis membuat entitas sekolah** di tabel schools — tidak perlu input manual. Edit, Hapus (per-row atau **multi-select dengan checkbox + Hapus Terpilih**), Regenerate Password, Toggle active/inactive, Print Kartu Kredensial (per-row atau **Print Terpilih** multiple sekaligus). Setelah create, tampil CreatedCredsModal dengan Copy Share Text (siap kirim WhatsApp). **Panel Leaderboard** di atas daftar peserta (top 10 EXP, filter departemen, collapsible) — hanya untuk oversight admin, TIDAK mempengaruhi penerbitan sertifikat.
@@ -65,6 +203,11 @@ PERAN:
 - Menyambut pembina magang (staff BPJTK) & membantu menjelaskan fitur dashboard
 - Membantu pembina membuat & mendeploy Quest ke grup chat
 - Menjawab pertanyaan terkait menu dashboard pembina saja
+- Bisa juga menjawab pertanyaan dasar tentang program BPJS Ketenagakerjaan (JHT, JKK, JKM, JP, JKL)
+
+${BPJS_KB}
+
+${BPJS_KB_PEMBINA_CONTEXT}
 
 MENU DASHBOARD PEMBINA (5 menu):
 1. **Beranda** — ringkasan statistik: grup dibimbing, total peserta, total pembina dalam grup. Quick actions: buka Grup Saya, buka Chat Grup, Deploy Quest. Ada list "Grup yang Saya Bimbing" — **tombol icon Clock** per peserta untuk lihat timeline lengkap (audit trail: absensi, tugas, quest, izin, sertifikat). Di timeline inilah pembina bisa kasih **Bonus XP (Gift)** ke aktivitas yang ditambahkan peserta sendiri — cari aktivitas dengan badge "Self-Added", klik tombol 🎁 +Bonus XP. Tombol icon Target untuk assign tugas individual ke peserta. Tombol DM untuk chat 1-on-1 dengan peserta. **Tombol Tag** (icon Tag, kuning) untuk beri tag/flag peserta (Unggul, Perlu Perhatian, Leadership, Fast Learner, Bermasalah) — sharing dengan admin. **Tombol 🎁 (Gift, amber)** untuk Quick Gift Modal — kasih Bonus XP cepat 3-klik tanpa pindah halaman. **Section "Persetujuan Check-in/out"** (amber, muncul kalau ada pending): approve/reject check-in/out peserta di hari libur/weekend — EXP diberikan setelah approve. **Section "Peserta Lain (Collaborator)"**: peserta di luar bimbingan Anda yang ada di grup yang sama (mis. "Diskusi Magang All") — bisa kasih 🎁 gift cross-department kalau peserta lain divisi bantu pekerjaan Anda.
@@ -133,6 +276,11 @@ PERAN:
 - Menyambut peserta magang & membantu menjelaskan fitur dashboard
 - Membantu peserta memahami alur magang harian
 - Menjawab pertanyaan terkait menu dashboard peserta saja
+- Bisa juga menjawab pertanyaan dasar tentang program BPJS Ketenagakerjaan (JHT, JKK, JKM, JP, JKL) — peserta akan banyak kerjakan quest terkait program ini
+
+${BPJS_KB}
+
+${BPJS_KB_INTERN_CONTEXT}
 
 MENU DASHBOARD PESERTA (6 menu, bottom nav):
 1. **Home** — ringkasan progress magang: avatar + LEVEL badge, EXP bar (current/next level), Waktu Magang progress (hari tersisa), Tier saat ini (Participation/Competent/Excellence), Streak hari (check-in beruntun), status Check-In hari ini, kartu Survival Kit Academy, Leaderboard mini Top 5, Notifikasi terbaru (nudges dari admin/pembina). Bell icon di pojok kanan → link ke Vault (bukan notification center).
@@ -214,6 +362,11 @@ PERAN:
 - Menyambut guru BKK & membantu menjelaskan fitur dashboard
 - Membantu BKK mengajukan permintaan penempatan magang ke BPJTK
 - Menjawab pertanyaan terkait menu dashboard BKK saja
+- Bisa juga menjawab pertanyaan dasar tentang program BPJS Ketenagakerjaan (JHT, JKK, JKM, JP, JKL) untuk edukasi siswa
+
+${BPJS_KB}
+
+${BPJS_KB_BKK_CONTEXT}
 
 MENU DASHBOARD BKK (5 menu):
 1. **Beranda** — ringkasan statistik peserta dari sekolah yang dibimbing. Welcome header dengan nama + sekolah yang dibimbing (BKK bisa multi-sekolah). 4 StatCards: Total Peserta, Rata-rata EXP, Sertifikat Terbit, Akan Selesai (<14 hari). Quick actions: Ajukan Magang, Lihat Peserta, Arsip Sertifikat. Summary card Permintaan Magang (4 status chips). Leaderboard EXP Top 5. "Akan Selesai Soon" (peserta <14 hari). "Sertifikat Baru Saja Terbit". Info privacy: foto selfie, GPS, dan detail tugas internal BPJS tidak ditampilkan.
@@ -258,6 +411,36 @@ function stubAnswer(dashboard: string, question: string): string {
   if (q.includes('terima kasih') || q.includes('makasih') || q.includes('thanks')) {
     return 'Sama-sama! Senang bisa membantu. Jika ada pertanyaan lain, jangan ragu tanya ya.';
   }
+
+  // === BPJS KNOWLEDGE BASE STUB (semua dashboard) ===
+  if (q.includes('jht') || q.includes('jaminan hari tua') || q.includes('tabungan hari tua')) {
+    return '**JHT (Jaminan Hari Tua)** adalah tabungan hari tua yang dibayar saat pensiun/berhenti kerja. Iuran 5,7% upah (2% pekerja + 3,7% employer). Bisa dicairkan saat usia 56 thn, atau usia 50 thn + 5 thn jadi peserta + tidak bekerja, atau PHK/mengundurkan diri + saldo >Rp10jt. Klaim via JMO app atau kantor BPJTK. Untuk detail dokumen, hubungi CS 175.';
+  }
+  if (q.includes('jkk') || q.includes('jaminan kecelakaan kerja') || q.includes('kecelakaan kerja')) {
+    return '**JKK (Jaminan Kecelakaan Kerja)** melindungi pekerja dari kecelakaan kerja & penyakit akibat kerja. Iuran 0,24%-1,74% upah (ditanggung employer, variasi risiko). Manfaat: biaya pengobatan tanpa batas, santunan harian 100% upah max 12 bln, santunan cacat 80% upah, santunan kematian 48 bln upah. Klaim: lapor employer → employer lapor BPJTK 2x24 jam → proses via JMO/e-JK.';
+  }
+  if (q.includes('jkm') || q.includes('jaminan kematian')) {
+    return '**JKM (Jaminan Kematian)** memberi santunan Rp48.000.000 untuk ahli waris pekerja yang meninggal (BUKAN karena kecelakaan kerja). Iuran 0,3% upah (ditanggung employer). Tambahan: biaya pemakaman Rp2jt + beasiswa anak. Klaim: ahli waris datang ke kantor BPJTK dengan KTP, KK, akta kematian, kartu peserta.';
+  }
+  if (q.includes('jp ') || q.includes('jaminan pensiun') || (q.includes('jp') && (q.includes('pensiun') || q.includes('iuran')))) {
+    return '**JP (Jaminan Pensiun)** = pensiun bulanan seumur hidup setelah usia pensiun. Iuran 3% upah (1% pekerja + 2% employer), upah max Rp10,5jt. Syarat: min 15 thn iuran + usia 56 thn (naik bertahap). Minimal pensiun Rp350rb/bln. Cara klaim: JMO app atau kantor BPJTK dengan dokumen (KTP, NPWP, kartu peserta, surat berhenti kerja).';
+  }
+  if (q.includes('jkl') || q.includes('kehilangan pekerjaan') || q.includes('phk')) {
+    return '**JKL (Jaminan Kehilangan Pekerjaan)** = bantuan untuk pekerja yang PHK (BUKAN mengundurkan diri). Program baru sejak 2024. Iuran 0,46% upah (0,24% pekerja + 0,22% employer). Syarat: min 12 bln iuran berturut-turut dalam 24 bln + PHK. Manfaat: 45% upah rata-rata max 3 bln + info lowongan kerja + pelatihan. Klaim: lapor BPJTK dengan surat PHK.';
+  }
+  if (q.includes('jmo') || q.includes('aplikasi jaminan') || q.includes('aplikasi bpjs')) {
+    return '**JMO (Jaminan Mobile)** adalah aplikasi resmi BPJS Ketenagakerjaan (Play Store/App Store) untuk: cek saldo JHT & JP, pengajuan pencairan JHT, klaim JKK online, klaim JKM online, download kartu peserta, cek status kepesertaan. Download gratis, login pakai nomor kepesertaan + OTP SMS.';
+  }
+  if ((q.includes('bpjs') || q.includes('bpjtk') || q.includes('ketenagakerjaan')) && (q.includes('apa') || q.includes('program') || q.includes('manfaat') || q.includes('itu'))) {
+    return '**BPJS Ketenagakerjaan** menyelenggarakan 5 program jaminan sosial untuk tenaga kerja:\n1. **JHT** — tabungan hari tua\n2. **JKK** — kecelakaan kerja & penyakit akibat kerja\n3. **JKM** — santunan kematian Rp48jt\n4. **JP** — pensiun bulanan\n5. **JKL** — bantuan PHK (baru 2024)\n\nPendaftaran via employer (wajib untuk pekerja formal). Klaim via JMO app atau kantor cabang. CS: 175.';
+  }
+  if (q.includes('iuran') && (q.includes('berapa') || q.includes('persen') || q.includes('hitung'))) {
+    return '**Iuran BPJS Ketenagakerjaan** (per upah):\n• JHT: 5,7% (2% pekerja + 3,7% employer)\n• JKK: 0,24%-1,74% (employer saja, sesuai risiko)\n• JKM: 0,3% (employer saja)\n• JP: 3% (1% pekerja + 2% employer), upah max Rp10,5jt\n• JKL: 0,46% (0,24% pekerja + 0,22% employer)\n\nTotal pekerja: ~8,16% upah. Untuk detail hitung, hubungi CS 175 atau kantor BPJTK.';
+  }
+  if (q.includes('klaim') && (q.includes('jht') || q.includes('pensiun') || q.includes('jp') || q.includes('cair'))) {
+    return '**Cara klaim JHT/JP:**\n1. Pastikan syarat terpenuhi (JHT: usia 56 thn / PHK + saldo >Rp10jt; JP: 15 thn iuran + usia pensiun)\n2. Siapkan dokumen: KTP, NPWP, kartu peserta, surat keterangan berhenti kerja, buku rekening\n3. Klaim via **JMO app** (pencairan sebagian/penuh, lebih cepat) ATAU datang ke **kantor BPJTK Cabang Cirebon**\n4. Tunggu verifikasi 1-7 hari kerja\n5. Dana masuk ke rekening\n\nHubungi CS 175 untuk detail dokumen sesuai kasus.';
+  }
+
 
   // === ADMIN STUB ===
   if (dashboard === 'admin') {
