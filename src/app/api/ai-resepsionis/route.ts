@@ -84,12 +84,13 @@ Tujuan: pensiun bulanan seumur hidup setelah usia pensiun.
 - Iuran: 3% upah (1% pekerja, 2% employer)
 - Upah maksimal yang dikenakan iuran (limit):
   * 2024: Rp10.547.400
-  * 2025: Rp11.078.400
+  * 2025 (BERLAKU SAAT INI): Rp11.078.400
 - Syarat: minimal 15 tahun iuran + usia pensiun
-- Usia pensiun (naik bertahap):
-  * 56 tahun (1 Jan 2019 - 31 Des 2024)
-  * 57 tahun (mulai 1 Januari 2025)
-  * Naik 1 tahun tiap 5 tahun, maksimal 65 tahun
+- Usia pensiun (naik bertahap, 1 tahun tiap 5 tahun, maksimal 65 tahun):
+  * 56 tahun (1 Jan 2019 - 31 Des 2024) — SUDAH BERLALU
+  * 57 tahun (mulai 1 Januari 2025) — BERLAKU SAAT INI (per Juli 2026)
+  * 58 tahun (mulai 1 Januari 2030)
+  * dst sampai 65 tahun
 - Manfaat: pensiun bulanan seumur hidup:
   * Pensiun usia (penuh): saat usia pensiun
   * Pensiun cacat: cacat total tetap
@@ -98,7 +99,7 @@ Tujuan: pensiun bulanan seumur hidup setelah usia pensiun.
 - Jumlah pensiun dihitung dari akumulasi iuran + hasil pengembangan
   + umur harapan hidup.
   * Minimal pensiun 2024: Rp350.000/bulan
-  * Minimal pensiun 2025: Rp360.000/bulan
+  * Minimal pensiun 2025 (BERLAKU SAAT INI): Rp360.000/bulan
 
 === 5. JKP (Jaminan Kehilangan Pekerjaan) ===
 Dasar hukum: Perpres No. 37 Tahun 2021.
