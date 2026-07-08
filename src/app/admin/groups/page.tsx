@@ -17,7 +17,9 @@ import {
   ArrowLeft,
   Archive,
   RotateCcw,
-  Send
+  Send,
+  Megaphone,
+  Sparkles
 } from 'lucide-react';
 
 interface Group {
@@ -32,6 +34,13 @@ interface Group {
   pembina_count: number;
   peserta_count: number;
   my_role?: string;
+}
+
+// Deteksi grup Mading (broadcast channel — semua peserta)
+// Kompatibel dengan nama baru 'Mading Pengumuman' dan nama lama 'All Peserta Magang'
+function isMadingGroup(g: Group): boolean {
+  return g.group_type === 'system' && !g.department &&
+    (g.name === 'Mading Pengumuman' || g.name === 'All Peserta Magang');
 }
 
 interface Member {
@@ -71,6 +80,13 @@ export default function AdminGroupsPage() {
     return matchSearch && matchTab;
   });
 
+  // Sort: Mading dulu (broadcast channel), lalu system lain, lalu manual
+  const sorted = [...filtered].sort((a, b) => {
+    const aRank = isMadingGroup(a) ? 0 : (a.group_type === 'system' ? 1 : 2);
+    const bRank = isMadingGroup(b) ? 0 : (b.group_type === 'system' ? 1 : 2);
+    return aRank - bRank;
+  });
+
   if (selectedGroup) {
     return <GroupDetail groupId={selectedGroup} onBack={() => { setSelectedGroup(null); fetchGroups(); }} />;
   }
@@ -93,7 +109,7 @@ export default function AdminGroupsPage() {
             Kelola Grup Chat
           </h1>
           <p className="text-gray-500 text-sm mt-1">
-            {groups.length} grup aktif
+            {groups.filter(g => g.is_active).length} grup aktif • {groups.filter(g => !g.is_active).length} arsip
           </p>
         </div>
         <button
@@ -102,6 +118,20 @@ export default function AdminGroupsPage() {
         >
           <Plus className="w-4 h-4" /> Buat Grup Baru
         </button>
+      </div>
+
+      {/* Info banner — grup sistem tidak bisa diarsipkan */}
+      <div className="bg-bpjs-blue/5 border border-bpjs-blue/20 rounded-xl p-4 flex items-start gap-3">
+        <Megaphone className="w-5 h-5 text-bpjs-blue flex-shrink-0 mt-0.5" />
+        <div className="text-sm text-gray-700">
+          <p className="font-semibold text-bpjs-blue mb-1">Grup Sistem (auto-managed):</p>
+          <ul className="list-disc list-inside space-y-0.5 text-gray-600 text-xs">
+            <li><strong>Mading Pengumuman</strong> — broadcast ke SEMUA peserta magang aktif (8 peserta)</li>
+            <li><strong>Magang - Pelayanan / Pemasaran / Keuangan</strong> — otomatis berisi peserta + pembina per departemen</li>
+            <li><strong>Diskusi Magang All</strong> — diskusi cross-department (semua peserta + semua pembina)</li>
+          </ul>
+          <p className="text-xs text-gray-500 mt-2">Grup sistem tidak bisa diarsipkan/dihapus. Peserta & pembina masuk-keluar otomatis sesuai status aktif & departemen.</p>
+        </div>
       </div>
 
       <div className="relative">
@@ -140,24 +170,60 @@ export default function AdminGroupsPage() {
         </div>
       ) : (
         <div className="grid gap-3">
-          {filtered.map((g) => (
+          {sorted.map((g) => {
+            const isMading = isMadingGroup(g);
+            // Label tampilan: untuk grup legacy 'All Peserta Magang', tampilkan 'Mading Pengumuman'
+            const displayName = isMading && g.name === 'All Peserta Magang' ? 'Mading Pengumuman' : g.name;
+            return (
             <div
               key={g.id}
-              className={`bg-white rounded-xl border p-4 hover:shadow-md hover:border-bpjs-blue/30 transition-all ${!g.is_active ? 'border-gray-300 bg-gray-50/50' : 'border-gray-200'}`}
+              className={`rounded-xl border p-4 hover:shadow-md transition-all relative overflow-hidden ${
+                !g.is_active
+                  ? 'border-gray-300 bg-gray-50/50'
+                  : isMading
+                    ? 'bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-300 hover:border-amber-400'
+                    : 'bg-white border-gray-200 hover:border-bpjs-blue/30'
+              }`}
             >
+              {isMading && g.is_active && (
+                <div className="absolute top-0 right-0 bg-amber-500 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-bl-lg uppercase tracking-wider flex items-center gap-1">
+                  <Sparkles className="w-2.5 h-2.5" /> Broadcast
+                </div>
+              )}
               <div className="flex items-start gap-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-bpjs-blue/10 to-bpjs-blue/5 flex items-center justify-center flex-shrink-0 cursor-pointer" onClick={() => setSelectedGroup(g.id)}>
-                  <MessageCircle className="w-6 h-6 text-bpjs-blue" />
+                <div
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer ${
+                    isMading
+                      ? 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-md shadow-amber-500/30'
+                      : 'bg-gradient-to-br from-bpjs-blue/10 to-bpjs-blue/5'
+                  }`}
+                  onClick={() => setSelectedGroup(g.id)}
+                >
+                  {isMading ? (
+                    <Megaphone className="w-6 h-6 text-white" />
+                  ) : (
+                    <MessageCircle className="w-6 h-6 text-bpjs-blue" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setSelectedGroup(g.id)}>
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <h3 className="font-bold text-gray-900">{g.name}</h3>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${g.group_type === 'system' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{g.group_type === 'system' ? 'Sistem' : g.group_type}</span>
+                    <h3 className={`font-bold ${isMading ? 'text-amber-900' : 'text-gray-900'}`}>{displayName}</h3>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      isMading
+                        ? 'bg-amber-200 text-amber-900'
+                        : g.group_type === 'system'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-purple-100 text-purple-700'
+                    }`}>{isMading ? 'Mading' : g.group_type === 'system' ? 'Sistem' : g.group_type}</span>
                     {g.department && <span className="text-xs px-2 py-0.5 bg-bpjs-blue/10 text-bpjs-blue rounded-full">{g.department}</span>}
                     {!g.is_active && <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full font-medium">Arsip</span>}
                   </div>
-                  {g.description && <p className="text-sm text-gray-500 mb-2 line-clamp-1">{g.description}</p>}
-                  <div className="flex items-center gap-4 text-xs text-gray-500 flex-wrap">
+                  {g.description && (
+                    <p className={`text-sm mb-2 line-clamp-1 ${isMading ? 'text-amber-700' : 'text-gray-500'}`}>
+                      {isMading ? 'Pengumuman resmi dari admin & pembina BPJS Ketenagakerjaan' : g.description}
+                    </p>
+                  )}
+                  <div className={`flex items-center gap-4 text-xs flex-wrap ${isMading ? 'text-amber-700' : 'text-gray-500'}`}>
                     <span className="flex items-center gap-1"><UserCog className="w-3 h-3" /> {g.pembina_count} pembina</span>
                     <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {g.peserta_count} peserta</span>
                     <span>Dibuat oleh: {g.created_by_name}</span>
@@ -169,8 +235,8 @@ export default function AdminGroupsPage() {
                     <Link
                       href={`/admin/chat/${g.id}`}
                       onClick={(e) => e.stopPropagation()}
-                      className="p-2 bg-bpjs-blue/10 hover:bg-bpjs-blue/20 text-bpjs-blue rounded-md"
-                      title={`Buka chat ${g.name}`}
+                      className={`p-2 rounded-md ${isMading ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-700' : 'bg-bpjs-blue/10 hover:bg-bpjs-blue/20 text-bpjs-blue'}`}
+                      title={`Buka chat ${displayName}`}
                     >
                       <Send className="w-4 h-4" />
                     </Link>
@@ -199,7 +265,8 @@ export default function AdminGroupsPage() {
                 </div>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
       )}
 
