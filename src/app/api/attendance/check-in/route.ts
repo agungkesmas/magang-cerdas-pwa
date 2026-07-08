@@ -113,6 +113,13 @@ export async function POST(req: NextRequest) {
     // Cek apakah check-in di hari libur/weekend (butuh approval pembina)
     const holidayCheck = checkIfHolidayCheckin();
 
+    // Cek keterlambatan: check-in setelah 08:00 WIB = terlambat
+    const wibHourStr = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false });
+    const [ciHour, ciMin] = wibHourStr.split(':').map(n => parseInt(n, 10));
+    const ciTotalMin = ciHour * 60 + ciMin;
+    const CHECKIN_DEADLINE_MIN = 8 * 60; // 08:00 = 480 menit
+    const isLate = ciTotalMin > CHECKIN_DEADLINE_MIN;
+
     // Insert attendance
     const { data: att, error } = await supabase
       .from('attendance')
@@ -126,6 +133,7 @@ export async function POST(req: NextRequest) {
         is_within_geofence: true,
         notes: notes || null,
         is_holiday_checkin: holidayCheck.isHoliday,
+        is_late: isLate,
         approval_status: holidayCheck.isHoliday ? 'pending' : 'approved'
       })
       .select()
@@ -169,7 +177,11 @@ export async function POST(req: NextRequest) {
       attendance: att,
       exp_gained: EXP_REWARDS.CHECK_IN,
       distance_meters: distance,
-      new_total_exp: (internData?.total_exp || 0) + EXP_REWARDS.CHECK_IN
+      new_total_exp: (internData?.total_exp || 0) + EXP_REWARDS.CHECK_IN,
+      is_late: isLate,
+      warning: isLate
+        ? `⚠️ Anda check-in terlambat (jam ${wibHourStr} WIB). Check-in seharusnya sebelum jam 08:00 WIB. Keterlambatan tercatat di sistem — mohon lebih disiplin besok.`
+        : undefined
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

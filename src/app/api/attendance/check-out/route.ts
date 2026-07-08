@@ -86,10 +86,6 @@ export async function POST(req: NextRequest) {
 
     // ============================================================
     // ENFORCE GEOFENCE untuk check-out (sama seperti check-in)
-    // Bug lama: check-out TETAP diterima walau di luar radius.
-    // Akibatnya: peserta check-out dari rumah/luar kantor (distance 700m+).
-    // Fix: reject check-out kalau di luar geofence, KECUALI weekend/holiday
-    // (yang butuh approval pembina).
     // ============================================================
     if (latitude && longitude && !isWithin && !holidayCheck.isHoliday) {
       return NextResponse.json(
@@ -103,6 +99,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Cek pulang awal: check-out sebelum 17:00 WIB = pulang awal
+    const wibHourStr = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false });
+    const [coHour, coMin] = wibHourStr.split(':').map(n => parseInt(n, 10));
+    const coTotalMin = coHour * 60 + coMin;
+    const CHECKOUT_EARLIEST_MIN = 17 * 60; // 17:00 = 1020 menit
+    const isEarly = coTotalMin < CHECKOUT_EARLIEST_MIN;
+
     const { data: att, error } = await supabase
       .from('attendance')
       .insert({
@@ -115,6 +118,7 @@ export async function POST(req: NextRequest) {
         is_within_geofence: isWithin,
         notes: notes || null,
         is_holiday_checkin: holidayCheck.isHoliday,
+        is_early: isEarly,
         approval_status: holidayCheck.isHoliday ? 'pending' : 'approved'
       })
       .select()
@@ -152,7 +156,11 @@ export async function POST(req: NextRequest) {
       success: true,
       attendance: att,
       exp_gained: EXP_REWARDS.CHECK_OUT,
-      new_total_exp: (internData?.total_exp || 0) + EXP_REWARDS.CHECK_OUT
+      new_total_exp: (internData?.total_exp || 0) + EXP_REWARDS.CHECK_OUT,
+      is_early: isEarly,
+      warning: isEarly
+        ? `⚠️ Anda check-out lebih awal (jam ${wibHourStr} WIB). Check-out seharusnya setelah jam 17:00 WIB. Pulang awal tercatat di sistem — mohon lebih disiplin besok.`
+        : undefined
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

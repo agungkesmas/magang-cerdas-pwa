@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import ShareButton from '@/components/shared/ShareButton';
+import AttendanceRecap from '@/components/intern/AttendanceRecap';
 import {
   MapPin,
   Camera,
@@ -761,6 +762,9 @@ export default function InternAttendancePage() {
           </p>
         )}
       </div>
+
+      {/* Rekap Absen 30 Hari + Fitur Koreksi */}
+      <AttendanceRecap />
     </div>
   );
 }
