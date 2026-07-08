@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import SWUpdateListener from '@/components/shared/SWUpdateListener';
 
 export const metadata: Metadata = {
   title: 'MAGANG-CERDAS — BPJS Ketenagakerjaan',
@@ -29,7 +30,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="id">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <SWUpdateListener />
+        {children}
+      </body>
     </html>
   );
 }

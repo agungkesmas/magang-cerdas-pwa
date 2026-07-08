@@ -19,8 +19,10 @@ import {
   RotateCcw,
   Send,
   Megaphone,
-  Sparkles
+  Sparkles,
+  RefreshCw
 } from 'lucide-react';
+import { fetchFresh } from '@/lib/fresh-fetch';
 
 interface Group {
   id: string;
@@ -63,7 +65,7 @@ export default function AdminGroupsPage() {
   const fetchGroups = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/groups/list');
+      const res = await fetchFresh('/api/groups/list');
       const data = await res.json();
       if (data.success) setGroups(data.groups);
     } finally {
@@ -112,12 +114,23 @@ export default function AdminGroupsPage() {
             {groups.filter(g => g.is_active).length} grup aktif • {groups.filter(g => !g.is_active).length} arsip
           </p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="inline-flex items-center gap-2 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white font-semibold px-4 py-2.5 rounded-lg shadow-md"
-        >
-          <Plus className="w-4 h-4" /> Buat Grup Baru
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => fetchGroups()}
+            disabled={loading}
+            className="inline-flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium px-3 py-2.5 rounded-lg shadow-sm disabled:opacity-50"
+            title="Refresh data grup (bypass cache)"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="inline-flex items-center gap-2 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white font-semibold px-4 py-2.5 rounded-lg shadow-md"
+          >
+            <Plus className="w-4 h-4" /> Buat Grup Baru
+          </button>
+        </div>
       </div>
 
       {/* Info banner — grup sistem tidak bisa diarsipkan */}

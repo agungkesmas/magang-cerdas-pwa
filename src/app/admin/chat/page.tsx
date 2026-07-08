@@ -11,8 +11,10 @@ import {
   UserCog,
   Building2,
   Megaphone,
-  Sparkles
+  Sparkles,
+  RefreshCw
 } from 'lucide-react';
+import { fetchFresh } from '@/lib/fresh-fetch';
 
 interface Group {
   id: string;
@@ -39,13 +41,18 @@ export default function AdminChatListPage() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'system' | 'manual'>('all');
 
-  useEffect(() => {
-    fetch('/api/groups/list?status=all')
+  const fetchGroups = () => {
+    setLoading(true);
+    fetchFresh('/api/groups/list?status=all')
       .then((r) => r.json())
       .then((d) => {
         if (d.success) setGroups(d.groups || []);
       })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchGroups();
   }, []);
 
   const filtered = groups.filter((g) => {
@@ -76,16 +83,27 @@ export default function AdminChatListPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1
-          className="text-2xl font-bold text-gray-900"
-          style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1
+            className="text-2xl font-bold text-gray-900"
+            style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
+          >
+            Chat Grup
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Kirim pengumuman, tugas, atau info ke grup peserta magang — WhatsApp-style
+          </p>
+        </div>
+        <button
+          onClick={fetchGroups}
+          disabled={loading}
+          className="inline-flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium px-3 py-2 rounded-lg shadow-sm disabled:opacity-50"
+          title="Refresh data grup (bypass cache)"
         >
-          Chat Grup
-        </h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Kirim pengumuman, tugas, atau info ke grup peserta magang — WhatsApp-style
-        </p>
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <span className="hidden sm:inline">Refresh</span>
+        </button>
       </div>
 
       {/* Info banner */}
