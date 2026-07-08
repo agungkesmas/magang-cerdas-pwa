@@ -9,78 +9,114 @@ import { callLLM, LLMMessage } from '@/lib/llm';
 
 // ============================================================
 // KNOWLEDGE BASE — Manfaat Program BPJS Ketenagakerjaan
-// Update 2026-07-08: tambah KB BPJS untuk semua dashboard Si Pandai
-// Sumber: UU No. 40 Tahun 2004, PP No. 44 Tahun 2015,
-//         Perpres No. 64 Tahun 2020, website bpjsketenagakerjaan.go.id
+// Update 2026-07-08: KB BPJS untuk semua dashboard Si Pandai
+// Update 2026-07-09: KOREKSI JKL → JKP, update regulasi terkini
+//
+// Sumber regulasi (masih berlaku per Juli 2026):
+//   - UU No. 40 Tahun 2004 (SJSN)
+//   - UU No. 24 Tahun 2011 (BPJS)
+//   - PP No. 44 Tahun 2015 (Penyelenggaraan Program JKK & JKM)
+//   - PP No. 45 Tahun 2015 (Penyelenggaraan Program JP)
+//   - PP No. 46 Tahun 2024 (Perubahan atas PP 44/2015 — JHT,
+//     efektif 1 Januari 2025: pencairan JHT saat berhenti kerja
+//     min 6 bulan kepesertaan, dari sebelumnya 5 tahun)
+//   - Perpres No. 37 Tahun 2021 (JKP — Jaminan Kehilangan Pekerjaan)
+//   - Iuran JKP berlaku sejak 1 Februari 2024, manfaat sejak 1 Mei 2024
+//   - Website resmi: bpjsketenagakerjaan.go.id
+//   - Customer Service: 175
 // ============================================================
 
 const BPJS_KB = `KNOWLEDGE BASE — BPJS KETENAGAKERJAAN (BPJTK)
 BPJS Ketenagakerjaan adalah Badan Penyelenggara Jaminan Sosial yang
 menyelenggarakan program jaminan sosial bagi Tenaga Kerja. Berdiri sejak
-1 Januari 2014 berdasarkan UU No. 40 Tahun 2004. Ada 5 program jaminan:
+1 Januari 2014 berdasarkan UU No. 40 Tahun 2004 (SJSN) dan UU No. 24
+Tahun 2011 (BPJS). Ada 5 program jaminan:
 
 === 1. JHT (Jaminan Hari Tua) ===
-Tujuan: tabungan hari tua, dibayar saat usia pensiun / tidak bekerja lagi.
+Dasar hukum: PP No. 46 Tahun 2024 (perubahan PP 44/2015), efektif 1 Januari 2025.
+Tujuan: tabungan hari tua, dibayar saat usia pensiun / berhenti kerja.
 - Iuran: 5,7% upah (2% ditanggung pekerja, 3,7% ditanggung employer)
 - Manfaat: saldo JHT bisa dicairkan saat:
   * Usia 56 tahun (pensiun), ATAU
-  * Usia 50 tahun + 5 tahun menjadi peserta + tidak bekerja, ATAU
-  * Mengundurkan diri/Cape tiba-tiba + saldo > Rp10jt, ATAU
+  * Berhenti kerja (PHK/mengundurkan diri) — minimal 6 BULAN menjadi peserta
+    (PP 46/2024, sebelumnya 5 tahun), ATAU
   * Pekerja keluar negeri + kontrak kerja selesai, ATAU
   * Meninggal dunia (ahli waris), ATAU
   * Cacat total tetap
-- Cara klaim: datang ke kantor BPJTK / kantor cabang dengan dokumen
-  (KTP, NPWP, kartu peserta, surat keterangan berhenti kerja),
-  atau aplikasi JMO (Jaminan Mobile) untuk pencairan sebagian/penuh.
+- Pencairan sebagian 10% untuk persiapan pensiun (masih aktif kerja):
+  minimal 10 tahun jadi peserta + usia minimal 46 tahun
+- Cara klaim: aplikasi JMO (Jaminan Mobile) untuk pencairan sebagian/penuh,
+  atau datang ke kantor BPJTK dengan dokumen (KTP, NPWP, kartu peserta,
+  surat keterangan berhenti kerja).
 
 === 2. JKK (Jaminan Kecelakaan Kerja) ===
+Dasar hukum: PP No. 44 Tahun 2015.
 Tujuan: perlindungan untuk pekerja yang mengalami kecelakaan kerja ATAU
 penyakit akibat kerja (PAK).
 - Iuran: 0,24% - 1,74% upah (ditanggung PENUH oleh employer, variasi
-  tingkat risiko tempat kerja)
+  5 kelompok tingkat risiko tempat kerja: rendah, sedang, tinggi,
+  sangat tinggi, khusus)
 - Manfaat:
   * Biaya pengobatan tanpa batas (sesuai kebutuhan medis)
   * Santunan harian = 100% upah rata-rata selama max 12 bulan
-  * Santunan cacat = 80% upah, seumur hidup kalau total tetap
+  * Santunan cacat: 100% upah 12 bulan pertama, lalu 80% seumur hidup
+    (kalau cacat total tetap)
   * Santunan kematian = 48 bulan upah untuk ahli waris
   * Biaya rehabilitasi prostesis/alat bantu
 - Cara klaim: lapor ke employer → employer laporkan ke BPJTK dalam
   2x24 jam → proses klaim (bisa pakai aplikasi JMO/e-JK).
 
 === 3. JKM (Jaminan Kematian) ===
+Dasar hukum: PP No. 44 Tahun 2015.
 Tujuan: santunan kematian untuk ahli waris pekerja yang meninggal
 (BUKAN karena kecelakaan kerja — itu masuk JKK).
 - Iuran: 0,3% upah (ditanggung PENUH oleh employer)
 - Manfaat: santunan sebesar Rp48.000.000 (48 juta rupiah) untuk
   ahli waris (janda/duda, anak, orang tua — sesuai urutan)
+- Tambahan: biaya pemakaman Rp2.000.000 + beasiswa anak
+  (SD Rp200.000/bln, SMP Rp250.000/bln, SMA Rp300.000/bln)
 - Cara klaim: ahli waris datang ke kantor BPJTK dengan dokumen
-  (KTP ahli waris, KK, akta kematian, kartu peserta).
-- Tambahan: ada manfaat pemakaman Rp2.000.000 + beasiswa anak
-  (Rp200.000/bulan selama SD, Rp300.000/bulan SMP, dst).
+  (KTP ahli waris, KK, akta kematian, kartu peserta) atau via JMO.
 
 === 4. JP (Jaminan Pensiun) ===
+Dasar hukum: PP No. 45 Tahun 2015.
 Tujuan: pensiun bulanan seumur hidup setelah usia pensiun.
-- Iuran: 3% upah (1% pekerja, 2% employer), upah max Rp10.547.400 (2024)
-- Syarat: minimal 15 tahun iuran + usia 56 tahun (naik bertahap ke 57
-  di 2025, dst sampai 65 tahun).
+- Iuran: 3% upah (1% pekerja, 2% employer)
+- Upah maksimal yang dikenakan iuran (limit):
+  * 2024: Rp10.547.400
+  * 2025: Rp11.078.400
+- Syarat: minimal 15 tahun iuran + usia pensiun
+- Usia pensiun (naik bertahap):
+  * 56 tahun (1 Jan 2019 - 31 Des 2024)
+  * 57 tahun (mulai 1 Januari 2025)
+  * Naik 1 tahun tiap 5 tahun, maksimal 65 tahun
 - Manfaat: pensiun bulanan seumur hidup:
   * Pensiun usia (penuh): saat usia pensiun
   * Pensiun cacat: cacat total tetap
   * Pensiun janda/duda: ahli waris pensiun
-  * Pensiun anak: ahli waris di bawah 18 tahun
+  * Pensiun anak: ahli waris di bawah 18 tahun / belum menikah
 - Jumlah pensiun dihitung dari akumulasi iuran + hasil pengembangan
-  + umur harapan hidup. Minimal Rp350.000/bulan (2024).
+  + umur harapan hidup.
+  * Minimal pensiun 2024: Rp350.000/bulan
+  * Minimal pensiun 2025: Rp360.000/bulan
 
-=== 5. JKL (Jaminan Kehilangan Pekerjaan) ===
-Tujuan: bantuan sementara untuk pekerja yang kehilangan pekerjaan
-(PHK) - PROGRAM BARU sejak 2024.
-- Iuran: 0,46% upah (0,24% pekerja + 0,22% employer) — dari gaji
-  KOMponen tetap (bukan tunjangan variabel)
+=== 5. JKP (Jaminan Kehilangan Pekerjaan) ===
+Dasar hukum: Perpres No. 37 Tahun 2021.
+Catatan: JKP = Jaminan Kehilangan Pekerjaan (BUKAN "JKL" — singkatan
+resmi yang benar adalah JKP).
+- Iuran: 0,46% upah (0,24% pekerja + 0,22% employer) — dari komponen
+  upah tetap (bukan tunjangan variabel)
+- Iuran mulai dipotong: 1 Februari 2024
+- Manfaat mulai berlaku: 1 Mei 2024
 - Syarat:
-  * Peserta minimal 12 bulan iuran berturut-turut dalam 24 bulan
-  * PHK terjadi (bukan mengundurkan diri)
+  * WNI, usia 18-60 tahun
+  * Peserta minimal 12 bulan iuran berturut-turut dalam 24 bulan terakhir
+  * PHK (Pemutusan Hubungan Kerja) — BUKAN mengundurkan diri atau
+    habis kontrak kerja
 - Manfaat:
-  * Santunan bulanan = 45% dari upah rata-rata, max 3 bulan
+  * Bulan 1-3: 45% dari upah rata-rata
+  * Bulan 4-6: 25% dari upah rata-rata
+  * Maksimal 6 bulan
   * Akses ke informasi lowongan kerja
   * Pelatihan kerja
 - Cara klaim: lapor ke BPJTK setelah PHK, tunjukkan surat PHK.
@@ -93,12 +129,12 @@ JMO adalah aplikasi resmi BPJS Ketenagakerjaan untuk:
 - Klaim JKM online
 - Download kartu peserta
 - Cek status kepesertaan
-Download di Play Store / App Store.
+Download di Play Store / App Store. Login pakai nomor kepesertaan + OTP.
 
 === KANTOR CABANG CIREBON ===
-- Alamat: Jl. Dr. Cipto Mangunkusumo No. 1, Cirebon
-- Layanan: kepesertaan, klaim JHT/JP/JKK/JKM, JKL
+- Layanan: kepesertaan, klaim JHT/JP/JKK/JKM, JKP
 - Jam: Senin-Jumat 08:00-16:00 WIB
+- Customer Service: 175 (24 jam)
 
 === ATURAN MENJAWAB BPJS ===
 - Untuk pertanyaan spesifik detail (mis. "berapa iuran JKK untuk
@@ -106,7 +142,8 @@ Download di Play Store / App Store.
   BPJS Ketenagakerjaan di 175 atau datang ke kantor cabang.
 - Untuk detail dokumen klaim, arahkan ke aplikasi JMO atau kantor.
 - JANGAN berikan angka iuran yang TIDAK yakin — sebut range umum saja.
-- Tetap ramah dan bantu user memahami konsep dasar setiap program.`;
+- Tetap ramah dan bantu user memahami konsep dasar setiap program.
+- Singkatan yang BENAR: JHT, JKK, JKM, JP, JKP (BUKAN JKL).`;
 
 const BPJS_KB_ADMIN_CONTEXT = `CATATAN UNTUK ADMIN:
 - Magang-cerdas PWA berjalan di BPJTK Cabang Cirebon
@@ -413,32 +450,37 @@ function stubAnswer(dashboard: string, question: string): string {
   }
 
   // === BPJS KNOWLEDGE BASE STUB (semua dashboard) ===
+  // Regulasi terkini per Juli 2026:
+  // - JHT: PP No. 46 Tahun 2024 (efektif 1 Jan 2025) — pencairan saat berhenti kerja min 6 bln kepesertaan
+  // - JKK & JKM: PP No. 44 Tahun 2015
+  // - JP: PP No. 45 Tahun 2015 — usia pensiun naik ke 57 thn mulai 1 Jan 2025
+  // - JKP: Perpres No. 37 Tahun 2021 — iuran mulai 1 Feb 2024, manfaat 1 Mei 2024
   if (q.includes('jht') || q.includes('jaminan hari tua') || q.includes('tabungan hari tua')) {
-    return '**JHT (Jaminan Hari Tua)** adalah tabungan hari tua yang dibayar saat pensiun/berhenti kerja. Iuran 5,7% upah (2% pekerja + 3,7% employer). Bisa dicairkan saat usia 56 thn, atau usia 50 thn + 5 thn jadi peserta + tidak bekerja, atau PHK/mengundurkan diri + saldo >Rp10jt. Klaim via JMO app atau kantor BPJTK. Untuk detail dokumen, hubungi CS 175.';
+    return '**JHT (Jaminan Hari Tua)** adalah tabungan hari tua yang dibayar saat pensiun/berhenti kerja. Dasar: PP No. 46 Tahun 2024 (efektif 1 Jan 2025). Iuran 5,7% upah (2% pekerja + 3,7% employer). Bisa dicairkan saat usia 56 thn (pensiun), atau berhenti kerja dengan minimal 6 BULAN jadi peserta (sebelumnya 5 tahun). Klaim via JMO app atau kantor BPJTK. Untuk detail dokumen, hubungi CS 175.';
   }
   if (q.includes('jkk') || q.includes('jaminan kecelakaan kerja') || q.includes('kecelakaan kerja')) {
-    return '**JKK (Jaminan Kecelakaan Kerja)** melindungi pekerja dari kecelakaan kerja & penyakit akibat kerja. Iuran 0,24%-1,74% upah (ditanggung employer, variasi risiko). Manfaat: biaya pengobatan tanpa batas, santunan harian 100% upah max 12 bln, santunan cacat 80% upah, santunan kematian 48 bln upah. Klaim: lapor employer → employer lapor BPJTK 2x24 jam → proses via JMO/e-JK.';
+    return '**JKK (Jaminan Kecelakaan Kerja)** melindungi pekerja dari kecelakaan kerja & penyakit akibat kerja. Dasar: PP No. 44 Tahun 2015. Iuran 0,24%-1,74% upah (ditanggung employer, 5 kelompok tingkat risiko). Manfaat: biaya pengobatan tanpa batas, santunan harian 100% upah max 12 bln, santunan cacat 100% upah 12 bln pertama lalu 80% seumur hidup, santunan kematian 48 bln upah. Klaim: lapor employer → employer lapor BPJTK 2x24 jam → proses via JMO/e-JK.';
   }
   if (q.includes('jkm') || q.includes('jaminan kematian')) {
-    return '**JKM (Jaminan Kematian)** memberi santunan Rp48.000.000 untuk ahli waris pekerja yang meninggal (BUKAN karena kecelakaan kerja). Iuran 0,3% upah (ditanggung employer). Tambahan: biaya pemakaman Rp2jt + beasiswa anak. Klaim: ahli waris datang ke kantor BPJTK dengan KTP, KK, akta kematian, kartu peserta.';
+    return '**JKM (Jaminan Kematian)** memberi santunan Rp48.000.000 untuk ahli waris pekerja yang meninggal (BUKAN karena kecelakaan kerja — itu masuk JKK). Dasar: PP No. 44 Tahun 2015. Iuran 0,3% upah (ditanggung employer). Tambahan: biaya pemakaman Rp2jt + beasiswa anak (SD Rp200rb/bln, SMP Rp250rb/bln, SMA Rp300rb/bln). Klaim: ahli waris datang ke kantor BPJTK dengan KTP, KK, akta kematian, kartu peserta, atau via JMO.';
   }
   if (q.includes('jp ') || q.includes('jaminan pensiun') || (q.includes('jp') && (q.includes('pensiun') || q.includes('iuran')))) {
-    return '**JP (Jaminan Pensiun)** = pensiun bulanan seumur hidup setelah usia pensiun. Iuran 3% upah (1% pekerja + 2% employer), upah max Rp10,5jt. Syarat: min 15 thn iuran + usia 56 thn (naik bertahap). Minimal pensiun Rp350rb/bln. Cara klaim: JMO app atau kantor BPJTK dengan dokumen (KTP, NPWP, kartu peserta, surat berhenti kerja).';
+    return '**JP (Jaminan Pensiun)** = pensiun bulanan seumur hidup setelah usia pensiun. Dasar: PP No. 45 Tahun 2015. Iuran 3% upah (1% pekerja + 2% employer), upah max Rp11.078.400 (2025). Syarat: min 15 thn iuran + usia pensiun. Usia pensiun naik ke 57 thn mulai 1 Januari 2025 (dari 56 thn). Minimal pensiun Rp360rb/bln (2025). Klaim: JMO app atau kantor BPJTK dengan dokumen (KTP, NPWP, kartu peserta, surat berhenti kerja).';
   }
-  if (q.includes('jkl') || q.includes('kehilangan pekerjaan') || q.includes('phk')) {
-    return '**JKL (Jaminan Kehilangan Pekerjaan)** = bantuan untuk pekerja yang PHK (BUKAN mengundurkan diri). Program baru sejak 2024. Iuran 0,46% upah (0,24% pekerja + 0,22% employer). Syarat: min 12 bln iuran berturut-turut dalam 24 bln + PHK. Manfaat: 45% upah rata-rata max 3 bln + info lowongan kerja + pelatihan. Klaim: lapor BPJTK dengan surat PHK.';
+  if (q.includes('jkp') || q.includes('jkl') || q.includes('kehilangan pekerjaan') || q.includes('phk')) {
+    return '**JKP (Jaminan Kehilangan Pekerjaan)** = bantuan untuk pekerja yang PHK (BUKAN mengundurkan diri). Dasar: Perpres No. 37 Tahun 2021. Iuran 0,46% upah (0,24% pekerja + 0,22% employer) dari komponen upah tetap. Iuran mulai 1 Feb 2024, manfaat mulai 1 Mei 2024. Syarat: min 12 bln iuran berturut-turut dalam 24 bln + PHK. Manfaat: bln 1-3 = 45% upah, bln 4-6 = 25% upah, max 6 bln + info lowongan kerja + pelatihan. Klaim: lapor BPJTK dengan surat PHK. Catatan: singkatan resmi yang benar adalah JKP, bukan JKL.';
   }
   if (q.includes('jmo') || q.includes('aplikasi jaminan') || q.includes('aplikasi bpjs')) {
     return '**JMO (Jaminan Mobile)** adalah aplikasi resmi BPJS Ketenagakerjaan (Play Store/App Store) untuk: cek saldo JHT & JP, pengajuan pencairan JHT, klaim JKK online, klaim JKM online, download kartu peserta, cek status kepesertaan. Download gratis, login pakai nomor kepesertaan + OTP SMS.';
   }
   if ((q.includes('bpjs') || q.includes('bpjtk') || q.includes('ketenagakerjaan')) && (q.includes('apa') || q.includes('program') || q.includes('manfaat') || q.includes('itu'))) {
-    return '**BPJS Ketenagakerjaan** menyelenggarakan 5 program jaminan sosial untuk tenaga kerja:\n1. **JHT** — tabungan hari tua\n2. **JKK** — kecelakaan kerja & penyakit akibat kerja\n3. **JKM** — santunan kematian Rp48jt\n4. **JP** — pensiun bulanan\n5. **JKL** — bantuan PHK (baru 2024)\n\nPendaftaran via employer (wajib untuk pekerja formal). Klaim via JMO app atau kantor cabang. CS: 175.';
+    return '**BPJS Ketenagakerjaan** menyelenggarakan 5 program jaminan sosial untuk tenaga kerja:\n1. **JHT** — tabungan hari tua (iuran 5,7%)\n2. **JKK** — kecelakaan kerja & penyakit akibat kerja (0,24%-1,74%)\n3. **JKM** — santunan kematian Rp48jt (0,3%)\n4. **JP** — pensiun bulanan (3%)\n5. **JKP** — bantuan PHK (0,46%, baru 2024)\n\nPendaftaran via employer (wajib untuk pekerja formal). Klaim via JMO app atau kantor cabang. CS: 175.';
   }
   if (q.includes('iuran') && (q.includes('berapa') || q.includes('persen') || q.includes('hitung'))) {
-    return '**Iuran BPJS Ketenagakerjaan** (per upah):\n• JHT: 5,7% (2% pekerja + 3,7% employer)\n• JKK: 0,24%-1,74% (employer saja, sesuai risiko)\n• JKM: 0,3% (employer saja)\n• JP: 3% (1% pekerja + 2% employer), upah max Rp10,5jt\n• JKL: 0,46% (0,24% pekerja + 0,22% employer)\n\nTotal pekerja: ~8,16% upah. Untuk detail hitung, hubungi CS 175 atau kantor BPJTK.';
+    return '**Iuran BPJS Ketenagakerjaan** (per upah, regulasi 2025):\n• JHT: 5,7% (2% pekerja + 3,7% employer) — PP 46/2024\n• JKK: 0,24%-1,74% (employer saja, sesuai 5 tingkat risiko) — PP 44/2015\n• JKM: 0,3% (employer saja) — PP 44/2015\n• JP: 3% (1% pekerja + 2% employer), upah max Rp11.078.400 (2025) — PP 45/2015\n• JKP: 0,46% (0,24% pekerja + 0,22% employer) dari upah tetap — Perpres 37/2021\n\nTotal iuran pekerja: ~7,7% upah. Untuk detail hitung, hubungi CS 175 atau kantor BPJTK.';
   }
   if (q.includes('klaim') && (q.includes('jht') || q.includes('pensiun') || q.includes('jp') || q.includes('cair'))) {
-    return '**Cara klaim JHT/JP:**\n1. Pastikan syarat terpenuhi (JHT: usia 56 thn / PHK + saldo >Rp10jt; JP: 15 thn iuran + usia pensiun)\n2. Siapkan dokumen: KTP, NPWP, kartu peserta, surat keterangan berhenti kerja, buku rekening\n3. Klaim via **JMO app** (pencairan sebagian/penuh, lebih cepat) ATAU datang ke **kantor BPJTK Cabang Cirebon**\n4. Tunggu verifikasi 1-7 hari kerja\n5. Dana masuk ke rekening\n\nHubungi CS 175 untuk detail dokumen sesuai kasus.';
+    return '**Cara klaim JHT/JP:**\n1. Pastikan syarat terpenuhi:\n   - JHT: usia 56 thn (pensiun) ATAU berhenti kerja min 6 bln kepesertaan (PP 46/2024)\n   - JP: min 15 thn iuran + usia pensiun (57 thn mulai 2025)\n2. Siapkan dokumen: KTP, NPWP, kartu peserta, surat keterangan berhenti kerja, buku rekening\n3. Klaim via **JMO app** (pencairan sebagian/penuh, lebih cepat) ATAU datang ke **kantor BPJTK Cabang Cirebon**\n4. Tunggu verifikasi 1-7 hari kerja\n5. Dana masuk ke rekening\n\nHubungi CS 175 untuk detail dokumen sesuai kasus.';
   }
 
 
