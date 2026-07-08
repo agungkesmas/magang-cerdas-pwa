@@ -74,17 +74,36 @@ const withPWA = withPWAInit({
         }
       },
       // ============================================================
-      // HALAMAN (pages) — NetworkFirst dengan TTL 5 menit (bukan 24 jam!)
-      // Supaya kalau ada deploy baru, user dapet update dalam 5 menit
-      // tanpa perlu hard refresh.
+      // HALAMAN AUTHENTICATED (admin/pembina/bkk/intern) — NetworkOnly
+      // JANGAN cache halaman yang butuh login. Penyebab bug "grup
+      // Pemasaran & Keuangan hilang": SW cache halaman lama, user lihat
+      // versi stale walau server sudah return data baru.
       // ============================================================
       {
-        urlPattern: ({ url, sameOrigin }) => sameOrigin && !url.pathname.startsWith('/api/'),
+        urlPattern: ({ url, sameOrigin }) =>
+          sameOrigin &&
+          (url.pathname.startsWith('/admin') ||
+           url.pathname.startsWith('/pembina') ||
+           url.pathname.startsWith('/bkk') ||
+           url.pathname.startsWith('/intern')),
+        handler: 'NetworkOnly'
+      },
+      // ============================================================
+      // HALAMAN PUBLIK (landing, login, staff-access) — NetworkFirst TTL 5 menit
+      // ============================================================
+      {
+        urlPattern: ({ url, sameOrigin }) =>
+          sameOrigin &&
+          !url.pathname.startsWith('/api/') &&
+          !url.pathname.startsWith('/admin') &&
+          !url.pathname.startsWith('/pembina') &&
+          !url.pathname.startsWith('/bkk') &&
+          !url.pathname.startsWith('/intern'),
         handler: 'NetworkFirst',
         options: {
-          cacheName: 'pages',
+          cacheName: 'pages-public',
           networkTimeoutSeconds: 5,
-          expiration: { maxEntries: 32, maxAgeSeconds: 300 } // 5 menit (dari 24 jam)
+          expiration: { maxEntries: 16, maxAgeSeconds: 300 }
         }
       }
     ]

@@ -33,19 +33,27 @@ export default function PWACacheCleanup() {
     const silentCleanup = async () => {
       try {
         const cacheNames = await caches.keys();
-        const hasOldApiCache = cacheNames.includes('apis');
+        // Cleanup kalau ada cache lama yang sekarang sudah TIDAK boleh ada:
+        // - 'apis' (API cache — sekarang NetworkOnly, tidak boleh ada)
+        // - 'pages' (HTML authenticated cache — sekarang NetworkOnly untuk /admin,/pembina,/bkk,/intern)
+        const staleCaches = ['apis', 'pages'];
+        const hasStaleCache = staleCaches.some(name => cacheNames.includes(name));
 
-        // Hanya cleanup kalau ada cache 'apis' lama (indikasi SW lama)
-        if (!hasOldApiCache) {
+        if (!hasStaleCache) {
           return;
         }
 
-        console.info('[PWA] Cleaning up stale API cache (silent)...');
+        console.info('[PWA] Cleaning up stale cache (silent)...', cacheNames);
 
-        // 1. Hapus cache 'apis' saja (jangan sentuh cache lain)
-        await caches.delete('apis');
+        // 1. Hapus cache stale
+        for (const name of staleCaches) {
+          if (cacheNames.includes(name)) {
+            await caches.delete(name);
+            console.info('[PWA] Deleted cache:', name);
+          }
+        }
 
-        // 2. Unregister SW lama supaya SW baru bisa take over di next load
+        // 2. Unregister SW lama supaya SW baru (config NetworkOnly) take over
         const regs = await navigator.serviceWorker.getRegistrations();
         for (const reg of regs) {
           await reg.unregister();
@@ -55,9 +63,7 @@ export default function PWACacheCleanup() {
 
         // TIDAK reload halaman — anti-panik.
         // SWUpdateListener sudah handle auto-reload kalau SW baru activate.
-        // User tidak akan sadar apa-apa terjadi.
       } catch (e) {
-        // Silent fail — jangan ganggu user
         console.warn('[PWA] Silent cleanup failed (not critical):', e);
       }
     };

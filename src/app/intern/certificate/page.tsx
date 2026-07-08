@@ -121,46 +121,12 @@ export default function InternCertificatePage() {
             <div className="w-20 h-20 mx-auto mb-3 bg-white/5 rounded-2xl flex items-center justify-center">
               <Lock className="w-10 h-10 text-white/40" />
             </div>
-<<<<<<< HEAD
-            <h3 className="text-lg font-bold text-white mb-1">Vault Terkunci</h3>
-            <p className="text-sm text-white/60 mb-3">
-              Capai <span className="text-bpjs-yellow font-bold">tier Competent</span> (25% dari maksimal EXP magang Anda) untuk membuka Vault
-              <br />
-              Atau minta Admin menerbitkan sertifikat untuk Anda.
-            </p>
-            <div className="max-w-xs mx-auto">
-              {(() => {
-                const tp = calculateTierProgress(profile.total_exp, profile.start_date, profile.end_date);
-                return (
-                  <>
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="text-white/60">
-                        {profile.total_exp} / {tp.max_exp} EXP
-                      </span>
-                      <span className="text-bpjs-yellow">{tp.percentage}%</span>
-                    </div>
-                    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-bpjs-yellow to-amber-500"
-                        style={{ width: `${tp.percentage}%` }}
-                      />
-                    </div>
-                    <div className="mt-2 text-[11px] text-white/50">
-                      Tier saat ini: <span className="font-semibold text-white/80">{tp.current_tier}</span>
-                      {tp.next_tier && (
-                        <> • Butuh <span className="text-bpjs-yellow font-semibold">{(tp.next_tier_exp || 0) - profile.total_exp} EXP</span> lagi ke {tp.next_tier}</>
-                      )}
-                    </div>
-                  </>
-                );
-              })()}
-=======
             <h3 className="text-lg font-bold text-white mb-1">Sertifikat Belum Diterbitkan</h3>
             <p className="text-sm text-white/60 mb-4">
               Admin akan menerbitkan sertifikat Anda setelah masa magang selesai, dengan syarat:
             </p>
 
-            {/* Syarat EXP */}
+            {/* Syarat EXP dengan progress tier */}
             <div className="max-w-md mx-auto mb-3 text-left">
               <div className="flex items-center justify-between text-xs mb-1">
                 <span className="text-white/70 flex items-center gap-1">
@@ -168,13 +134,26 @@ export default function InternCertificatePage() {
                 </span>
                 <span className="text-bpjs-yellow">Tier: {profile.tier || 'Participation'}</span>
               </div>
-              <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-bpjs-yellow to-amber-500"
-                  style={{ width: `${Math.min(100, ((profile.total_exp || 0) / 1750) * 100)}%` }}
-                />
-              </div>
->>>>>>> 76dd82f (feat(geofence+cert+rename): koreksi koordinat presisi + syarat kehadiran sertifikat + rename menu)
+              {(() => {
+                const tp = calculateTierProgress(profile.total_exp, profile.start_date, profile.end_date);
+                return (
+                  <>
+                    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-bpjs-yellow to-amber-500"
+                        style={{ width: `${tp.percentage}%` }}
+                      />
+                    </div>
+                    <div className="mt-1.5 text-[11px] text-white/50">
+                      {tp.next_tier ? (
+                        <>Butuh <span className="text-bpjs-yellow font-semibold">{(tp.next_tier_exp || 0) - profile.total_exp} EXP</span> lagi ke {tp.next_tier}</>
+                      ) : (
+                        <span className="text-bpjs-green font-semibold">Tier maksimal tercapai!</span>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
 
             {/* Syarat Kehadiran */}
