@@ -74,50 +74,62 @@ export async function GET() {
       const intern = atts[0].interns;
 
       // ============================================================
-      // Pattern 1: GPS distance sama persis (beda <2m) ≥3 hari
+      // Pattern 1: GPS distance sama persis (beda <2m) ≥5 hari
+      // Threshold dinaikkan dari 3 ke 5 untuk reduce false positive
+      // (8 peserta di kantor yang sama wajar punya jarak mirip)
       // ============================================================
       const distGroups: Record<string, any[]> = {};
       atts.forEach((a) => {
         if (a.distance_meters === null) return;
-        // Round to nearest 5m for grouping
-        const bucket = Math.round(a.distance_meters / 5) * 5;
+        // Round to nearest 10m for grouping (wider bucket = less false positive)
+        const bucket = Math.round(a.distance_meters / 10) * 10;
         if (!distGroups[bucket]) distGroups[bucket] = [];
         distGroups[bucket].push(a);
       });
 
       for (const [bucket, group] of Object.entries(distGroups)) {
-        if (group.length >= 3) {
+        if (group.length >= 5) {
           patterns.push({
             intern_id: internId,
             intern_name: intern.name,
             pattern_type: 'gps_distance_consistent',
             description: `Jarak GPS konsisten ~${bucket}m di ${group.length} check-in. Mungkin fake GPS atau foto dari spot yang sama persis.`,
             affected_attendance_ids: group.map((g) => g.id),
-            severity: group.length >= 5 ? 'high' : 'medium'
+            severity: group.length >= 7 ? 'high' : 'medium'
           });
         }
       }
 
       // ============================================================
-      // Pattern 2: Timestamp check-in identik (jam:menit sama) ≥3 hari
+      // Pattern 2: Timestamp check-in identik (jam:menit sama) ≥5 hari
+      // Pakai WIB timezone (bukan UTC) + 15-min bucket untuk reduce noise
       // ============================================================
       const timeGroups: Record<string, any[]> = {};
       atts.forEach((a) => {
-        const ts = new Date(a.timestamp);
-        const timeKey = `${ts.getHours()}:${ts.getMinutes().toString().padStart(2, '0')}`;
+        // PAKAI WIB TIMEZONE — bukan getHours() yang return UTC
+        const wibTime = new Date(a.timestamp).toLocaleString('id-ID', {
+          timeZone: 'Asia/Jakarta',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+        // Bucket per 15 menit (mis. "07:00", "07:15", "07:30", "07:45")
+        const [hh, mm] = wibTime.split(':');
+        const bucket = Math.floor(parseInt(mm) / 15) * 15;
+        const timeKey = `${hh}:${bucket.toString().padStart(2, '0')}`;
         if (!timeGroups[timeKey]) timeGroups[timeKey] = [];
         timeGroups[timeKey].push(a);
       });
 
       for (const [timeKey, group] of Object.entries(timeGroups)) {
-        if (group.length >= 3) {
+        if (group.length >= 5) {
           patterns.push({
             intern_id: internId,
             intern_name: intern.name,
             pattern_type: 'timestamp_consistent',
-            description: `Check-in selalu jam ${timeKey} di ${group.length} hari. Mungkin automated script atau polai tidak natural.`,
+            description: `Check-in selalu di sekitar jam ${timeKey} WIB di ${group.length} hari. Mungkin automated script atau polai tidak natural.`,
             affected_attendance_ids: group.map((g) => g.id),
-            severity: group.length >= 5 ? 'high' : 'medium'
+            severity: group.length >= 7 ? 'high' : 'medium'
           });
         }
       }
