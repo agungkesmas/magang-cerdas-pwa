@@ -89,6 +89,10 @@ export default function AdminAttendancePage() {
   const [flagging, setFlagging] = useState<string | null>(null);
   const [flagModal, setFlagModal] = useState<{ attId: string; internName: string } | null>(null);
   const [flagReason, setFlagReason] = useState('');
+  // Setup migration status
+  const [migrationNeeded, setMigrationNeeded] = useState(false);
+  const [migrationSql, setMigrationSql] = useState('');
+  const [checkingMigration, setCheckingMigration] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -119,9 +123,6 @@ export default function AdminAttendancePage() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
 
   // Determine which interns haven't checked in today (timezone WIB)
   const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
@@ -260,6 +261,38 @@ export default function AdminAttendancePage() {
     } catch (e: any) {
       alert('Error: ' + e.message);
     }
+  };
+
+  // ============================================================
+  // MIGRATION CHECK — verify kolom is_suspicious sudah ada
+  // ============================================================
+  const checkMigration = useCallback(async () => {
+    setCheckingMigration(true);
+    try {
+      const res = await fetch('/api/admin/setup-suspicious', { method: 'POST', credentials: 'include' });
+      const data = await res.json();
+      if (data.success && data.already_exists) {
+        setMigrationNeeded(false);
+      } else if (data.needs_manual_sql) {
+        setMigrationNeeded(true);
+        setMigrationSql(data.sql_content || '');
+      }
+    } catch {
+      // Silent fail
+    } finally {
+      setCheckingMigration(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAll();
+    checkMigration();
+  }, [fetchAll, checkMigration]);
+
+  const copySqlToClipboard = () => {
+    navigator.clipboard.writeText(migrationSql).then(() => {
+      alert('✅ SQL berhasil disalin! Paste di Supabase SQL Editor → Run, lalu refresh halaman ini.');
+    });
   };
 
   return (
@@ -402,6 +435,53 @@ export default function AdminAttendancePage() {
                 </button>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Migration Banner — tampil kalau kolom is_suspicious belum ada */}
+      {migrationNeeded && (
+        <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-amber-900 mb-1">
+                ⚠️ Setup Diperlukan untuk Fitur Anti-Fraud
+              </h3>
+              <p className="text-sm text-amber-800 mb-3">
+                Untuk mengaktifkan fitur "Tandai Mencurigakan" dan "Scan Pattern",
+                jalankan SQL migration berikut di Supabase SQL Editor:
+              </p>
+              <pre className="bg-amber-100 border border-amber-200 rounded-md p-3 text-xs text-amber-900 overflow-x-auto mb-3 whitespace-pre-wrap">
+{migrationSql}
+              </pre>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={copySqlToClipboard}
+                  className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-md"
+                >
+                  📋 Copy SQL
+                </button>
+                <button
+                  onClick={() => checkMigration()}
+                  disabled={checkingMigration}
+                  className="inline-flex items-center gap-1.5 bg-white border border-amber-300 hover:bg-amber-50 text-amber-700 text-sm font-medium px-3 py-1.5 rounded-md disabled:opacity-50"
+                >
+                  {checkingMigration ? <Loader2 className="w-4 h-4 animate-spin" /> : '🔄 Cek Ulang'}
+                </button>
+                <a
+                  href="https://supabase.com/dashboard/project/ktfyzoowgxvllwauqpir/sql/new"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium px-3 py-1.5 rounded-md"
+                >
+                  🔗 Buka Supabase SQL Editor
+                </a>
+              </div>
+              <p className="text-xs text-amber-700 mt-2">
+                Setelah Run SQL di Supabase, klik "Cek Ulang" — banner ini akan hilang otomatis.
+              </p>
+            </div>
           </div>
         </div>
       )}
