@@ -190,7 +190,7 @@ export default function InternProfilePage() {
 
       {/* Read-only info */}
       <div className="glass-card p-5">
-        <h3 className="text-sm font-semibold text-white/80 mb-3">Informasi Magang (Read-Only)</h3>
+        <h3 className="text-sm font-semibold text-white/80 mb-3">Informasi Magang (Hanya Baca)</h3>
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="text-xs text-white/50 uppercase tracking-wider">Username</label>

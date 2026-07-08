@@ -62,7 +62,7 @@ export default function BKKShell({
               <h1 className="font-bold text-lg leading-tight" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
                 MAGANG-CERDAS
               </h1>
-              <p className="text-xs text-bpjs-yellow font-medium uppercase tracking-wider">BKK Dashboard</p>
+              <p className="text-xs text-bpjs-yellow font-medium uppercase tracking-wider">Dashboard BKK</p>
             </div>
           </div>
         </div>
@@ -112,7 +112,7 @@ export default function BKKShell({
             <span className="text-sm font-medium">Keluar</span>
           </button>
           <p className="text-[10px] text-white/40 text-center mt-3">
-            Powered by <span className="text-bpjs-yellow/70 font-medium">Tim Syukur Mikrodigital</span>
+            Didukung oleh <span className="text-bpjs-yellow/70 font-medium">Tim Syukur Mikrodigital</span>
           </p>
         </div>
       </aside>
@@ -129,7 +129,7 @@ export default function BKKShell({
           <button onClick={() => setSidebarOpen(true)}>
             <Menu className="w-6 h-6" />
           </button>
-          <span className="font-bold">BKK Dashboard</span>
+          <span className="font-bold">Dashboard BKK</span>
           <button onClick={handleLogout}>
             <LogOut className="w-5 h-5" />
           </button>

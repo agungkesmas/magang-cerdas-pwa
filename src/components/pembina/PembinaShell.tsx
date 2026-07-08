@@ -102,7 +102,7 @@ export default function PembinaShell({
             <span className="text-sm font-medium">Keluar</span>
           </button>
           <p className="text-[10px] text-white/40 text-center mt-3">
-            Powered by <span className="text-bpjs-yellow/70 font-medium">Tim Syukur Mikrodigital</span>
+            Didukung oleh <span className="text-bpjs-yellow/70 font-medium">Tim Syukur Mikrodigital</span>
           </p>
         </div>
       </aside>

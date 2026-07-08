@@ -345,7 +345,7 @@ export default function BKKHomePage() {
         <div className="bg-white rounded-2xl border border-gray-200 p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-              <Clock className="w-5 h-5 text-orange-500" /> Akan Selesai Soon
+              <Clock className="w-5 h-5 text-orange-500" /> Akan Selesai Segera
             </h2>
             <Link href="/bkk/interns" className="text-sm text-bpjs-green hover:underline font-medium">
               Semua →

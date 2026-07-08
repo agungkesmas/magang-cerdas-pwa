@@ -151,7 +151,7 @@ export default function AdminSettingsPage() {
             tab === 'llm' ? 'bg-bpjs-blue text-white' : 'text-gray-700 hover:bg-gray-50'
           }`}
         >
-          <Cpu className="w-4 h-4" /> AI Provider
+          <Cpu className="w-4 h-4" /> Penyedia AI
         </button>
         <button
           onClick={() => setTab('security')}
@@ -266,7 +266,7 @@ export default function AdminSettingsPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <Cpu className="w-5 h-5 text-bpjs-blue" />
-            <h2 className="font-semibold text-gray-900">AI Provider Configuration</h2>
+            <h2 className="font-semibold text-gray-900">Penyedia AI Configuration</h2>
           </div>
 
           <p className="text-sm text-gray-600">

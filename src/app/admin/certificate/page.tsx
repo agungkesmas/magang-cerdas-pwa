@@ -129,7 +129,7 @@ export default function AdminCertificatePage() {
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-bpjs-blue-dark flex items-center gap-2">
-              <Zap className="w-4 h-4 text-bpjs-yellow" /> Auto-Create Sertifikat
+              <Zap className="w-4 h-4 text-bpjs-yellow" /> Buat Otomatis Sertifikat
             </h3>
             <p className="text-sm text-gray-600 mt-1">
               Sistem otomatis terbitkan sertifikat untuk peserta yang masa magangnya sudah selesai + 7 hari grace period TAPI belum punya sertifikat (kelupaan manual).
@@ -142,7 +142,7 @@ export default function AdminCertificatePage() {
             className="inline-flex items-center gap-2 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white text-sm font-semibold px-4 py-2 rounded-lg disabled:opacity-50 flex-shrink-0"
           >
             {autoCreateLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-            Jalankan Auto-Create
+            Jalankan Buat Otomatis
           </button>
         </div>
 
@@ -162,7 +162,7 @@ export default function AdminCertificatePage() {
               </div>
               <div>
                 <div className="text-2xl font-bold text-bpjs-blue">{autoCreateResult.total_eligible || 0}</div>
-                <div className="text-xs text-gray-500">Eligible</div>
+                <div className="text-xs text-gray-500">Memenuhi Syarat</div>
               </div>
             </div>
             {autoCreateResult.details && autoCreateResult.details.length > 0 && (

@@ -569,7 +569,7 @@ export default function InternAttendancePage() {
       {success && (
         <div className="glass-card p-5 bg-bpjs-green/10 border-bpjs-green/40 text-center">
           <CheckCircle2 className="w-14 h-14 text-bpjs-green mx-auto mb-2" />
-          <h3 className="text-lg font-bold text-white">Mission Berhasil!</h3>
+          <h3 className="text-lg font-bold text-white">Absen Berhasil!</h3>
           <p className="text-sm text-white/60 mt-1">Jarak dari kantor: {success.distance}m</p>
           <div className="mt-3 inline-flex items-center gap-1 bg-bpjs-yellow text-bpjs-blue-dark px-4 py-1.5 rounded-full font-bold">
             <Zap className="w-4 h-4" /> +{success.exp} EXP
@@ -607,7 +607,7 @@ export default function InternAttendancePage() {
             ) : (
               <>
                 <MapPin className="w-6 h-6" />
-                DEPLOY MISSION (CHECK-IN)
+                MULAI ABSEN (CHECK-IN)
               </>
             )}
           </button>

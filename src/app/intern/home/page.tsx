@@ -219,12 +219,12 @@ export default function InternHomePage() {
       {/* Tanggal Merah Bulan Ini — info hari libur */}
       <HolidaysWidget />
 
-      {/* Leaderboard mini */}
+      {/* Papan Peringkat mini */}
       {data.leaderboard.length > 0 && (
         <div className="glass-card p-4">
           <div className="flex items-center gap-2 mb-3">
             <Trophy className="w-4 h-4 text-bpjs-yellow" />
-            <span className="text-sm font-semibold text-white">Leaderboard</span>
+            <span className="text-sm font-semibold text-white">Papan Peringkat</span>
             {myRank > 0 && (
               <span className="text-xs text-bpjs-yellow ml-auto">Anda di peringkat #{myRank}</span>
             )}

@@ -251,7 +251,7 @@ function BKKCertsContent() {
 
       {/* Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-800">
-        💡 Untuk melihat sertifikat lengkap (dengan TTD Kepala Cabang + verification ID), klik "Lihat Detail" pada peserta yang sertifikatnya sudah terbit. Admin BPJS yang menerbitkan sertifikat — BKK hanya dapat melihat arsip.
+        💡 Untuk melihat sertifikat lengkap (dengan TTD Kepala Cabang + ID verifikasi), klik "Lihat Detail" pada peserta yang sertifikatnya sudah terbit. Admin BPJS yang menerbitkan sertifikat — BKK hanya dapat melihat arsip.
       </div>
     </div>
   );

@@ -351,7 +351,7 @@ function RequestFormModal({ onClose, onSuccess }: { onClose: () => void; onSucce
               <label className="flex-1 cursor-pointer">
                 <div className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-gray-300 hover:border-gray-400 rounded-lg text-sm text-gray-600">
                   <Paperclip className="w-4 h-4" />
-                  {suratFile ? suratFile.name : 'Pilih file PDF...'}
+                  {suratFile ? suratFile.name : 'Pilih berkas PDF...'}
                 </div>
                 <input
                   type="file"
@@ -378,14 +378,14 @@ function RequestFormModal({ onClose, onSuccess }: { onClose: () => void; onSucce
                 href="/api/bkk/template"
                 className="text-xs text-bpjs-green hover:underline flex items-center gap-1"
               >
-                <Download className="w-3 h-3" /> Download Template
+                <Download className="w-3 h-3" /> Unduh Template
               </a>
             </div>
             <div className="flex items-center gap-2">
               <label className="flex-1 cursor-pointer">
                 <div className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-gray-300 hover:border-gray-400 rounded-lg text-sm text-gray-600">
                   <Upload className="w-4 h-4" />
-                  {excelFile ? excelFile.name : 'Pilih file Excel...'}
+                  {excelFile ? excelFile.name : 'Pilih berkas Excel...'}
                 </div>
                 <input
                   type="file"
@@ -552,7 +552,7 @@ function RequestDetail({ id, onBack, onRefresh }: { id: string; onBack: () => vo
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-sm text-bpjs-green hover:underline block"
               >
-                <Download className="w-4 h-4" /> Download Daftar Siswa (Excel)
+                <Download className="w-4 h-4" /> Unduh Daftar Siswa (Excel)
               </a>
             )}
           </div>
@@ -589,8 +589,8 @@ function RequestDetail({ id, onBack, onRefresh }: { id: string; onBack: () => vo
               </h4>
               <ol className="text-sm text-green-700 space-y-1 list-decimal list-inside">
                 <li>Buka menu <strong>Peserta Magang</strong> untuk lihat daftar siswa yang sudah terdaftar</li>
-                <li>Klik <strong>Batch Upload</strong> jika belum upload daftar siswa</li>
-                <li>Download/print <strong>Kartu Kredensial</strong> (username + password per siswa)</li>
+                <li>Klik <strong>Unggah Massal</strong> jika belum upload daftar siswa</li>
+                <li>Unduh/print <strong>Kartu Kredensial</strong> (username + password per siswa)</li>
                 <li>Bagikan kartu ke masing-masing siswa</li>
                 <li>Siswa login di <strong>/intern/login</strong> dan check-in di hari pertama magang</li>
               </ol>

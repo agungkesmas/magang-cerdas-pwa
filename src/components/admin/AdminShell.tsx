@@ -80,7 +80,7 @@ export default function AdminShell({
               <h1 className="font-bold text-lg leading-tight" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
                 MAGANG-CERDAS
               </h1>
-              <p className="text-xs text-bpjs-yellow font-medium uppercase tracking-wider">Admin Console</p>
+              <p className="text-xs text-bpjs-yellow font-medium uppercase tracking-wider">Konsol Admin</p>
             </div>
           </div>
         </div>
@@ -142,7 +142,7 @@ export default function AdminShell({
             </button>
           </div>
           <p className="text-[10px] text-white/40 text-center mt-3">
-            Powered by <span className="text-bpjs-yellow/70 font-medium">Tim Syukur Mikrodigital</span>
+            Didukung oleh <span className="text-bpjs-yellow/70 font-medium">Tim Syukur Mikrodigital</span>
           </p>
         </div>
       </aside>

@@ -187,7 +187,7 @@ export default function InternCertificatePage() {
       <div className="glass-card p-4">
         <div className="flex items-center gap-2 mb-3">
           <Trophy className="w-4 h-4 text-bpjs-yellow" />
-          <h3 className="text-sm font-semibold text-white">Leaderboard Saat Ini</h3>
+          <h3 className="text-sm font-semibold text-white">Papan Peringkat Saat Ini</h3>
         </div>
         <div className="space-y-2 max-h-64 overflow-y-auto">
           {leaderboard.slice(0, 10).map((entry: any, idx: number) => (
@@ -316,7 +316,7 @@ export default function InternCertificatePage() {
               {/* Footer with signature */}
               <div className="flex items-end justify-between pt-6 border-t-2 border-gray-200">
                 <div>
-                  <div className="text-xs text-gray-500 mb-1">Verification ID</div>
+                  <div className="text-xs text-gray-500 mb-1">ID Verifikasi</div>
                   <div className="font-mono text-sm font-bold text-bpjs-blue">{certificate.verification_id}</div>
                   <div className="text-xs text-gray-500 mt-1">
                     <a
@@ -350,7 +350,7 @@ export default function InternCertificatePage() {
             className="w-full flex items-center justify-center gap-2 bg-bpjs-yellow hover:bg-bpjs-yellow-dark text-bpjs-blue-dark font-bold py-3 rounded-lg disabled:opacity-50"
           >
             {downloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
-            {downloading ? 'Generating PDF...' : 'Download PDF'}
+            {downloading ? 'Membuat PDF...' : 'Unduh PDF'}
           </button>
 
           {/* Share sertifikat */}
@@ -528,7 +528,7 @@ function CertificatePreview({ profile, certSettings }: { profile: any; certSetti
           {/* Footer mock */}
           <div className="flex items-start justify-between pt-4 border-t border-gray-200">
             <div>
-              <div className="text-[9px] text-gray-400 uppercase tracking-wider">Verification ID</div>
+              <div className="text-[9px] text-gray-400 uppercase tracking-wider">ID Verifikasi</div>
               <div className="font-mono text-[11px] font-bold text-gray-400">MC-XXXX-XXXXXX</div>
               <div className="text-[9px] text-gray-400 mt-0.5">Scan QR untuk verifikasi online</div>
             </div>

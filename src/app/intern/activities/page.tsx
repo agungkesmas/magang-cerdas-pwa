@@ -335,7 +335,7 @@ export default function InternActivitiesPage() {
                       disabled={questActionLoading === q.id}
                       className="w-full mt-2 flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 rounded-lg text-sm disabled:opacity-50"
                     >
-                      {questActionLoading === q.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Target className="w-4 h-4" />} START QUEST
+                      {questActionLoading === q.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Target className="w-4 h-4" />} MULAI QUEST
                     </button>
                   )}
 
@@ -352,7 +352,7 @@ export default function InternActivitiesPage() {
                         <div className="flex gap-2">
                           <button onClick={() => { setShowQuestSubmitModal(null); setQuestSubmitNotes(''); }} className="flex-1 px-3 py-2 border border-white/10 text-white/60 text-sm rounded-lg">Batal</button>
                           <button onClick={() => handleQuestSubmit(q.id, q.group_id)} disabled={questActionLoading === q.id} className="flex-1 px-3 py-2 bg-bpjs-green text-white font-bold text-sm rounded-lg disabled:opacity-50 flex items-center justify-center gap-1">
-                            {questActionLoading === q.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Submit Quest
+                            {questActionLoading === q.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Kirim Quest
                           </button>
                         </div>
                       </div>
@@ -361,7 +361,7 @@ export default function InternActivitiesPage() {
                         onClick={() => { setShowQuestSubmitModal(q.id); setQuestSubmitNotes(''); }}
                         className="w-full mt-2 flex items-center justify-center gap-2 bg-bpjs-green hover:bg-bpjs-green-dark text-white font-bold py-2.5 rounded-lg text-sm"
                       >
-                        <CheckCircle2 className="w-4 h-4" /> SUBMIT QUEST
+                        <CheckCircle2 className="w-4 h-4" /> KIRIM QUEST
                       </button>
                     )
                   )}
@@ -473,7 +473,7 @@ export default function InternActivitiesPage() {
                                 />
                               </div>
                               {act.daily_deadline_hour && (
-                                <p className="text-[10px] text-white/40 mt-1">⏰ Complete sebelum jam {act.daily_deadline_hour}:00 WIB setiap hari</p>
+                                <p className="text-[10px] text-white/40 mt-1">⏰ Selesaikan sebelum jam {act.daily_deadline_hour}:00 WIB setiap hari</p>
                               )}
                             </div>
                           )}
@@ -495,7 +495,7 @@ export default function InternActivitiesPage() {
                       {/* Quest: tombol buka chat (submit via chat, bukan di sini) */}
                       {act.is_quest && act.quest_status === 'in_progress' && (
                         <a href={`/intern/chat/${act.group_id}`} className="w-full mt-2 flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 rounded-lg transition-colors text-sm">
-                          <MessageCircle className="w-4 h-4" /> Buka Chat untuk Submit Quest
+                          <MessageCircle className="w-4 h-4" /> Buka Chat untuk Kirim Quest
                         </a>
                       )}
 
@@ -784,7 +784,7 @@ function InternAddActivityModal({ onClose, onSuccess }: { onClose: () => void; o
             <label className="block text-sm font-medium text-white/80 mb-1">XP Reward</label>
             <div className="px-3 py-2 border border-white/10 bg-white/5 rounded-lg text-white flex items-center gap-2">
               <Zap className="w-4 h-4 text-bpjs-yellow" />
-              <span className="font-semibold">20 XP</span>
+              <span className="font-semibold">20 EXP</span>
               <span className="text-xs text-white/40 ml-auto">Fixed — pembina bisa beri Bonus XP tambahan</span>
             </div>
           </div>

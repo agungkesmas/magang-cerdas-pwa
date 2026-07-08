@@ -206,7 +206,7 @@ export default function PembinaQuestsPage() {
                       <Target className="w-3 h-3" /> QUEST
                     </span>
                     {statusBadge(q.derived_status)}
-                    {q.is_recurring && <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">🔁 Recurring</span>}
+                    {q.is_recurring && <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">🔁 Berulang</span>}
                     <h3 className="font-bold text-gray-900">{q.title}</h3>
                   </div>
                   <p className="text-sm text-gray-700 line-clamp-2 mb-2">{q.description}</p>
@@ -394,9 +394,9 @@ function EditInlineModal({ quest, onClose, onSuccess }: { quest: QuestItem; onCl
               {xpLocked && <p className="text-xs text-orange-600 mt-1">XP terkunci (anti-fraud).</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Max Slots</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Slot Maksimum</label>
               <input type="number" min={1} value={form.max_slots} onChange={(e) => setForm({ ...form, max_slots: e.target.value })}
-                placeholder="kosong = unlimited" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900" />
+                placeholder="kosong = tak terbatas" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900" />
             </div>
           </div>
           <div>

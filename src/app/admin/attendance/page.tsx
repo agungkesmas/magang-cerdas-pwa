@@ -392,7 +392,7 @@ export default function AdminAttendancePage() {
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <span className="font-semibold text-gray-900">{lr.intern?.name || 'Unknown'}</span>
+                        <span className="font-semibold text-gray-900">{lr.intern?.name || 'Tidak Diketahui'}</span>
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${leaveInfo.color}`}>
                           {leaveInfo.label}
                         </span>
@@ -448,7 +448,7 @@ export default function AdminAttendancePage() {
                         disabled={reviewing === lr.id}
                         className="inline-flex items-center gap-1 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg disabled:opacity-50"
                       >
-                        Konfirmasi Reject
+                        Konfirmasi Tolak
                       </button>
                     )}
                   </div>
@@ -658,7 +658,7 @@ export default function AdminAttendancePage() {
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
           <MapPin className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-          <p className="text-gray-500">Belum ada record kehadiran.</p>
+          <p className="text-gray-500">Belum ada catatan kehadiran.</p>
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -681,21 +681,21 @@ export default function AdminAttendancePage() {
                     r.is_missing ? 'bg-amber-50' : ''
                   }`}>
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900">{r.intern?.name || 'Unknown'}</div>
+                      <div className="font-medium text-gray-900">{r.intern?.name || 'Tidak Diketahui'}</div>
                       <div className="text-xs text-gray-500">{r.intern?.department}</div>
                     </td>
                     <td className="px-4 py-3">
                       {r.is_missing ? (
                         <span className="inline-flex items-center gap-1 text-red-700 bg-red-100 px-2 py-0.5 rounded-full text-xs font-medium">
-                          <AlertTriangle className="w-3 h-3" /> Out
+                          <AlertTriangle className="w-3 h-3" /> Keluar
                         </span>
                       ) : r.type === 'Check-In' ? (
                         <span className="inline-flex items-center gap-1 text-green-700 bg-green-100 px-2 py-0.5 rounded-full text-xs font-medium">
-                          <CheckCircle2 className="w-3 h-3" /> In
+                          <CheckCircle2 className="w-3 h-3" /> Masuk
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full text-xs font-medium">
-                          <Clock className="w-3 h-3" /> Out
+                          <Clock className="w-3 h-3" /> Keluar
                         </span>
                       )}
                     </td>
@@ -739,7 +739,7 @@ export default function AdminAttendancePage() {
                           </div>
                         </button>
                       ) : (
-                        <span className="text-gray-400 text-xs">No photo</span>
+                        <span className="text-gray-400 text-xs">Tidak ada foto</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -766,7 +766,7 @@ export default function AdminAttendancePage() {
                         </div>
                       ) : (
                         <button
-                          onClick={() => setFlagModal({ attId: r.id, internName: r.intern?.name || 'Unknown' })}
+                          onClick={() => setFlagModal({ attId: r.id, internName: r.intern?.name || 'Tidak Diketahui' })}
                           className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 hover:bg-amber-100 px-2 py-1 rounded-md text-xs font-medium border border-amber-200"
                           title="Tandai foto ini mencurigakan"
                         >

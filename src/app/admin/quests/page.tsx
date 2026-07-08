@@ -193,7 +193,7 @@ export default function AdminQuestsPage() {
                       <Target className="w-3 h-3" /> QUEST
                     </span>
                     {statusBadge(q.derived_status)}
-                    {q.is_recurring && <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">🔁 Recurring</span>}
+                    {q.is_recurring && <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">🔁 Berulang</span>}
                     <h3 className="font-bold text-gray-900">{q.title}</h3>
                   </div>
                   <p className="text-sm text-gray-700 line-clamp-2 mb-2">{q.description}</p>
@@ -211,7 +211,7 @@ export default function AdminQuestsPage() {
                     <span className="text-gray-400">•</span>
                     <span>{q.group_name}</span>
                     {q.pembina_name && <span>• by {q.pembina_name} ({q.pembina_code})</span>}
-                    {q.edited_at && <span className="text-gray-400">• Edited {new Date(q.edited_at).toLocaleDateString('id-ID')}</span>}
+                    {q.edited_at && <span className="text-gray-400">• Diubah {new Date(q.edited_at).toLocaleDateString('id-ID')}</span>}
                   </div>
                 </div>
 
@@ -302,7 +302,7 @@ function ConfirmModal({
   onConfirm: () => void;
 }) {
   const [confirmText, setConfirmText] = useState('');
-  const titles = { archive: 'Arsipkan Quest', restore: 'Restore Quest', delete: 'Hapus Permanen Quest' };
+  const titles = { archive: 'Arsipkan Quest', restore: 'Pulihkan Quest', delete: 'Hapus Permanen Quest' };
   const colors = {
     archive: 'bg-gray-700 hover:bg-gray-800',
     restore: 'bg-bpjs-green hover:bg-bpjs-green-dark',
@@ -407,7 +407,7 @@ function EditQuestInline({ quest, onClose, onSuccess }: { quest: QuestItem; onCl
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="p-5 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white">
-          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2"><Edit2 className="w-5 h-5 text-purple-600" /> Edit Quest</h3>
+          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2"><Edit2 className="w-5 h-5 text-purple-600" /> Sunting Quest</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
@@ -439,13 +439,13 @@ function EditQuestInline({ quest, onClose, onSuccess }: { quest: QuestItem; onCl
               {xpLocked && <p className="text-xs text-orange-600 mt-1">XP terkunci (anti-fraud).</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Max Slots</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Slot Maksimum</label>
               <input
                 type="number"
                 min={1}
                 value={form.max_slots}
                 onChange={(e) => setForm({ ...form, max_slots: e.target.value })}
-                placeholder="kosong = unlimited"
+                placeholder="kosong = tak terbatas"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
               />
             </div>

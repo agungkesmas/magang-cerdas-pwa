@@ -131,7 +131,7 @@ export default function AdminInternsPage() {
             onClick={() => setShowBatch(true)}
             className="inline-flex items-center gap-2 bg-bpjs-green hover:bg-bpjs-green-dark text-white font-semibold px-4 py-2.5 rounded-lg shadow-md"
           >
-            <Upload className="w-4 h-4" /> Batch Upload
+            <Upload className="w-4 h-4" /> Unggah Massal
           </button>
           <button
             onClick={() => { setEditingIntern(null); setShowForm(true); }}
@@ -232,14 +232,14 @@ export default function AdminInternsPage() {
                             loginUrl: '/intern/login',
                             subInfo: [
                               { label: 'Jurusan', value: i.major },
-                              { label: 'Dept', value: i.department },
+                              { label: 'Bidang', value: i.department },
                             ],
                           }));
                         setPrintItems(items);
                       }}
                       className="inline-flex items-center gap-1 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white text-xs font-semibold px-3 py-1.5 rounded-md"
                     >
-                      <Printer className="w-3.5 h-3.5" /> Print Terpilih ({selectedCount})
+                      <Printer className="w-3.5 h-3.5" /> Cetak Terpilih ({selectedCount})
                     </button>
                     {tab === 'active' ? (
                       <button
@@ -275,7 +275,7 @@ export default function AdminInternsPage() {
                         }}
                         className="inline-flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md"
                       >
-                        <RotateCcw className="w-3.5 h-3.5" /> Restore Terpilih ({selectedCount})
+                        <RotateCcw className="w-3.5 h-3.5" /> Pulihkan Terpilih ({selectedCount})
                       </button>
                     )}
                     <button
@@ -439,11 +439,11 @@ export default function AdminInternsPage() {
                           loginUrl: '/intern/login',
                           subInfo: [
                             { label: 'Jurusan', value: intern.major },
-                            { label: 'Dept', value: intern.department },
+                            { label: 'Bidang', value: intern.department },
                           ],
                         }]);
                       }}
-                      title="Print Kartu Kredensial"
+                      title="Cetak Kartu Kredensial"
                       className="inline-flex items-center gap-1 bg-bpjs-yellow/20 hover:bg-bpjs-yellow/30 text-bpjs-yellow-dark text-xs font-semibold px-2.5 py-1.5 rounded-md"
                     >
                       <Printer className="w-3.5 h-3.5" /> Print
@@ -540,7 +540,7 @@ function BatchUploadModal({ onClose, onSuccess }: { onClose: () => void; onSucce
   const [uploadMode, setUploadMode] = useState<'excel' | 'csv'>('excel');
   const [parseWarnings, setParseWarnings] = useState<{ row: number; message: string }[]>([]);
 
-  // Download Excel template from API
+  // Unduh Excel template from API
   const downloadExcelTemplate = async () => {
     try {
       const res = await fetch('/api/interns/template');
@@ -680,7 +680,7 @@ function BatchUploadModal({ onClose, onSuccess }: { onClose: () => void; onSucce
       <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="flex items-center justify-between p-5 border-b border-gray-100 sticky top-0 bg-white z-10">
           <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-            <Upload className="w-5 h-5 text-bpjs-green" /> Batch Upload Peserta Magang
+            <Upload className="w-5 h-5 text-bpjs-green" /> Unggah Massal Peserta Magang
           </h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
         </div>
@@ -711,29 +711,29 @@ function BatchUploadModal({ onClose, onSuccess }: { onClose: () => void; onSucce
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
                 <p className="font-semibold mb-1">Cara Pakai:</p>
                 <ol className="list-decimal list-inside space-y-1 text-xs">
-                  <li>Download template {uploadMode === 'excel' ? 'Excel (.xlsx)' : 'CSV'} di bawah</li>
+                  <li>Unduh template {uploadMode === 'excel' ? 'Excel (.xlsx)' : 'CSV'} di bawah</li>
                   <li>Buka di Excel/Google Sheets, isi data peserta (1 baris = 1 peserta)</li>
                   <li>Hapus baris contoh (Budi, Siti, Andi) sebelum upload</li>
                   <li>Upload file yang sudah diisi</li>
                   <li>Sistem auto-generate username + password untuk setiap peserta</li>
-                  <li>Download hasil CSV atau print kartu kredensial</li>
+                  <li>Unduh hasil CSV atau print kartu kredensial</li>
                 </ol>
               </div>
 
-              {/* Download template button */}
+              {/* Unduh template button */}
               {uploadMode === 'excel' ? (
                 <button
                   onClick={downloadExcelTemplate}
                   className="w-full flex items-center justify-center gap-2 bg-bpjs-green/10 hover:bg-bpjs-green/20 border border-bpjs-green/30 text-bpjs-green-dark font-semibold py-3 rounded-lg"
                 >
-                  <Download className="w-5 h-5" /> Download Template Excel (.xlsx)
+                  <Download className="w-5 h-5" /> Unduh Template Excel (.xlsx)
                 </button>
               ) : (
                 <button
                   onClick={downloadCsvTemplate}
                   className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 font-medium py-3 rounded-lg"
                 >
-                  <Download className="w-5 h-5" /> Download Template CSV
+                  <Download className="w-5 h-5" /> Unduh Template CSV
                 </button>
               )}
 
@@ -744,7 +744,7 @@ function BatchUploadModal({ onClose, onSuccess }: { onClose: () => void; onSucce
                   Pilih file {uploadMode === 'excel' ? 'Excel (.xlsx, .xls)' : 'CSV'} yang sudah diisi
                 </p>
                 <label className="inline-flex items-center gap-2 bg-bpjs-green hover:bg-bpjs-green-dark text-white font-semibold px-4 py-2 rounded-lg cursor-pointer">
-                  <Upload className="w-4 h-4" /> Pilih File
+                  <Upload className="w-4 h-4" /> Pilih Berkas
                   <input
                     type="file"
                     accept={uploadMode === 'excel' ? '.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : '.csv,text/csv'}
@@ -787,10 +787,10 @@ function BatchUploadModal({ onClose, onSuccess }: { onClose: () => void; onSucce
 
               <div className="flex gap-2 flex-wrap">
                 <button onClick={downloadResultsCSV} className="inline-flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium px-3 py-2 rounded-lg">
-                  <Download className="w-4 h-4" /> Download Hasil CSV
+                  <Download className="w-4 h-4" /> Unduh Hasil CSV
                 </button>
                 <button onClick={() => setShowPrint(true)} className="inline-flex items-center gap-1 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white text-sm font-medium px-3 py-2 rounded-lg">
-                  <Printer className="w-4 h-4" /> Print Kartu Kredensial
+                  <Printer className="w-4 h-4" /> Cetak Kartu Kredensial
                 </button>
               </div>
 
@@ -841,7 +841,7 @@ function BatchPrintCredentialsModal({ results, onClose }: { results: BatchResult
   };
 
   const copyAll = () => {
-    const text = results.map((r) => `Hai ${r.name}!\nUsername: ${r.username}\nPassword: ${r.raw_password}\nLogin: ${window.location.origin}/intern/login`).join('\n\n---\n\n');
+    const text = results.map((r) => `Hai ${r.name}!\nUsername: ${r.username}\nPassword: ${r.raw_password}\nMasuk: ${window.location.origin}/intern/login`).join('\n\n---\n\n');
     navigator.clipboard.writeText(text);
     alert('Semua kredensial tersalin!');
   };
@@ -869,7 +869,7 @@ function BatchPrintCredentialsModal({ results, onClose }: { results: BatchResult
         <div className="batch-modal-header flex items-center justify-between p-5 border-b border-gray-100 sticky top-0 bg-white print:hidden">
           <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2"><Printer className="w-5 h-5" /> Kartu Kredensial ({results.length})</h3>
           <div className="flex gap-2">
-            <button onClick={copyAll} className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg flex items-center gap-1"><Copy className="w-4 h-4" /> Copy Semua</button>
+            <button onClick={copyAll} className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg flex items-center gap-1"><Copy className="w-4 h-4" /> Salin Semua</button>
             <button onClick={handlePrint} className="text-sm bg-bpjs-blue text-white px-3 py-1.5 rounded-lg flex items-center gap-1"><Printer className="w-4 h-4" /> Print</button>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
           </div>
@@ -892,9 +892,9 @@ function BatchPrintCredentialsModal({ results, onClose }: { results: BatchResult
                 <div className="space-y-1 text-xs">
                   <div><span className="text-gray-500">Username:</span> <span className="font-mono font-bold text-bpjs-blue">{r.username}</span></div>
                   <div><span className="text-gray-500">Password:</span> <span className="font-mono font-bold text-bpjs-blue">{r.raw_password}</span></div>
-                  <div><span className="text-gray-500">Login:</span> <span className="font-mono text-[10px]">magang-cerdas-pwa.vercel.app/intern/login</span></div>
+                  <div><span className="text-gray-500">Masuk:</span> <span className="font-mono text-[10px]">magang-cerdas-pwa.vercel.app/intern/login</span></div>
                   {r.major && <div><span className="text-gray-500">Jurusan:</span> {r.major}</div>}
-                  {r.department && <div><span className="text-gray-500">Dept:</span> {r.department}</div>}
+                  {r.department && <div><span className="text-gray-500">Bidang:</span> {r.department}</div>}
                 </div>
                 <div className="mt-3 pt-2 border-t border-gray-100 text-[10px] text-gray-400 text-center">
                   Simpan kredensial ini dengan aman. Jangan bagikan ke orang lain.
@@ -1017,7 +1017,7 @@ function AddInternModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap *</label>
             <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40" placeholder="Budi Santoso" />
-            {!editing && <p className="text-xs text-gray-500 mt-1">Username & password akan otomatis di-generate</p>}
+            {!editing && <p className="text-xs text-gray-500 mt-1">Username & password akan otomatis dibuat otomatis</p>}
           </div>
 
           <div>
@@ -1139,7 +1139,7 @@ function CreatedCredsModal({ creds, onClose, copied, setCopied }: { creds: Creat
         </div>
         <button onClick={() => { navigator.clipboard.writeText(shareText); setCopied('created-share'); setTimeout(() => { onClose(); setCopied(null); }, 1500); }}
           className="w-full mt-4 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2">
-          {copied === 'created-share' ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />} {copied === 'created-share' ? 'Tersalin!' : 'Copy & Tutup'}
+          {copied === 'created-share' ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />} {copied === 'created-share' ? 'Tersalin!' : 'Salin Copy & Tutup Tutup'}
         </button>
         <button onClick={onClose} className="w-full mt-2 text-gray-500 hover:text-gray-700 text-sm py-2">Tutup</button>
       </div>
