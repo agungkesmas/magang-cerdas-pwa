@@ -844,6 +844,121 @@ export default function AdminAttendancePage() {
           </div>
         </div>
       )}
+
+      {/* Rekap Kehadiran 7 Hari Terakhir — siapa tidak absen per hari */}
+      <AttendanceRecap7Days records={records} interns={interns} />
+
+    </div>
+  );
+}
+
+// ============================================================
+// AttendanceRecap7Days — Rekap kehadiran 7 hari terakhir
+// Tampilkan per hari: siapa hadir, siapa tidak absen, siapa koreksi
+// ============================================================
+function AttendanceRecap7Days({ records, interns }: { records: AttendanceRow[]; interns: Intern[] }) {
+  const [expandedDay, setExpandedDay] = useState<string | null>(null);
+
+  // Build 7-day history
+  const days: { date: string; dayName: string; hadir: string[]; tidakAbsen: string[]; koreksi: string[] }[] = [];
+  const activeInterns = interns.filter(i => i.is_active);
+
+  for (let i = 1; i <= 7; i++) { // mulai dari kemarin (skip hari ini)
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+    const dayName = d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' });
+    const isWeekend = d.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta', weekday: 'short' }) === 'Sun' ||
+                      d.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta', weekday: 'short' }) === 'Sat';
+
+    // Cek siapa yang check-in di tanggal ini
+    const wibStart = new Date(`${dateStr}T00:00:00+07:00`).getTime();
+    const wibEnd = new Date(`${dateStr}T23:59:59.999+07:00`).getTime();
+    const ciIds = new Set<string>();
+    const koreksiIds = new Set<string>();
+    records.forEach(r => {
+      if (r.type !== 'Check-In') return;
+      const ts = new Date(r.timestamp).getTime();
+      if (ts >= wibStart && ts <= wibEnd) {
+        ciIds.add(r.intern_id);
+        // Cek apakah ini record koreksi
+        if (r.notes?.includes('Koreksi')) koreksiIds.add(r.intern_id);
+      }
+    });
+
+    const hadir = activeInterns.filter(i => ciIds.has(i.id)).map(i => i.name);
+    const koreksi = activeInterns.filter(i => koreksiIds.has(i.id)).map(i => i.name);
+    const tidakAbsen = activeInterns.filter(i => !ciIds.has(i.id)).map(i => i.name);
+
+    days.push({ date: dateStr, dayName, hadir, tidakAbsen, koreksi });
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Calendar className="w-4 h-4 text-bpjs-blue" />
+        <h3 className="text-sm font-bold text-gray-900">Rekap Kehadiran 7 Hari Terakhir</h3>
+      </div>
+      <div className="space-y-1.5">
+        {days.map(day => {
+          const isExpanded = expandedDay === day.date;
+          const isWeekend = day.hadir.length === 0 && day.tidakAbsen.length === activeInterns.length;
+          return (
+            <div key={day.date} className="border border-gray-100 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setExpandedDay(isExpanded ? null : day.date)}
+                className={`w-full flex items-center justify-between p-2.5 hover:bg-gray-50 text-left ${isExpanded ? 'bg-gray-50' : ''}`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-900">{day.dayName}</span>
+                  {day.koreksi.length > 0 && (
+                    <span className="text-[10px] px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">
+                      {day.koreksi.length} koreksi
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  {isWeekend ? (
+                    <span className="text-gray-400">Weekend / Libur</span>
+                  ) : (
+                    <>
+                      <span className="text-green-600">✓ {day.hadir.length} hadir</span>
+                      {day.tidakAbsen.length > 0 && (
+                        <span className="text-red-500">✗ {day.tidakAbsen.length} tidak absen</span>
+                      )}
+                    </>
+                  )}
+                </div>
+              </button>
+              {isExpanded && !isWeekend && (
+                <div className="p-2.5 bg-gray-50 border-t border-gray-100 space-y-1">
+                  {day.hadir.length > 0 && (
+                    <div className="text-xs">
+                      <span className="text-green-600 font-medium">✓ Hadir:</span>{' '}
+                      <span className="text-gray-700">{day.hadir.join(', ')}</span>
+                    </div>
+                  )}
+                  {day.tidakAbsen.length > 0 && (
+                    <div className="text-xs">
+                      <span className="text-red-500 font-medium">✗ Tidak absen:</span>{' '}
+                      <span className="text-gray-700">{day.tidakAbsen.join(', ')}</span>
+                    </div>
+                  )}
+                  {day.koreksi.length > 0 && (
+                    <div className="text-xs">
+                      <span className="text-purple-600 font-medium">📝 Dikoreksi:</span>{' '}
+                      <span className="text-gray-700">{day.koreksi.join(', ')}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[10px] text-gray-400 mt-2">
+        Klik tanggal untuk lihat detail. Status berubah otomatis setelah koreksi absen disetujui.
+      </p>
     </div>
   );
 }
