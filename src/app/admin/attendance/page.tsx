@@ -657,9 +657,9 @@ export default function AdminAttendancePage() {
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Magang</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Tipe</th>
