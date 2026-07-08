@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getAdminToken, getPembinaToken, getInternToken } from '@/lib/auth';
+import { getWIBToday } from '@/lib/utils';
 
 export async function GET(req: NextRequest) {
   try {
@@ -71,10 +72,10 @@ export async function GET(req: NextRequest) {
       (logs || []).forEach((l: any) => { myQuestLogs[l.quest_id] = l; });
     }
 
-    // Fetch today's daily completions untuk intern (quest recurring)
+    // Fetch today's daily completions untuk intern (quest recurring, timezone WIB)
     let myDailyCompletions: Record<string, any> = {};
     if (intern && questIds.length > 0) {
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = getWIBToday();
       const { data: dailies } = await supabase
         .from('quest_daily_completions')
         .select('quest_id, completion_date, xp_awarded, submitted_at')

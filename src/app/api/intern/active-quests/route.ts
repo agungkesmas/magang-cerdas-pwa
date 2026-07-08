@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getInternToken } from '@/lib/auth';
+import { getWIBToday } from '@/lib/utils';
 
 export async function GET() {
   try {
@@ -49,7 +50,7 @@ export async function GET() {
     (questLogs || []).forEach((l: any) => { logMap[l.quest_id] = l; });
 
     let todayMap: Record<string, any> = {};
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getWIBToday();
     try {
       const { data: todayCompletions } = await supabase
         .from('quest_daily_completions')

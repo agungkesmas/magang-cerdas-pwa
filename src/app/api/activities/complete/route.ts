@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getInternToken } from '@/lib/auth';
+import { getWIBTodayRange, getWIBToday } from '@/lib/utils';
 
 const EXP_REWARD = 20;
 const BONUS_EXP_ALL_COMPLETE = 50;
@@ -44,15 +45,15 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerClient();
 
-    // 0. CEK: Peserta sudah check-in hari ini?
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    // 0. CEK: Peserta sudah check-in hari ini? (timezone WIB)
+    const { start: wibStart, end: wibEnd } = getWIBTodayRange();
     const { data: todayCheckIn } = await supabase
       .from('attendance')
       .select('id')
       .eq('intern_id', intern.intern_id)
       .eq('type', 'Check-In')
-      .gte('timestamp', todayStart.toISOString())
+      .gte('timestamp', wibStart.toISOString())
+      .lte('timestamp', wibEnd.toISOString())
       .maybeSingle();
     if (!todayCheckIn) {
       return NextResponse.json(
@@ -91,37 +92,36 @@ export async function POST(req: NextRequest) {
     }
 
     // ============================================================
-    // BRANCH 1: RECURRING MODE (HARIAN)
+    // BRANCH 1: RECURRING MODE (HARIAN) — timezone WIB
     // ============================================================
     if (activity.is_recurring) {
       const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
+      const todayStr = getWIBToday(today);
 
-      // Validasi range
+      // Validasi range (pakai tanggal WIB, bukan UTC)
       if (activity.start_date && activity.end_date) {
-        const todayMidnight = new Date(today);
-        todayMidnight.setHours(0, 0, 0, 0);
-        const sd = new Date(activity.start_date);
-        sd.setHours(0, 0, 0, 0);
-        const ed = new Date(activity.end_date);
-        ed.setHours(0, 0, 0, 0);
+        const todayDate = new Date(`${todayStr}T12:00:00+07:00`);
+        const sd = new Date(activity.start_date + 'T12:00:00');
+        const ed = new Date(activity.end_date + 'T12:00:00');
 
-        if (todayMidnight < sd || todayMidnight > ed) {
+        if (todayDate < sd || todayDate > ed) {
           return NextResponse.json({ error: 'Hari ini di luar rentang aktivitas' }, { status: 400 });
         }
       }
 
-      // Validasi weekend
+      // Validasi weekend (pakai timezone WIB)
       if (activity.skip_weekend) {
-        const day = today.getDay();
-        if (day === 0 || day === 6) {
+        const wibDayStr = today.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta', weekday: 'short' });
+        if (wibDayStr === 'Sun' || wibDayStr === 'Sat') {
           return NextResponse.json({ error: 'Akhir pekan (Sabtu/Minggu) tidak ada aktivitas' }, { status: 400 });
         }
       }
 
-      // Validasi jam
+      // Validasi jam (WIB)
       if (activity.daily_deadline_hour) {
-        const wibHour = (today.getUTCHours() + 7) % 24;
+        // Hitung jam WIB dari now
+        const wibHourStr = today.toLocaleString('en-US', { timeZone: 'Asia/Jakarta', hour: '2-digit', hour12: false });
+        const wibHour = parseInt(wibHourStr, 10);
         if (wibHour >= activity.daily_deadline_hour) {
           return NextResponse.json({
             error: `Waktu complete sudah habis. Aktivitas harus diselesaikan sebelum jam ${activity.daily_deadline_hour}:00 WIB.`

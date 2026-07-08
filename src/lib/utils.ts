@@ -10,6 +10,55 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // ============================================================
+// TIMEZONE HELPERS — WIB (Asia/Jakarta, UTC+7)
+//
+// Penting: Vercel server run di UTC. Browser user di WIB.
+// Bug lama: pakai `new Date().toISOString().split('T')[0]` yang
+// convert ke UTC dulu. Saat user di WIB jam 00:00-07:00,
+// "hari ini" dianggap "hari kemarin" UTC → filter tanggal salah.
+//
+// Semua logika "hari ini" WAJIB pakai helper di bawah ini.
+// ============================================================
+
+/**
+ * Return YYYY-MM-DD tanggal hari ini di timezone WIB.
+ * Bisa dipakai di server (UTC) maupun client (WIB).
+ *
+ * Contoh:
+ *   - Server UTC, jam 23:30 UTC tanggal 8 Juli → WIB = 06:30 tanggal 9 Juli → return "2026-07-09"
+ *   - Client WIB, jam 00:15 tanggal 9 Juli → return "2026-07-09"
+ */
+export function getWIBToday(now: Date = new Date()): string {
+  // Format YYYY-MM-DD dengan locale en-CA + timeZone Asia/Jakarta
+  return now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+}
+
+/**
+ * Return range [start, end] untuk query "hari ini" di timezone WIB.
+ * Start = 00:00:00.000 WIB (=> 17:00:00.000 UTC hari sebelumnya)
+ * End   = 23:59:59.999 WIB (=> 16:59:59.999 UTC hari yang sama)
+ *
+ * Pakai range ini untuk `.gte('timestamp', start.toISOString())`
+ * dan `.lte('timestamp', end.toISOString())` di query Supabase.
+ */
+export function getWIBTodayRange(now: Date = new Date()): { start: Date; end: Date } {
+  const todayStr = getWIBToday(now);
+  // Buat Date object dengan explicit WIB offset
+  const start = new Date(`${todayStr}T00:00:00+07:00`);
+  const end = new Date(`${todayStr}T23:59:59.999+07:00`);
+  return { start, end };
+}
+
+/**
+ * Return range [start, end] untuk query tanggal YYYY-MM-DD tertentu di WIB.
+ */
+export function getWIBDateRange(dateStr: string): { start: Date; end: Date } {
+  const start = new Date(`${dateStr}T00:00:00+07:00`);
+  const end = new Date(`${dateStr}T23:59:59.999+07:00`);
+  return { start, end };
+}
+
+// ============================================================
 // Haversine distance — meters between two coordinates
 // ============================================================
 export function haversineDistance(

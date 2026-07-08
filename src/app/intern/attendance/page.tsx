@@ -20,6 +20,15 @@ import {
   XCircle
 } from 'lucide-react';
 
+// Helper timezone WIB — bug fix: lama pakai UTC, jam 00-07 WIB dianggap hari kemarin
+function getWIBToday(): string {
+  if (typeof window === 'undefined') {
+    // Server-side fallback (Next.js SSR) — pakai Intl
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+  }
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+}
+
 export default function InternAttendancePage() {
   const [todayAtt, setTodayAtt] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,14 +63,23 @@ export default function InternAttendancePage() {
       const attData = await attRes.json();
       const leaveData = await leaveRes.json();
       if (attData.success) {
-        const today = new Date().toISOString().split('T')[0];
+        // Filter: hari ini berdasarkan timezone WIB (bukan UTC)
+        // Bug lama: pakai new Date().toISOString().split('T')[0] = UTC date
+        // yang akan salah saat jam 00:00-07:00 WIB (UTC masih tanggal kemarin).
+        // Fix: bandingkan timestamp dengan range WIB hari ini.
+        const todayStr = getWIBToday();
+        const wibStart = new Date(`${todayStr}T00:00:00+07:00`).getTime();
+        const wibEnd = new Date(`${todayStr}T23:59:59.999+07:00`).getTime();
         setTodayAtt(
-          (attData.attendance || []).filter((a: any) => a.timestamp?.startsWith(today))
+          (attData.attendance || []).filter((a: any) => {
+            const ts = new Date(a.timestamp).getTime();
+            return ts >= wibStart && ts <= wibEnd;
+          })
         );
       }
       if (leaveData.success) {
         setMyLeaves(leaveData.leave_requests || []);
-        const today = new Date().toISOString().split('T')[0];
+        const today = getWIBToday();
         const todayL = (leaveData.leave_requests || []).find(
           (lr: any) => lr.status === 'approved' && today >= lr.start_date && today <= lr.end_date
         );
@@ -753,8 +771,8 @@ export default function InternAttendancePage() {
 function LeaveForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const [form, setForm] = useState({
     type: 'izin' as 'sakit' | 'izin' | 'cuti' | 'dinas-luar',
-    start_date: new Date().toISOString().split('T')[0],
-    end_date: new Date().toISOString().split('T')[0],
+    start_date: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }),
+    end_date: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }),
     reason: '',
     medical_certificate_url: ''
   });
@@ -950,8 +968,9 @@ function HolidayWarning() {
 
   useEffect(() => {
     const now = new Date();
-    const day = now.getDay(); // 0=Minggu, 6=Sabtu
-    if (day === 0 || day === 6) {
+    // Cek weekend pakai timezone WIB (bukan UTC)
+    const wibDayStr = now.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta', weekday: 'short' });
+    if (wibDayStr === 'Sun' || wibDayStr === 'Sat') {
       setIsWeekend(true);
     }
     // Fetch holidays
@@ -959,7 +978,8 @@ function HolidayWarning() {
       .then(r => r.json())
       .then(d => {
         if (d.success) {
-          const today = now.toISOString().split('T')[0];
+          // Bandingkan tanggal hari ini WIB dengan tanggal libur
+          const today = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
           const found = (d.holidays || []).find((h: any) => h.date === today);
           if (found) setHoliday({ name: found.name, type: found.type });
         }

@@ -9,14 +9,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getInternToken } from '@/lib/auth';
-import { haversineDistance, EXP_REWARDS } from '@/lib/utils';
+import { haversineDistance, EXP_REWARDS, getWIBTodayRange } from '@/lib/utils';
 import { getHolidayInfo } from '@/lib/holidays';
 import { ensureCustomHolidaysLoaded } from '@/lib/holidays-loader';
 
 function checkIfHolidayCheckin(): { isHoliday: boolean; reason: string } {
   const now = new Date();
-  const day = now.getDay();
-  if (day === 0 || day === 6) {
+  const wibDayStr = now.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta', weekday: 'short' });
+  if (wibDayStr === 'Sun' || wibDayStr === 'Sat') {
     return { isHoliday: true, reason: 'Weekend (Sabtu/Minggu)' };
   }
   const holidayInfo = getHolidayInfo(now);
@@ -38,15 +38,15 @@ export async function POST(req: NextRequest) {
     const { latitude, longitude, photo_url, notes } = await req.json();
     const supabase = createServerClient();
 
-    // Verify checked in today
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    // Verify checked in today (timezone WIB)
+    const { start: wibStart, end: wibEnd } = getWIBTodayRange();
     const { data: checkIn } = await supabase
       .from('attendance')
       .select('id, approval_status')
       .eq('intern_id', intern.intern_id)
       .eq('type', 'Check-In')
-      .gte('timestamp', todayStart.toISOString())
+      .gte('timestamp', wibStart.toISOString())
+      .lte('timestamp', wibEnd.toISOString())
       .maybeSingle();
 
     if (!checkIn) {
@@ -59,7 +59,8 @@ export async function POST(req: NextRequest) {
       .select('id')
       .eq('intern_id', intern.intern_id)
       .eq('type', 'Check-Out')
-      .gte('timestamp', todayStart.toISOString())
+      .gte('timestamp', wibStart.toISOString())
+      .lte('timestamp', wibEnd.toISOString())
       .maybeSingle();
 
     if (checkOut) {

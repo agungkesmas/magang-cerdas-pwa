@@ -91,8 +91,8 @@ export default function AdminAttendancePage() {
       if (internData.success) setInterns(internData.interns);
       if (leaveData.success) {
         setLeaveRequests(leaveData.leave_requests || []);
-        // Build set of intern IDs yang sedang izin approved hari ini
-        const today = new Date().toISOString().split('T')[0];
+        // Build set of intern IDs yang sedang izin approved hari ini (timezone WIB)
+        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
         const onLeaveToday = new Set<string>(
           (leaveData.leave_requests || [])
             .filter((lr: any) => lr.status === 'approved' && today >= lr.start_date && today <= lr.end_date)
@@ -109,11 +109,16 @@ export default function AdminAttendancePage() {
     fetchAll();
   }, [fetchAll]);
 
-  // Determine which interns haven't checked in today (exclude yang sedang izin approved)
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  // Determine which interns haven't checked in today (timezone WIB)
+  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+  const wibStartMs = new Date(`${todayStr}T00:00:00+07:00`).getTime();
+  const wibEndMs = new Date(`${todayStr}T23:59:59.999+07:00`).getTime();
   const checkedInToday = new Set(
-    records.filter((r) => r.type === 'Check-In' && new Date(r.timestamp) >= todayStart).map((r) => r.intern_id)
+    records.filter((r) => {
+      if (r.type !== 'Check-In') return false;
+      const ts = new Date(r.timestamp).getTime();
+      return ts >= wibStartMs && ts <= wibEndMs;
+    }).map((r) => r.intern_id)
   );
   const notCheckedIn = interns.filter(
     (i) => i.is_active && !checkedInToday.has(i.id) && !approvedLeaveToday.has(i.id)
@@ -179,7 +184,7 @@ export default function AdminAttendancePage() {
   const pendingLeaves = leaveRequests.filter((lr) => lr.status === 'pending');
   const todayOnLeave = leaveRequests.filter((lr) => {
     if (lr.status !== 'approved') return false;
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
     return today >= lr.start_date && today <= lr.end_date;
   });
 

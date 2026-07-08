@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getAdminToken } from '@/lib/auth';
-import { calculateTimeProgress, daysRemaining } from '@/lib/utils';
+import { calculateTimeProgress, daysRemaining, getWIBTodayRange, getWIBToday } from '@/lib/utils';
 
 export async function GET() {
   try {
@@ -23,16 +23,13 @@ export async function GET() {
       .select('id, name, school_origin, major, department, start_date, end_date, total_exp, streak_count, is_active, certificate_unlocked, username, raw_password, created_at')
       .order('created_at', { ascending: false });
 
-    // Today's attendance
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    // Today's attendance (timezone WIB)
+    const { start: wibStart, end: wibEnd } = getWIBTodayRange();
     const { data: todayAtt } = await supabase
       .from('attendance')
       .select('*, Interns!inner(name, major, department)')
-      .gte('timestamp', todayStart.toISOString())
-      .lte('timestamp', todayEnd.toISOString())
+      .gte('timestamp', wibStart.toISOString())
+      .lte('timestamp', wibEnd.toISOString())
       .order('timestamp', { ascending: false });
 
     // Interns near end (within 14 days)

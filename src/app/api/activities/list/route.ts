@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getAdminToken, getInternToken } from '@/lib/auth';
+import { getWIBToday } from '@/lib/utils';
 
 // Helper: hitung jumlah hari kerja dalam range (exclude weekend jika skip_weekend)
 function countWorkingDays(start: Date, end: Date, skipWeekend: boolean): number {
@@ -33,19 +34,19 @@ function countWorkingDays(start: Date, end: Date, skipWeekend: boolean): number 
   return count;
 }
 
-// Helper: cek apakah today adalah hari kerja dalam range
+// Helper: cek apakah today adalah hari kerja dalam range (timezone WIB)
 function isTodayInRange(start: string | null, end: string | null, skipWeekend: boolean): boolean {
   if (!start || !end) return true; // tidak ada range = selalu tampil (backward compat)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const sd = new Date(start);
-  sd.setHours(0, 0, 0, 0);
-  const ed = new Date(end);
-  ed.setHours(0, 0, 0, 0);
+  // Pakai tanggal WIB
+  const todayStr = getWIBToday();
+  const today = new Date(`${todayStr}T12:00:00+07:00`); // siang hari supaya tidak edge case
+  const sd = new Date(start + 'T12:00:00'); // anggap start_date = YYYY-MM-DD lokal
+  const ed = new Date(end + 'T12:00:00');
   if (today < sd || today > ed) return false;
   if (skipWeekend) {
-    const day = today.getDay();
-    if (day === 0 || day === 6) return false;
+    // Hitung hari dari tanggal WIB
+    const wibDayStr = today.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta', weekday: 'short' });
+    if (wibDayStr === 'Sun' || wibDayStr === 'Sat') return false;
   }
   return true;
 }
@@ -59,7 +60,7 @@ export async function GET(req: NextRequest) {
     }
 
     const supabase = createServerClient();
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getWIBToday();
 
     if (admin && !intern) {
       // Admin: list SEMUA aktivitas (including archived) with completion info
@@ -250,12 +251,13 @@ export async function GET(req: NextRequest) {
         progressCompletedDays = (myDailyCompletionsMap[a.id] || []).length;
       }
 
-      // Cek apakah sudah lewat deadline harian (untuk recurring)
+      // Cek apakah sudah lewat deadline harian (untuk recurring) — timezone WIB
       let isPastDailyDeadline = false;
       if (isRecurring && a.daily_deadline_hour) {
         const now = new Date();
-        // WIB = UTC+7
-        const wibHour = (now.getUTCHours() + 7) % 24;
+        // Pakai timezone WIB untuk ambil jam
+        const wibHourStr = now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta', hour: '2-digit', hour12: false });
+        const wibHour = parseInt(wibHourStr, 10);
         isPastDailyDeadline = wibHour >= a.daily_deadline_hour;
       }
 

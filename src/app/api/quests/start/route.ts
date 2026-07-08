@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getInternToken } from '@/lib/auth';
+import { getWIBTodayRange, getWIBToday } from '@/lib/utils';
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,17 +21,15 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerClient();
 
-    // 0. CEK: Peserta sudah check-in hari ini?
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    // 0. CEK: Peserta sudah check-in hari ini? (timezone WIB)
+    const { start: wibStart, end: wibEnd } = getWIBTodayRange();
     const { data: todayCheckIn } = await supabase
       .from('attendance')
       .select('id')
       .eq('intern_id', intern.intern_id)
       .eq('type', 'Check-In')
-      .gte('timestamp', todayStart.toISOString())
+      .gte('timestamp', wibStart.toISOString())
+      .lte('timestamp', wibEnd.toISOString())
       .maybeSingle();
     if (!todayCheckIn) {
       return NextResponse.json(
@@ -45,7 +44,8 @@ export async function POST(req: NextRequest) {
       .select('id')
       .eq('intern_id', intern.intern_id)
       .eq('type', 'Check-Out')
-      .gte('timestamp', todayStart.toISOString())
+      .gte('timestamp', wibStart.toISOString())
+      .lte('timestamp', wibEnd.toISOString())
       .maybeSingle();
     if (todayCheckOut) {
       return NextResponse.json(
@@ -67,9 +67,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Quest sudah lewat deadline' }, { status: 400 });
     }
 
-    // 1b. Untuk quest RECURRING: cek sudah complete + limit harian + jeda 3 jam
+    // 1b. Untuk quest RECURRING: cek sudah complete + limit harian + jeda 3 jam (timezone WIB)
     if (quest.is_recurring) {
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = getWIBToday();
       try {
         const { data: todayCompletion } = await supabase
           .from('quest_daily_completions')
@@ -91,8 +91,9 @@ export async function POST(req: NextRequest) {
           .select('id', { count: 'exact', head: true })
           .eq('intern_id', intern.intern_id)
           .eq('completion_date', todayStr);
-        const ts = new Date(); ts.setHours(0,0,0,0);
-        const te = new Date(); te.setHours(23,59,59,999);
+        // Self-added count pakai range WIB
+        const ts = wibStart;
+        const te = wibEnd;
         const { count: selfAddedCount } = await supabase
           .from('activities')
           .select('id', { count: 'exact', head: true })

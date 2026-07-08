@@ -13,16 +13,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getInternToken } from '@/lib/auth';
-import { haversineDistance, EXP_REWARDS } from '@/lib/utils';
+import { haversineDistance, EXP_REWARDS, getWIBTodayRange, getWIBToday } from '@/lib/utils';
 import { isHoliday, getHolidayInfo } from '@/lib/holidays';
 import { ensureCustomHolidaysLoaded } from '@/lib/holidays-loader';
 
-// Cek apakah hari ini weekend atau hari libur
+// Cek apakah hari ini weekend atau hari libur (timezone WIB)
 function checkIfHolidayCheckin(): { isHoliday: boolean; reason: string } {
   const now = new Date();
-  const day = now.getDay(); // 0=Minggu, 6=Sabtu
-
-  if (day === 0 || day === 6) {
+  // Pakai timezone WIB untuk tentukan hari
+  const wibDayStr = now.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta', weekday: 'short' });
+  // 'Sun' atau 'Sat'
+  if (wibDayStr === 'Sun' || wibDayStr === 'Sat') {
     return { isHoliday: true, reason: 'Weekend (Sabtu/Minggu)' };
   }
 
@@ -75,15 +76,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if already checked in today
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    // Check if already checked in today (timezone WIB)
+    const { start: wibStart, end: wibEnd } = getWIBTodayRange();
     const { data: existing } = await supabase
       .from('attendance')
       .select('id')
       .eq('intern_id', intern.intern_id)
       .eq('type', 'Check-In')
-      .gte('timestamp', todayStart.toISOString())
+      .gte('timestamp', wibStart.toISOString())
+      .lte('timestamp', wibEnd.toISOString())
       .maybeSingle();
 
     if (existing) {
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Cek apakah hari ini ada izin yang approved
-    const today = new Date().toISOString().split('T')[0];
+    const today = getWIBToday();
     const { data: approvedLeave } = await supabase
       .from('leave_requests')
       .select('id, type')

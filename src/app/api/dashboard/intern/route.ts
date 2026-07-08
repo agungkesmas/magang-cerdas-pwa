@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getInternToken } from '@/lib/auth';
-import { calculateLevel, calculateTimeProgress, daysRemaining, internshipDuration, calculateTier } from '@/lib/utils';
+import { calculateLevel, calculateTimeProgress, daysRemaining, internshipDuration, calculateTier, getWIBTodayRange } from '@/lib/utils';
 import { ensureCustomHolidaysLoaded } from '@/lib/holidays-loader';
 
 export async function GET() {
@@ -32,17 +32,14 @@ export async function GET() {
       return NextResponse.json({ error: 'Profile tidak ditemukan' }, { status: 404 });
     }
 
-    // Today's attendance
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    // Today's attendance (timezone WIB)
+    const { start: wibStart, end: wibEnd } = getWIBTodayRange();
     const { data: todayAtt } = await supabase
       .from('attendance')
       .select('*')
       .eq('intern_id', intern.intern_id)
-      .gte('timestamp', todayStart.toISOString())
-      .lte('timestamp', todayEnd.toISOString())
+      .gte('timestamp', wibStart.toISOString())
+      .lte('timestamp', wibEnd.toISOString())
       .order('timestamp', { ascending: true });
 
     // Leaderboard (all active interns, top 10)

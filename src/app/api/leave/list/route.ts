@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getAdminToken, getInternToken, getBKKToken } from '@/lib/auth';
+import { getWIBToday } from '@/lib/utils';
 
 export async function GET(req: NextRequest) {
   try {
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (todayOnly) {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getWIBToday();
       query = query.lte('start_date', today).gte('end_date', today);
     }
 

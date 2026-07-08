@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getInternToken } from '@/lib/auth';
+import { getWIBTodayRange, getWIBToday } from '@/lib/utils';
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,15 +21,15 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerClient();
 
-    // 0. CEK: Peserta sudah check-in hari ini?
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    // 0. CEK: Peserta sudah check-in hari ini? (timezone WIB)
+    const { start: wibStart, end: wibEnd } = getWIBTodayRange();
     const { data: todayCheckIn } = await supabase
       .from('attendance')
       .select('id')
       .eq('intern_id', intern.intern_id)
       .eq('type', 'Check-In')
-      .gte('timestamp', todayStart.toISOString())
+      .gte('timestamp', wibStart.toISOString())
+      .lte('timestamp', wibEnd.toISOString())
       .maybeSingle();
     if (!todayCheckIn) {
       return NextResponse.json(
@@ -72,9 +73,9 @@ export async function POST(req: NextRequest) {
     }
 
     const xpAwarded = quest.xp_reward || 20;
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getWIBToday();
 
-    // 3b. Untuk quest RECURRING: cek race condition + limit + jeda 3 jam
+    // 3b. Untuk quest RECURRING: cek race condition + limit + jeda 3 jam (timezone WIB)
     if (quest.is_recurring) {
       try {
         const { data: todayCompletion } = await supabase
@@ -97,8 +98,8 @@ export async function POST(req: NextRequest) {
           .select('id', { count: 'exact', head: true })
           .eq('intern_id', intern.intern_id)
           .eq('completion_date', todayStr);
-        const ts2 = new Date(); ts2.setHours(0,0,0,0);
-        const te2 = new Date(); te2.setHours(23,59,59,999);
+        const ts2 = wibStart;
+        const te2 = wibEnd;
         const { count: selfAddedCount } = await supabase
           .from('activities')
           .select('id', { count: 'exact', head: true })

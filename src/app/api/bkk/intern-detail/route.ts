@@ -116,14 +116,27 @@ export async function GET(req: NextRequest) {
     const checkOuts = (att || []).filter((a) => a.type === 'Check-Out');
     const durationDays = internshipDuration(intern.start_date, intern.end_date);
 
-    // Last 7 days attendance
+    // Last 7 days attendance (timezone WIB)
+    // Bug lama: pakai toISOString() yang convert ke UTC, jadi timestamp di DB
+    // (yang juga UTC) di-compare dengan YYYY-MM-DD UTC — tetap benar.
+    // Tapi karena DB simpan timestamp UTC dan `dateStr` di sini juga UTC, range match.
+    // Untuk konsistensi tetap pakai WIB date string, lalu bandingkan dengan range WIB.
     const last7Days: { date: string; check_in: boolean; check_out: boolean }[] = [];
     for (let i = 0; i < 7; i++) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
-      const ci = checkIns.some((a) => a.timestamp?.startsWith(dateStr));
-      const co = checkOuts.some((a) => a.timestamp?.startsWith(dateStr));
+      const dateStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+      // Bandingkan timestamp DB dengan range WIB tanggal ini
+      const wibStart = new Date(`${dateStr}T00:00:00+07:00`).getTime();
+      const wibEnd = new Date(`${dateStr}T23:59:59.999+07:00`).getTime();
+      const ci = checkIns.some((a) => {
+        const ts = new Date(a.timestamp).getTime();
+        return ts >= wibStart && ts <= wibEnd;
+      });
+      const co = checkOuts.some((a) => {
+        const ts = new Date(a.timestamp).getTime();
+        return ts >= wibStart && ts <= wibEnd;
+      });
       last7Days.push({ date: dateStr, check_in: ci, check_out: co });
     }
 

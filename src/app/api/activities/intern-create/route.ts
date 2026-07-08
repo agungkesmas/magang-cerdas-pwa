@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getInternToken } from '@/lib/auth';
+import { getWIBTodayRange, getWIBToday } from '@/lib/utils';
 
 const MAX_DAILY_SELF_ACTIVITIES = 2;
 const MAX_DAILY_TOTAL = 3;
@@ -47,17 +48,15 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerClient();
 
-    // 0. CEK: Peserta sudah check-in hari ini?
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    // 0. CEK: Peserta sudah check-in hari ini? (timezone WIB)
+    const { start: todayStart, end: todayEnd } = getWIBTodayRange();
     const { data: todayCheckIn } = await supabase
       .from('attendance')
       .select('id')
       .eq('intern_id', intern.intern_id)
       .eq('type', 'Check-In')
       .gte('timestamp', todayStart.toISOString())
+      .lte('timestamp', todayEnd.toISOString())
       .maybeSingle();
     if (!todayCheckIn) {
       return NextResponse.json(
@@ -73,6 +72,7 @@ export async function POST(req: NextRequest) {
       .eq('intern_id', intern.intern_id)
       .eq('type', 'Check-Out')
       .gte('timestamp', todayStart.toISOString())
+      .lte('timestamp', todayEnd.toISOString())
       .maybeSingle();
     if (todayCheckOut) {
       return NextResponse.json(
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 0b. CEK: Batas self-added + total + jeda 3 jam
+    // 0b. CEK: Batas self-added + total + jeda 3 jam (timezone WIB)
     const { count: todaySelfActivities } = await supabase
       .from('activities')
       .select('id', { count: 'exact', head: true })
@@ -90,10 +90,10 @@ export async function POST(req: NextRequest) {
       .gte('created_at', todayStart.toISOString())
       .lte('created_at', todayEnd.toISOString());
 
-    // Cek quest count hari ini
+    // Cek quest count hari ini (timezone WIB)
     let questCountToday = 0;
     try {
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = getWIBToday();
       const { count: qc } = await supabase
         .from('quest_daily_completions')
         .select('id', { count: 'exact', head: true })
@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
     if (totalN >= 2) {
       let latestTime: Date | null = null;
       try {
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = getWIBToday();
         const { data: lq } = await supabase
           .from('quest_daily_completions')
           .select('submitted_at')
