@@ -15,12 +15,18 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
-import { getAdminToken } from '@/lib/auth';
+import { getAdminToken, getPembinaToken } from '@/lib/auth';
 import { EXP_REWARDS } from '@/lib/utils';
 
 export async function POST(req: NextRequest) {
   try {
     const admin = await getAdminToken();
+    const pembina = await getPembinaToken();
+    if (!admin && !pembina) {
+      return NextResponse.json({ error: 'Unauthorized — admin atau pembina only' }, { status: 401 });
+    }
+    const reviewerId = admin?.sub || pembina?.pembina_id;
+    const reviewerName = admin?.name || pembina?.name || 'Pembina';
     if (!admin) {
       return NextResponse.json({ error: 'Unauthorized — admin only' }, { status: 401 });
     }
@@ -76,7 +82,7 @@ export async function POST(req: NextRequest) {
         .from('attendance_corrections')
         .update({
           status: 'rejected',
-          reviewed_by: admin.sub,
+          reviewed_by: reviewerId,
           reviewed_at: new Date().toISOString(),
           review_notes: 'Auto-rejected: record absen sudah ada (peserta mungkin sudah absen manual setelah ajukan koreksi)'
         })
@@ -133,9 +139,9 @@ export async function POST(req: NextRequest) {
       .from('attendance_corrections')
       .update({
         status: 'approved',
-        reviewed_by: admin.sub,
+        reviewed_by: reviewerId,
         reviewed_at: new Date().toISOString(),
-        review_notes: review_notes?.trim() || 'Diapprove oleh admin'
+        review_notes: review_notes?.trim() || 'Diapprove oleh admin/pembina'
       })
       .eq('id', correction_id);
 
@@ -188,8 +194,8 @@ export async function POST(req: NextRequest) {
       message: `✅ Koreksi ${correction.type} tanggal ${dateStr} jam ${actualTimeStr} DISETUJUI. Record absen ditambahkan (+${expGain} EXP${expNote}). ${isLate ? '⚠️ Tercatat terlambat. ' : ''}${isEarly ? '🏠 Tercatat pulang awal. ' : ''}Catatan admin: ${review_notes?.trim() || 'Diapprove'}.`,
       type: 'correction_approved',
       created_by_type: 'admin',
-      created_by_id: admin.sub,
-      created_by_name: admin.name
+      created_by_id: reviewerId,
+      created_by_name: reviewerName
     });
 
     return NextResponse.json({

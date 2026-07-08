@@ -5,11 +5,17 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
-import { getAdminToken } from '@/lib/auth';
+import { getAdminToken, getPembinaToken } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {
     const admin = await getAdminToken();
+    const pembina = await getPembinaToken();
+    if (!admin && !pembina) {
+      return NextResponse.json({ error: 'Unauthorized — admin atau pembina only' }, { status: 401 });
+    }
+    const reviewerId = admin?.sub || pembina?.pembina_id;
+    const reviewerName = admin?.name || pembina?.name || 'Pembina';
     if (!admin) {
       return NextResponse.json({ error: 'Unauthorized — admin only' }, { status: 401 });
     }
@@ -49,7 +55,7 @@ export async function POST(req: NextRequest) {
       .from('attendance_corrections')
       .update({
         status: 'rejected',
-        reviewed_by: admin.sub,
+        reviewed_by: reviewerId,
         reviewed_at: new Date().toISOString(),
         review_notes: review_notes.trim()
       })
@@ -63,11 +69,11 @@ export async function POST(req: NextRequest) {
     const intern = correction.interns as any;
     await supabase.from('nudges').insert({
       intern_id: correction.intern_id,
-      message: `❌ Koreksi ${correction.type} untuk tanggal ${correction.correction_date} Anda DITOLAK oleh admin. Alasan: ${review_notes.trim()}. Hubungi admin kalau ada pertanyaan.`,
+      message: `❌ Koreksi ${correction.type} untuk tanggal ${correction.correction_date} Anda DITOLAK oleh admin/pembina. Alasan: ${review_notes.trim()}. Hubungi admin kalau ada pertanyaan.`,
       type: 'correction_rejected',
       created_by_type: 'admin',
-      created_by_id: admin.sub,
-      created_by_name: admin.name
+      created_by_id: reviewerId,
+      created_by_name: reviewerName
     });
 
     return NextResponse.json({

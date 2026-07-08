@@ -5,13 +5,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
-import { getInternToken, getAdminToken } from '@/lib/auth';
+import { getInternToken, getAdminToken, getPembinaToken } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   try {
     const intern = await getInternToken();
     const admin = await getAdminToken();
-    if (!intern && !admin) {
+    const pembina = await getPembinaToken();
+    if (!intern && !admin && !pembina) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

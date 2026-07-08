@@ -21,6 +21,8 @@ import {
   Gift
 } from 'lucide-react';
 import QuickGiftModal from '@/components/shared/QuickGiftModal';
+import CorrectionApprovals from '@/components/admin/CorrectionApprovals';
+import EarlyLeaveApprovals from '@/components/admin/EarlyLeaveApprovals';
 
 export default function PembinaHomePage() {
   const [pembina, setPembina] = useState<any>(null);
@@ -282,6 +284,12 @@ export default function PembinaHomePage() {
           </div>
         </div>
       )}
+
+      {/* Koreksi Absen Pending — pembina bisa approve */}
+      <CorrectionApprovals />
+
+      {/* Izin Pulang Cepat Pending — pembina bisa approve */}
+      <EarlyLeaveApprovals />
 
       {/* Pending Approval — check-in/out di hari libur/weekend */}
       {pendingAttendances.length > 0 && (
