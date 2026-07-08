@@ -1,156 +1,73 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { RefreshCw, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { useEffect } from 'react';
 
 /**
- * PWA Cache Cleanup Component
+ * PWACacheCleanup (SILENT VERSION)
  *
- * Masalah: Service Worker lama cache API response selama 24 jam.
- * User lihat data stale walaupun server sudah return data baru.
+ * Versi lama: tampilkan banner kuning besar yang panikkan user.
+ * Versi ini: jalankan cleanup secara SILENT di background, tanpa UI.
  *
- * Solusi: Komponen ini auto-detect kalau ada SW lama & clear cache.
- * Hanya tampil di admin (bisa diakses di /admin/pwa-cleanup atau
- * auto-run di admin layout).
+ * Strategi:
+ * 1. Detect cache 'apis' lama di background (tidak tampilkan apa-apa)
+ * 2. Kalau ada, silently unregister SW lama + clear cache 'apis'
+ * 3. JANGAN reload halaman (anti-panik)
+ * 4. Next page load akan otomatis pakai SW baru (config NetworkOnly API)
  *
- * Setelah deploy fix PWA config, komponen ini akan:
- * 1. Unregister SW lama
- * 2. Clear semua cache (pages, apis, dll)
- * 3. Reload halaman supaya SW baru (dengan config NetworkOnly untuk API) terinstall
+ * Cleanup ini hanya perlu jalan sekali — begitu SW baru terinstall,
+ * cache 'apis' tidak akan pernah terisi lagi (karena NetworkOnly).
+ *
+ * Komponen ini return null — tidak render apa-apa di layar.
  */
 export default function PWACacheCleanup() {
-  const [status, setStatus] = useState<'idle' | 'cleaning' | 'done' | 'error'>('idle');
-  const [message, setMessage] = useState('');
-  const [showBanner, setShowBanner] = useState(false);
-
   useEffect(() => {
-    // Cek apakah perlu cleanup — kalau ada cache 'apis' yang berisi API response lama
-    const checkAndCleanup = async () => {
-      if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('caches' in window)) {
-        return;
-      }
+    if (typeof window === 'undefined') {
+      return;
+    }
 
+    // Tidak ada SW → tidak perlu cleanup
+    if (!('serviceWorker' in navigator) || !('caches' in window)) {
+      return;
+    }
+
+    const silentCleanup = async () => {
       try {
         const cacheNames = await caches.keys();
-        const hasApiCache = cacheNames.includes('apis');
-        const hasOldPagesCache = cacheNames.includes('pages');
+        const hasOldApiCache = cacheNames.includes('apis');
 
-        // Kalau ada cache 'apis' (yang seharusnya tidak ada di SW baru), perlu cleanup
-        if (hasApiCache) {
-          setShowBanner(true);
+        // Hanya cleanup kalau ada cache 'apis' lama (indikasi SW lama)
+        if (!hasOldApiCache) {
+          return;
         }
-      } catch (e) {
-        console.warn('[PWA Cleanup] check failed:', e);
-      }
-    };
 
-    checkAndCleanup();
-  }, []);
+        console.info('[PWA] Cleaning up stale API cache (silent)...');
 
-  const doCleanup = async () => {
-    setStatus('cleaning');
-    setMessage('Membersihkan cache lama...');
+        // 1. Hapus cache 'apis' saja (jangan sentuh cache lain)
+        await caches.delete('apis');
 
-    try {
-      // 1. Unregister semua SW lama
-      if ('serviceWorker' in navigator) {
+        // 2. Unregister SW lama supaya SW baru bisa take over di next load
         const regs = await navigator.serviceWorker.getRegistrations();
         for (const reg of regs) {
           await reg.unregister();
-          console.log('[PWA Cleanup] SW unregistered:', reg.scope);
         }
+
+        console.info('[PWA] Stale cache cleaned. SW will re-register on next load.');
+
+        // TIDAK reload halaman — anti-panik.
+        // SWUpdateListener sudah handle auto-reload kalau SW baru activate.
+        // User tidak akan sadar apa-apa terjadi.
+      } catch (e) {
+        // Silent fail — jangan ganggu user
+        console.warn('[PWA] Silent cleanup failed (not critical):', e);
       }
+    };
 
-      // 2. Clear semua cache
-      if ('caches' in window) {
-        const cacheNames = await caches.keys();
-        for (const name of cacheNames) {
-          await caches.delete(name);
-          console.log('[PWA Cleanup] Cache deleted:', name);
-        }
-      }
+    // Delay 2 detik supaya tidak block initial render
+    const timer = setTimeout(silentCleanup, 2000);
 
-      // 3. Clear localStorage & sessionStorage untuk reset PWA state
-      // (Tidak hapus auth tokens — biarkan user tetap login)
-      const authKeys = ['magang_admin_token', 'magang_intern_token', 'magang_bkk_token', 'magang_pembina_token'];
-      const savedAuth: Record<string, string> = {};
-      authKeys.forEach(k => {
-        const v = localStorage.getItem(k);
-        if (v) savedAuth[k] = v;
-      });
+    return () => clearTimeout(timer);
+  }, []);
 
-      localStorage.clear();
-      sessionStorage.clear();
-
-      // Restore auth tokens
-      Object.entries(savedAuth).forEach(([k, v]) => localStorage.setItem(k, v));
-
-      setStatus('done');
-      setMessage('Cache berhasil dibersihkan! Halaman akan reload otomatis...');
-
-      // 4. Reload setelah 1.5 detik supaya SW baru (dengan config NetworkOnly) terinstall
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
-    } catch (e: any) {
-      setStatus('error');
-      setMessage('Gagal cleanup: ' + e.message);
-    }
-  };
-
-  if (!showBanner && status === 'idle') return null;
-
-  return (
-    <div className="fixed bottom-4 right-4 z-50 max-w-sm bg-white rounded-xl shadow-2xl border-2 border-amber-400 p-4 animate-fade-in">
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-          <AlertTriangle className="w-5 h-5 text-amber-600" />
-        </div>
-        <div className="flex-1">
-          <h3 className="font-bold text-gray-900 text-sm">Cache PWA Perlu Diperbarui</h3>
-          <p className="text-xs text-gray-600 mt-1">
-            Kami mendeteksi cache lama yang menyimpan data stale. Klik tombol di bawah
-            untuk membersihkan cache & reload halaman dengan versi terbaru.
-          </p>
-
-          {status === 'done' && (
-            <div className="mt-2 flex items-center gap-1.5 text-xs text-green-700">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              {message}
-            </div>
-          )}
-
-          {status === 'error' && (
-            <div className="mt-2 text-xs text-red-600">{message}</div>
-          )}
-
-          {status !== 'cleaning' && status !== 'done' && (
-            <button
-              onClick={doCleanup}
-              className="mt-3 inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Bersihkan Cache
-            </button>
-          )}
-
-          {status === 'cleaning' && (
-            <div className="mt-2 flex items-center gap-1.5 text-xs text-gray-600">
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-              {message}
-            </div>
-          )}
-
-          {status === 'idle' && (
-            <button
-              onClick={() => setShowBanner(false)}
-              className="mt-2 text-[10px] text-gray-400 hover:text-gray-600"
-            >
-              Tutup (nanti)
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  // Tidak render apa-apa — komponen ini invisible
+  return null;
 }
