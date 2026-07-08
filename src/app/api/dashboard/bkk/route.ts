@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getBKKToken } from '@/lib/auth';
-import { calculateTimeProgress, daysRemaining, internshipDuration, calculateTier } from '@/lib/utils';
+import { calculateTimeProgress, daysRemaining, internshipDuration, calculateTier, getWIBTodayRange } from '@/lib/utils';
 import { ensureCustomHolidaysLoaded } from '@/lib/holidays-loader';
 
 export async function GET() {
@@ -108,6 +108,69 @@ export async function GET() {
     const certifiedCount = internsEnriched.filter((i) => i.certificate_unlocked).length;
     const nearEndCount = internsEnriched.filter((i) => i.is_active && i.days_remaining <= 14).length;
 
+    // ============================================================
+    // TODAY SNAPSHOT — berapa peserta yang sudah check-in hari ini
+    // ============================================================
+    const { start: wibStart, end: wibEnd } = getWIBTodayRange();
+    const activeInternIds = internsEnriched.filter(i => i.is_active).map(i => i.id);
+
+    let todaySnapshot = {
+      checked_in: 0,
+      checked_out: 0,
+      not_checked_in: activeInternIds.length,
+      on_leave: 0,
+      late_today: 0
+    };
+
+    if (activeInternIds.length > 0) {
+      const { data: todayAtt } = await supabase
+        .from('attendance')
+        .select('intern_id, type, is_late')
+        .in('intern_id', activeInternIds)
+        .gte('timestamp', wibStart.toISOString())
+        .lte('timestamp', wibEnd.toISOString());
+
+      const ciIds = new Set<string>();
+      const coIds = new Set<string>();
+      const lateIds = new Set<string>();
+      (todayAtt || []).forEach((a: any) => {
+        if (a.type === 'Check-In') {
+          ciIds.add(a.intern_id);
+          if (a.is_late) lateIds.add(a.intern_id);
+        }
+        if (a.type === 'Check-Out') coIds.add(a.intern_id);
+      });
+
+      // Cek izin approved hari ini
+      const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+      const { data: todayLeaves } = await supabase
+        .from('leave_requests')
+        .select('intern_id')
+        .eq('status', 'approved')
+        .lte('start_date', todayStr)
+        .gte('end_date', todayStr)
+        .in('intern_id', activeInternIds);
+      const leaveIds = new Set((todayLeaves || []).map((l: any) => l.intern_id));
+
+      todaySnapshot = {
+        checked_in: ciIds.size,
+        checked_out: coIds.size,
+        not_checked_in: activeInternIds.length - ciIds.size - leaveIds.size,
+        on_leave: leaveIds.size,
+        late_today: lateIds.size
+      };
+    }
+
+    // At-risk: peserta dengan attendance <70% atau EXP rendah
+    const atRiskCount = internsEnriched.filter(i => {
+      if (!i.is_active) return false;
+      const att = (i as any).attendance;
+      const attRate = att && att.check_in_count > 0
+        ? att.check_in_count / Math.max(1, internshipDuration(i.start_date, i.end_date))
+        : 0;
+      return attRate < 0.5 || (i.total_exp || 0) < 100;
+    }).length;
+
     return NextResponse.json({
       success: true,
       teacher: {
@@ -120,8 +183,10 @@ export async function GET() {
         active_interns: activeInterns,
         avg_exp: avgExp,
         certified_count: certifiedCount,
-        near_end_count: nearEndCount
+        near_end_count: nearEndCount,
+        at_risk_count: atRiskCount
       },
+      today_snapshot: todaySnapshot,
       interns: internsEnriched
     });
   } catch (e: any) {

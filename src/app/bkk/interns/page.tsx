@@ -17,8 +17,12 @@ import {
   XCircle,
   CheckSquare,
   AlertTriangle,
-  ExternalLink
+  ExternalLink,
+  Search,
+  Upload,
+  Bell
 } from 'lucide-react';
+import { fetchFresh } from '@/lib/fresh-fetch';
 
 export default function BKKInternsPage() {
   return (
@@ -41,11 +45,14 @@ function BKKInternsContent() {
 function InternList() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'at_risk'>('all');
   const [schoolFilter, setSchoolFilter] = useState<string>('all');
+  const [search, setSearch] = useState('');
+  const [showBatchUpload, setShowBatchUpload] = useState(false);
+  const [nudgeTarget, setNudgeTarget] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/dashboard/bkk')
+    fetchFresh('/api/dashboard/bkk')
       .then((r) => r.json())
       .then((d) => d.success && setData(d))
       .finally(() => setLoading(false));
@@ -65,22 +72,76 @@ function InternList() {
     if (schoolFilter !== 'all' && i.school_origin !== schoolFilter) return false;
     if (filter === 'active') return i.is_active;
     if (filter === 'completed') return i.certificate_unlocked;
+    if (filter === 'at_risk') {
+      const att = i.attendance;
+      const dur = i.duration_days || 1;
+      const attRate = att && att.check_in_count > 0 ? att.check_in_count / Math.max(1, dur) : 0;
+      return i.is_active && (attRate < 0.5 || (i.total_exp || 0) < 100);
+    }
     return true;
+  }).filter((i: any) => {
+    // Search by name
+    if (!search) return true;
+    return i.name.toLowerCase().includes(search.toLowerCase()) ||
+           (i.major || '').toLowerCase().includes(search.toLowerCase()) ||
+           (i.department || '').toLowerCase().includes(search.toLowerCase());
   });
+
+  const handleNudge = async (internId: string, name: string) => {
+    if (!confirm(`Kirim pengingat ke ${name}?`)) return;
+    setNudgeTarget(internId);
+    try {
+      const res = await fetch('/api/nudge/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          intern_id: internId,
+          message: `Hai ${name}! Ini pengingat dari BKK sekolah Anda. Jangan lupa rajin check-in dan kerjakan tugas magang ya. Semangat!`,
+          type: 'bkk_reminder'
+        })
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      alert(`Pengingat terkirim ke ${name}!`);
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    } finally {
+      setNudgeTarget(null);
+    }
+  };
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-          Daftar Peserta Magang
-        </h1>
-        <p className="text-gray-500 text-sm mt-1">
-          {data.interns.length} peserta dari {data.teacher.schools.length} institusi yang Anda bimbing
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+            Daftar Peserta Magang
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            {data.interns.length} peserta dari {data.teacher.schools.length} institusi yang Anda bimbing
+          </p>
+        </div>
+        <a
+          href="/api/interns/template"
+          className="inline-flex items-center gap-1.5 bg-bpjs-green hover:bg-bpjs-green-dark text-white text-sm font-semibold px-3 py-2 rounded-lg shadow-sm"
+        >
+          <Upload className="w-4 h-4" /> Template Excel
+        </a>
       </div>
 
-      {/* Filter by sekolah + status */}
+      {/* Search + Filter */}
       <div className="flex flex-wrap gap-2 items-center">
+        {/* Search */}
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Cari nama, jurusan, departemen..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-3 py-1.5 border border-gray-200 rounded-md text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
+          />
+        </div>
         {/* Filter sekolah */}
         {data.teacher.schools.length > 1 && (
           <select
@@ -100,7 +161,7 @@ function InternList() {
           </select>
         )}
         {/* Filter status */}
-        {(['all', 'active', 'completed'] as const).map((f) => {
+        {(['all', 'active', 'completed', 'at_risk'] as const).map((f) => {
           const count = data.interns.filter((i: any) => {
             if (schoolFilter !== 'all' && i.school_origin !== schoolFilter) return false;
             if (f === 'active') return i.is_active;
@@ -115,7 +176,7 @@ function InternList() {
                 filter === f ? 'bg-bpjs-green text-white' : 'bg-white border border-gray-200 text-gray-700'
               }`}
             >
-              {f === 'all' ? `Semua (${count})` : f === 'active' ? `Aktif (${count})` : `Selesai (${count})`}
+              {f === 'all' ? `Semua (${count})` : f === 'active' ? `Aktif (${count})` : f === 'at_risk' ? `⚠️ At Risk (${count})` : `Selesai (${count})`}
             </button>
           );
         })}
@@ -129,11 +190,20 @@ function InternList() {
         </div>
       ) : (
         <div className="grid gap-3">
-          {filtered.map((intern: any) => (
-            <a
+          {filtered.map((intern: any) => {
+            // At-risk check
+            const att = intern.attendance;
+            const dur = intern.duration_days || 1;
+            const attRate = att && att.check_in_count > 0 ? att.check_in_count / Math.max(1, dur) : 0;
+            const isAtRisk = intern.is_active && (attRate < 0.5 || (intern.total_exp || 0) < 100);
+
+            return (
+            <div
               key={intern.id}
-              href={`/bkk/interns?id=${intern.id}`}
-              className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-bpjs-green/30 transition-all cursor-pointer"
+              onClick={() => window.location.href = `/bkk/interns?id=${intern.id}`}
+              className={`bg-white rounded-xl border p-4 hover:shadow-md transition-all cursor-pointer ${
+                isAtRisk ? 'border-red-200 bg-red-50/30' : 'border-gray-200 hover:border-bpjs-green/30'
+              }`}
             >
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 {/* Avatar + name */}
@@ -153,6 +223,11 @@ function InternList() {
                       {intern.certificate_unlocked && (
                         <span className="text-xs px-2 py-0.5 bg-bpjs-yellow/20 text-bpjs-blue-dark rounded-full font-medium flex items-center gap-1">
                           <Award className="w-3 h-3" /> Sertifikat
+                        </span>
+                      )}
+                      {isAtRisk && (
+                        <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full font-medium flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" /> Butuh Perhatian
                         </span>
                       )}
                     </div>
@@ -205,9 +280,29 @@ function InternList() {
                     {intern.is_active ? `${intern.days_remaining} hari lagi` : 'Selesai'}
                   </div>
                 </div>
+
+                {/* Nudge button */}
+                {intern.is_active && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleNudge(intern.id, intern.name);
+                    }}
+                    disabled={nudgeTarget === intern.id}
+                    className="flex-shrink-0 p-2 bg-bpjs-green/10 hover:bg-bpjs-green/20 text-bpjs-green rounded-lg disabled:opacity-50"
+                    title="Kirim pengingat ke peserta"
+                  >
+                    {nudgeTarget === intern.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Bell className="w-4 h-4" />
+                    )}
+                  </button>
+                )}
               </div>
-            </a>
-          ))}
+            </div>
+            );
+          })}
         </div>
       )}
     </div>

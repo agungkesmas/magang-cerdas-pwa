@@ -9,7 +9,6 @@ import {
   School as SchoolIcon,
   Lock,
   Loader2,
-  Camera,
   Save,
   Check,
   AlertCircle,
@@ -33,11 +32,9 @@ export default function BKKProfilePage() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [phoneEdit, setPhoneEdit] = useState('');
   const [waEdit, setWaEdit] = useState('');
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch('/api/bkk/profile')
@@ -52,27 +49,8 @@ export default function BKKProfilePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleUploadPhoto = async (file: File) => {
-    if (file.size > 3 * 1024 * 1024) { setMsg({ type: 'error', text: 'Maksimal 3MB' }); return; }
-    if (!file.type.startsWith('image/')) { setMsg({ type: 'error', text: 'File harus gambar' }); return; }
-    setUploading(true); setMsg(null);
-    try {
-      const fd = new FormData();
-      fd.append('signature', file);
-      fd.append('official_id', 'bkk-profile');
-      // Use intern upload-photo as fallback, or create dedicated endpoint
-      // Actually, let's use a simple approach: upload to attendance-photos bucket
-      const fd2 = new FormData();
-      fd2.append('photo', file);
-      // We need a BKK upload endpoint — for now, reuse intern's
-      // Actually let's just upload via Supabase directly from client
-      // Simpler: use the intern upload-photo endpoint pattern but for BKK
-      // For now, let's create inline upload
-      setMsg({ type: 'error', text: 'Upload foto BKK belum tersedia. Hubungi admin.' });
-    } finally {
-      setUploading(false);
-    }
-  };
+  // Upload foto BKK belum tersedia — sembunyikan UI camera
+  // (dihapus dead code handleUploadPhoto, fileInputRef, Camera icon)
 
   const handleSavePhone = async () => {
     setSaving(true); setMsg(null);

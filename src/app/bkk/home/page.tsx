@@ -32,6 +32,14 @@ interface DashboardData {
     avg_exp: number;
     certified_count: number;
     near_end_count: number;
+    at_risk_count?: number;
+  };
+  today_snapshot?: {
+    checked_in: number;
+    checked_out: number;
+    not_checked_in: number;
+    on_leave: number;
+    late_today: number;
   };
   interns: any[];
   warning?: string;
@@ -214,6 +222,48 @@ export default function BKKHomePage() {
           sub="< 14 hari lagi"
         />
       </div>
+
+      {/* Today Snapshot — "hidup" feel */}
+      {data?.today_snapshot && data.today_snapshot.checked_in + data.today_snapshot.not_checked_in + data.today_snapshot.on_leave > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Calendar className="w-4 h-4 text-bpjs-blue" />
+            <h3 className="text-sm font-bold text-gray-900">Snapshot Hari Ini</h3>
+            <span className="text-[10px] text-gray-400">
+              {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <div className="bg-green-50 rounded-lg p-2.5 text-center">
+              <div className="text-xl font-bold text-green-600">{data.today_snapshot.checked_in}</div>
+              <div className="text-[10px] text-gray-500">Sudah Masuk</div>
+            </div>
+            <div className="bg-blue-50 rounded-lg p-2.5 text-center">
+              <div className="text-xl font-bold text-blue-600">{data.today_snapshot.checked_out}</div>
+              <div className="text-[10px] text-gray-500">Sudah Pulang</div>
+            </div>
+            <div className="bg-orange-50 rounded-lg p-2.5 text-center">
+              <div className="text-xl font-bold text-orange-600">{data.today_snapshot.not_checked_in}</div>
+              <div className="text-[10px] text-gray-500">Belum Masuk</div>
+            </div>
+            <div className="bg-purple-50 rounded-lg p-2.5 text-center">
+              <div className="text-xl font-bold text-purple-600">{data.today_snapshot.on_leave}</div>
+              <div className="text-[10px] text-gray-500">Izin/Sakit</div>
+            </div>
+            <div className="bg-amber-50 rounded-lg p-2.5 text-center">
+              <div className="text-xl font-bold text-amber-600">{data.today_snapshot.late_today}</div>
+              <div className="text-[10px] text-gray-500">Telat Hari Ini</div>
+            </div>
+          </div>
+          {stats.at_risk_count !== undefined && stats.at_risk_count > 0 && (
+            <div className="mt-2 flex items-center gap-2 text-xs">
+              <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+              <span className="text-red-600 font-medium">{stats.at_risk_count} peserta butuh perhatian</span>
+              <Link href="/bkk/interns" className="text-bpjs-blue hover:underline ml-auto">Lihat detail →</Link>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Share prestasi sekolah */}
       <div className="flex justify-end">
