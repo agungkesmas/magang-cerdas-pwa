@@ -13,6 +13,9 @@ import { syncInternToSystemGroups } from '@/lib/system-groups';
 import { Intern, Department } from '@/types';
 
 const VALID_DEPARTMENTS: Department[] = ['Pelayanan', 'Pemasaran', 'Keuangan'];
+// BKK boleh upload TANPA departemen — default "Belum Ditempatkan"
+// Admin yang menentukan penempatan kemudian hari
+const DEFAULT_DEPARTMENT = 'Belum Ditempatkan';
 
 export async function POST(req: NextRequest) {
   try {
@@ -58,9 +61,9 @@ export async function POST(req: NextRequest) {
           continue;
         }
         if (!item.department || !VALID_DEPARTMENTS.includes(item.department)) {
-          results.push({ index: row, success: false, name: item.name, error: `Departemen harus: ${VALID_DEPARTMENTS.join(', ')}` });
-          failCount++;
-          continue;
+          // Department tidak wajib — default "Belum Ditempatkan"
+          // Admin assign department kemudian hari via /admin/interns
+          item.department = DEFAULT_DEPARTMENT;
         }
 
         // Default dates

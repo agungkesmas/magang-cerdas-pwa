@@ -53,7 +53,7 @@ export default function BatchUploadModal({ role, onClose, onSuccess }: Props) {
     },
     'bkk-interns': {
       title: 'Batch Upload Peserta Magang',
-      templateUrl: '/api/interns/template',
+      templateUrl: '/api/bkk/template',
       parseUrl: '/api/bkk/parse-excel',
       createUrl: '/api/bkk/batch-create',
       dataKey: 'interns',

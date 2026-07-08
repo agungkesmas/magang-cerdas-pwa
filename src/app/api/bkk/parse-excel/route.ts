@@ -66,8 +66,10 @@ export async function POST(req: NextRequest) {
     const interns = rows.map((row: any) => {
       const name = String(row['Nama'] || row['Name'] || row['nama'] || '').trim();
       const major = String(row['Jurusan'] || row['Major'] || row['jurusan'] || '').trim();
+      // Department TIDAK wajib untuk BKK — admin yang menentukan penempatan
+      // Default: "Belum Ditempatkan" — admin assign nanti
       const deptRaw = row['Departemen'] || row['Department'] || row['departemen'] || '';
-      const department = normalizeDept(deptRaw);
+      const department = normalizeDept(deptRaw) || 'Belum Ditempatkan';
       const startDate = normalizeDate(row['Tanggal Mulai'] || row['Start Date'] || row['start_date']) || today;
       const endDate = normalizeDate(row['Tanggal Selesai'] || row['End Date'] || row['end_date']) || defaultEnd;
       const email = String(row['Email'] || row['email'] || '').trim() || undefined;
@@ -78,11 +80,10 @@ export async function POST(req: NextRequest) {
       return { name, major, department, school_origin: schoolOrigin, start_date: startDate, end_date: endDate, email, whatsapp };
     }).filter(r => r.name); // filter empty rows
 
-    // Validate
+    // Validate — department TIDAK wajib untuk BKK
     const errors: string[] = [];
     interns.forEach((r, i) => {
       if (!r.major) errors.push(`Baris ${i + 2}: Jurusan kosong`);
-      if (!r.department) errors.push(`Baris ${i + 2}: Departemen tidak valid (gunakan: Pelayanan, Pemasaran, Keuangan)`);
       if (!r.school_origin) errors.push(`Baris ${i + 2}: Sekolah kosong (pilih dari: ${bkk.schools.join(', ')})`);
       if (r.school_origin && !bkk.schools.includes(r.school_origin)) errors.push(`Baris ${i + 2}: Sekolah "${r.school_origin}" tidak termasuk sekolah yang Anda bimbing`);
     });

@@ -126,7 +126,7 @@ function InternList() {
         </div>
         <div className="flex gap-2">
           <a
-            href="/api/interns/template"
+            href="/api/bkk/template"
             className="inline-flex items-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium px-3 py-2 rounded-lg"
           >
             <Upload className="w-4 h-4" /> Template
