@@ -172,6 +172,102 @@ export async function POST(req: NextRequest) {
         .eq('id', intern.intern_id);
     }
 
+    // ============================================================
+    // CEK "LUPA ABSEN PULANG" KEMARIN
+    // Kalau kemarin ada check-in tapi tidak ada check-out → warning
+    // + hitung total lupa absen pulang (30 hari terakhir)
+    // ============================================================
+    let forgotCheckoutWarning: any = undefined;
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+    const yStart = new Date(`${yesterdayStr}T00:00:00+07:00`).toISOString();
+    const yEnd = new Date(`${yesterdayStr}T23:59:59.999+07:00`).toISOString();
+
+    const { data: yCI } = await supabase
+      .from('attendance')
+      .select('id')
+      .eq('intern_id', intern.intern_id)
+      .eq('type', 'Check-In')
+      .gte('timestamp', yStart)
+      .lte('timestamp', yEnd)
+      .maybeSingle();
+
+    const { data: yCO } = await supabase
+      .from('attendance')
+      .select('id')
+      .eq('intern_id', intern.intern_id)
+      .eq('type', 'Check-Out')
+      .gte('timestamp', yStart)
+      .lte('timestamp', yEnd)
+      .maybeSingle();
+
+    const forgotYesterday = yCI && !yCO;
+
+    if (forgotYesterday) {
+      // Hitung total lupa absen pulang (30 hari terakhir)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const { data: allCIs } = await supabase
+        .from('attendance')
+        .select('timestamp')
+        .eq('intern_id', intern.intern_id)
+        .eq('type', 'Check-In')
+        .gte('timestamp', thirtyDaysAgo.toISOString());
+      const { data: allCOs } = await supabase
+        .from('attendance')
+        .select('timestamp')
+        .eq('intern_id', intern.intern_id)
+        .eq('type', 'Check-Out')
+        .gte('timestamp', thirtyDaysAgo.toISOString());
+
+      const coDates = new Set(
+        (allCOs || []).map(co =>
+          new Date(co.timestamp).toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' })
+        )
+      );
+      const forgotDates = new Set(
+        (allCIs || [])
+          .filter(ci => {
+            const ciDate = new Date(ci.timestamp).toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+            return !coDates.has(ciDate);
+          })
+          .map(ci => new Date(ci.timestamp).toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }))
+      );
+      const forgotCount = forgotDates.size;
+
+      // Format tanggal kemarin (mis. "Senin, 7 Jul")
+      const yDateObj = new Date(yesterdayStr + 'T12:00:00+07:00');
+      const yFormatted = yDateObj.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short' });
+
+      // Pesan edukasi — anak muda tapi formal, tidak galak
+      const remaining = 5 - forgotCount;
+      let msg = `Heads up! Kemarin (${yFormatted}) kamu lupa absen pulang ya? Santai, bisa dikoreksi kok — scroll ke bawah ke menu "Rekap Absen", pilih tanggal ${yFormatted}, lalu ajukan koreksi absen.\n\n`;
+      msg += `Sampai saat ini sudah ${forgotCount}x lupa absen pulang (batas 5x).`;
+      if (remaining <= 0) {
+        msg += `\n\n⚠️ Kamu sudah mencapai batas 5x lupa absen. Mohon segera hubungi admin BPJS untuk konsultasi — mereka pasti bantu ko. Jangan ragu ya!`;
+      } else if (remaining <= 2) {
+        msg += `\n\nHati-hati ya, tinggal ${remaining}x lagi. Kalau ada kendala absen, jangan tunggu — hubungi admin langsung. Stay disiplin, semangat! 🙌`;
+      } else {
+        msg += `\n\nTinggal ${remaining}x lagi batasnya. Tetap semangat dan jangan lupa absen pulang ya! ✨`;
+      }
+
+      forgotCheckoutWarning = {
+        forgot_yesterday: true,
+        yesterday_date: yFormatted,
+        total_forgot_count: forgotCount,
+        remaining: Math.max(0, remaining),
+        message: msg
+      };
+    }
+
+    // Build warning messages
+    const warnings: string[] = [];
+    if (isLate) {
+      warnings.push(`⚠️ Anda check-in terlambat (jam ${wibHourStr} WIB). Check-in seharusnya sebelum jam 08:00 WIB. Keterlambatan tercatat di sistem — mohon lebih disiplin besok.`);
+    }
+
     return NextResponse.json({
       success: true,
       attendance: att,
@@ -179,9 +275,8 @@ export async function POST(req: NextRequest) {
       distance_meters: distance,
       new_total_exp: (internData?.total_exp || 0) + EXP_REWARDS.CHECK_IN,
       is_late: isLate,
-      warning: isLate
-        ? `⚠️ Anda check-in terlambat (jam ${wibHourStr} WIB). Check-in seharusnya sebelum jam 08:00 WIB. Keterlambatan tercatat di sistem — mohon lebih disiplin besok.`
-        : undefined
+      warning: warnings.length > 0 ? warnings.join('\n\n') : undefined,
+      forgot_checkout_warning: forgotCheckoutWarning
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

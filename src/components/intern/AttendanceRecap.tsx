@@ -159,10 +159,20 @@ export default function AttendanceRecap() {
       return { badge, label, color: 'text-bpjs-green' };
     }
     if (hasCI && !hasCO) {
-      if (pending && pending.type === 'Check-Out') {
-        return { badge: '⏳', label: 'Koreksi CO Pending', color: 'text-amber-400' };
+      // Cek apakah ini hari ini (masih bisa check-out) atau hari kemarin (lupa absen pulang)
+      const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+      if (day.date === todayStr) {
+        if (pending && pending.type === 'Check-Out') {
+          return { badge: '⏳', label: 'Koreksi CO Pending', color: 'text-amber-400' };
+        }
+        return { badge: '📍', label: 'Sudah Masuk, Belum Pulang', color: 'text-blue-400' };
+      } else {
+        // Hari kemarin atau sebelumnya — LUPA ABSEN PULANG
+        if (pending && pending.type === 'Check-Out') {
+          return { badge: '⏳', label: 'Koreksi Pulang Pending', color: 'text-amber-400' };
+        }
+        return { badge: '🚨', label: 'Lupa Absen Pulang', color: 'text-red-400' };
       }
-      return { badge: '📍', label: 'Sudah Masuk, Belum Pulang', color: 'text-blue-400' };
     }
     if (!hasCI && hasCO) {
       if (pending && pending.type === 'Check-In') {
@@ -214,6 +224,7 @@ export default function AttendanceRecap() {
         <span>🏠 Pulang Awal</span>
         <span>📝 Koreksi</span>
         <span>⏳ Koreksi Pending</span>
+        <span>🚨 Lupa Absen Pulang</span>
         <span>❌ Tidak Absen</span>
       </div>
 

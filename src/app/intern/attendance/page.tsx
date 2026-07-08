@@ -319,6 +319,20 @@ export default function InternAttendancePage() {
       setPhotoFile(null);
       fetchToday();
 
+      // Tampilkan warning lupa absen pulang (dari check-in)
+      if (data.forgot_checkout_warning) {
+        setTimeout(() => {
+          alert(data.forgot_checkout_warning.message);
+        }, 2500);
+      }
+
+      // Tampilkan warning terlambat / pulang awal
+      if (data.warning) {
+        setTimeout(() => {
+          alert(data.warning);
+        }, data.forgot_checkout_warning ? 4000 : 2500);
+      }
+
       // Confetti effect
       if (typeof document !== 'undefined') {
         for (let i = 0; i < 30; i++) {
