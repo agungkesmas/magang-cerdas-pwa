@@ -476,10 +476,12 @@ function RespondModal({ action, request, loading, onClose, onSubmit }: {
   onSubmit: (payload: any) => void;
 }) {
   const [reviewNotes, setReviewNotes] = useState('');
-  const [acceptedSlots, setAcceptedSlots] = useState(request.requested_slots.toString());
-  const [actualStart, setActualStart] = useState(request.proposed_start_date || '');
-  const [actualEnd, setActualEnd] = useState(request.proposed_end_date || '');
-  const [assignedDepts, setAssignedDepts] = useState(request.requested_departments || '');
+  // Admin yang menentukan — JANGAN auto-copy dari BKK
+  // Default: kosong, admin isi sendiri
+  const [acceptedSlots, setAcceptedSlots] = useState('');
+  const [actualStart, setActualStart] = useState('');
+  const [actualEnd, setActualEnd] = useState('');
+  const [assignedDepts, setAssignedDepts] = useState('');
 
   const title = {
     review: 'Mulai Review Permintaan',
@@ -502,7 +504,9 @@ function RespondModal({ action, request, loading, onClose, onSubmit }: {
     const payload: any = {};
     if (reviewNotes.trim()) payload.review_notes = reviewNotes.trim();
     if (action === 'accept') {
-      payload.accepted_slots = parseInt(acceptedSlots, 10);
+      // Jika acceptedSlots kosong, pakai requested_slots dari BKK
+      const slots = acceptedSlots.trim() ? parseInt(acceptedSlots, 10) : request.requested_slots;
+      payload.accepted_slots = slots;
       if (actualStart) payload.actual_start_date = actualStart;
       if (actualEnd) payload.actual_end_date = actualEnd;
       if (assignedDepts.trim()) payload.assigned_departments = assignedDepts.trim();
@@ -545,34 +549,47 @@ function RespondModal({ action, request, loading, onClose, onSubmit }: {
 
           {action === 'accept' && (
             <>
+              {/* Info: BKK meminta X slot */}
+              <div className="bg-blue-50 rounded-lg p-2 text-xs text-blue-700">
+                📋 BKK meminta {request.requested_slots} peserta
+                {request.proposed_start_date && ` • mulai ${new Date(request.proposed_start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}`}
+                {request.proposed_end_date && ` s/d ${new Date(request.proposed_end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}`}
+                . Admin yang menentukan jumlah & tanggal aktual.
+              </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Jumlah Slot Diterima</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Jumlah Slot Diterima <span className="text-gray-400 font-normal">(opsional — bisa nanti)</span>
+                </label>
                 <input
                   type="number"
                   min={1}
                   max={100}
                   value={acceptedSlots}
                   onChange={(e) => setAcceptedSlots(e.target.value)}
+                  placeholder={request.requested_slots.toString()}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-bpjs-blue/40"
                 />
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  Kosongkan = pakai jumlah yang BKK minta ({request.requested_slots}). Bisa diisi berbeda.
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Tanggal Mulai <span className="text-gray-400 font-normal">(opsional — bisa nanti)</span>
+                    Tanggal Mulai Aktual <span className="text-gray-400 font-normal">(opsional)</span>
                   </label>
                   <input type="date" value={actualStart} onChange={(e) => setActualStart(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Tanggal Selesai <span className="text-gray-400 font-normal">(opsional — bisa nanti)</span>
+                    Tanggal Selesai Aktual <span className="text-gray-400 font-normal">(opsional)</span>
                   </label>
                   <input type="date" value={actualEnd} onChange={(e) => setActualEnd(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Departemen Penempatan <span className="text-gray-400 font-normal">(opsional — bisa nanti)</span>
+                  Departemen Penempatan <span className="text-gray-400 font-normal">(opsional — murni admin)</span>
                 </label>
                 <select
                   value={assignedDepts}
@@ -583,13 +600,9 @@ function RespondModal({ action, request, loading, onClose, onSubmit }: {
                   <option value="Pelayanan">Pelayanan</option>
                   <option value="Pemasaran">Pemasaran</option>
                   <option value="Keuangan">Keuangan</option>
-                  <option value="Pelayanan, Pemasaran">Pelayanan & Pemasaran</option>
-                  <option value="Pelayanan, Keuangan">Pelayanan & Keuangan</option>
-                  <option value="Pemasaran, Keuangan">Pemasaran & Keuangan</option>
-                  <option value="Pelayanan, Pemasaran, Keuangan">Semua Departemen</option>
                 </select>
                 <p className="text-[10px] text-gray-400 mt-0.5">
-                  Bisa dikosongkan — assign nanti via menu Peserta Magang
+                  Bisa dikosongkan — assign per siswa nanti via menu Peserta Magang
                 </p>
               </div>
             </>

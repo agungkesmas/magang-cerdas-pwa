@@ -301,7 +301,12 @@ function RequestFormModal({ onClose, onSuccess }: { onClose: () => void; onSucce
             />
           </div>
 
-          {/* Jumlah + Tanggal */}
+          {/* Jumlah + Tanggal — info: ini hanya pengajuan, admin yang tentukan */}
+          <div className="bg-blue-50 rounded-lg p-2 text-xs text-blue-700">
+            📋 Jumlah peserta & tanggal di bawah ini adalah <strong>pengajuan</strong>.
+            Admin BPJS yang menentukan jumlah & tanggal aktual setelah review.
+            Departemen penempatan juga ditentukan admin.
+          </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Jumlah Peserta *</label>
@@ -501,12 +506,32 @@ function RequestDetail({ id, onBack, onRefresh }: { id: string; onBack: () => vo
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <DetailRow icon={Building2} label="Sekolah" value={req.school_name} />
-            <DetailRow icon={Users} label="Jumlah Peserta" value={`${req.requested_slots} siswa`} />
-            {req.proposed_start_date && (
-              <DetailRow icon={Calendar} label="Tanggal Mulai" value={new Date(req.proposed_start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} />
-            )}
-            {req.proposed_end_date && (
-              <DetailRow icon={Calendar} label="Tanggal Selesai" value={new Date(req.proposed_end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} />
+            {/* Diajukan BKK */}
+            <div className="pt-2 border-t border-gray-100">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Diajukan BKK:</p>
+              <DetailRow icon={Users} label="Jumlah Diajukan" value={`${req.requested_slots} siswa`} />
+              {req.proposed_start_date && (
+                <DetailRow icon={Calendar} label="Mulai Diajukan" value={new Date(req.proposed_start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} />
+              )}
+              {req.proposed_end_date && (
+                <DetailRow icon={Calendar} label="Selesai Diajukan" value={new Date(req.proposed_end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} />
+              )}
+            </div>
+            {/* Ditetapkan Admin (kalau sudah accepted) */}
+            {req.accepted_slots && (
+              <div className="pt-2 border-t border-gray-100">
+                <p className="text-[10px] font-semibold text-green-600 uppercase mb-1">Ditetapkan Admin:</p>
+                <DetailRow icon={Users} label="Jumlah Diterima" value={`${req.accepted_slots} siswa`} />
+                {req.actual_start_date && (
+                  <DetailRow icon={Calendar} label="Mulai Aktual" value={new Date(req.actual_start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} />
+                )}
+                {req.actual_end_date && (
+                  <DetailRow icon={Calendar} label="Selesai Aktual" value={new Date(req.actual_end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} />
+                )}
+                {req.assigned_departments && (
+                  <DetailRow icon={Building2} label="Departemen" value={req.assigned_departments} />
+                )}
+              </div>
             )}
           </div>
           <div className="space-y-2">
@@ -550,27 +575,15 @@ function RequestDetail({ id, onBack, onRefresh }: { id: string; onBack: () => vo
               : <XCircle className="w-5 h-5 text-red-600" />}
             Tanggapan Admin BPJTK
           </h3>
-          <div className="space-y-2">
-            {req.accepted_slots && (
-              <DetailRow icon={Users} label="Slot Diterima" value={`${req.accepted_slots} peserta`} />
-            )}
-            {req.assigned_departments && (
-              <DetailRow icon={Building2} label="Departemen" value={req.assigned_departments} />
-            )}
-            {req.actual_start_date && (
-              <DetailRow icon={Calendar} label="Mulai Aktual" value={new Date(req.actual_start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long' })} />
-            )}
-            {req.actual_end_date && (
-              <DetailRow icon={Calendar} label="Selesai Aktual" value={new Date(req.actual_end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long' })} />
-            )}
-            {req.review_notes && (
-              <div className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-700">{req.review_notes}</div>
-            )}
-          </div>
+          {req.review_notes && (
+            <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-700 whitespace-pre-line mb-3">
+              {req.review_notes}
+            </div>
+          )}
 
           {/* Petunjuk setelah diterima */}
           {req.status === 'accepted' && (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
               <h4 className="font-semibold text-green-800 text-sm mb-2 flex items-center gap-1">
                 <CheckCircle2 className="w-4 h-4" /> Langkah Selanjutnya:
               </h4>
