@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
 
     const officeLat = settings?.office_lat ?? -6.7386200;
     const officeLng = settings?.office_lng ?? 108.5372200;
-    const radius = settings?.geofence_radius_meters ?? 150;
+    const radius = settings?.geofence_radius_meters ?? 200;
 
     const distance =
       latitude && longitude ? haversineDistance(latitude, longitude, officeLat, officeLng) : null;
@@ -83,6 +83,25 @@ export async function POST(req: NextRequest) {
 
     // Cek holiday/weekend
     const holidayCheck = checkIfHolidayCheckin();
+
+    // ============================================================
+    // ENFORCE GEOFENCE untuk check-out (sama seperti check-in)
+    // Bug lama: check-out TETAP diterima walau di luar radius.
+    // Akibatnya: peserta check-out dari rumah/luar kantor (distance 700m+).
+    // Fix: reject check-out kalau di luar geofence, KECUALI weekend/holiday
+    // (yang butuh approval pembina).
+    // ============================================================
+    if (latitude && longitude && !isWithin && !holidayCheck.isHoliday) {
+      return NextResponse.json(
+        {
+          error: `Check-out GAGAL. Anda berada ${distance}m dari kantor (radius maksimal ${radius}m). Check-out harus dari lokasi kantor BPJS. Kalau Anda sudah di kantor, coba refresh GPS atau bergerak ke area yang lebih terbuka.`,
+          distance,
+          radius,
+          is_within_geofence: false
+        },
+        { status: 403 }
+      );
+    }
 
     const { data: att, error } = await supabase
       .from('attendance')
