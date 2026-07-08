@@ -319,18 +319,25 @@ export default function InternAttendancePage() {
       setPhotoFile(null);
       fetchToday();
 
+      // Tampilkan edukasi keterlambatan (penuh kasih)
+      if (data.late_education) {
+        setTimeout(() => {
+          alert(data.late_education.message);
+        }, 2500);
+      }
+
       // Tampilkan warning lupa absen pulang (dari check-in)
       if (data.forgot_checkout_warning) {
         setTimeout(() => {
           alert(data.forgot_checkout_warning.message);
-        }, 2500);
+        }, data.late_education ? 5000 : 2500);
       }
 
-      // Tampilkan warning terlambat / pulang awal
-      if (data.warning) {
+      // Tampilkan warning check-out (pulang awal)
+      if (data.warning && type === 'check-out') {
         setTimeout(() => {
           alert(data.warning);
-        }, data.forgot_checkout_warning ? 4000 : 2500);
+        }, 2500);
       }
 
       // Confetti effect

@@ -113,12 +113,47 @@ export async function POST(req: NextRequest) {
     // Cek apakah check-in di hari libur/weekend (butuh approval pembina)
     const holidayCheck = checkIfHolidayCheckin();
 
-    // Cek keterlambatan: check-in setelah 08:00 WIB = terlambat
+    // Cek keterlambatan: check-in setelah 08:00 WIB
+    // Grace period 15 menit (08:00-08:15) = tidak dianggap terlambat
     const wibHourStr = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false });
-    const [ciHour, ciMin] = wibHourStr.split(':').map(n => parseInt(n, 10));
+    const [ciHour, ciMin] = wibHourStr.split(':').map((n: string) => parseInt(n, 10));
     const ciTotalMin = ciHour * 60 + ciMin;
-    const CHECKIN_DEADLINE_MIN = 8 * 60; // 08:00 = 480 menit
-    const isLate = ciTotalMin > CHECKIN_DEADLINE_MIN;
+    const CHECKIN_DEADLINE_MIN = 8 * 60;       // 08:00 = 480
+    const GRACE_PERIOD_END = 8 * 60 + 15;      // 08:15 = 495
+    const LATE_LIGHT_END = 8 * 60 + 30;        // 08:30 = 510
+    const LATE_MODERATE_END = 9 * 60;          // 09:00 = 540
+
+    // Tentukan tier keterlambatan + EXP
+    let isLate = false;
+    let expToGrant: number = EXP_REWARDS.CHECK_IN; // default 20
+    let lateTier: 'on_time' | 'grace' | 'light' | 'moderate' | 'heavy' = 'on_time';
+
+    if (ciTotalMin <= CHECKIN_DEADLINE_MIN) {
+      // ≤ 08:00 — tepat waktu, full EXP
+      lateTier = 'on_time';
+      isLate = false;
+      expToGrant = EXP_REWARDS.CHECK_IN; // 20
+    } else if (ciTotalMin <= GRACE_PERIOD_END) {
+      // 08:01 - 08:15 — grace period, full EXP, tidak flag late
+      lateTier = 'grace';
+      isLate = false;
+      expToGrant = EXP_REWARDS.CHECK_IN; // 20
+    } else if (ciTotalMin <= LATE_LIGHT_END) {
+      // 08:16 - 08:30 — terlambat ringan, 75% EXP
+      lateTier = 'light';
+      isLate = true;
+      expToGrant = 15;
+    } else if (ciTotalMin <= LATE_MODERATE_END) {
+      // 08:31 - 09:00 — terlambat sedang, 50% EXP
+      lateTier = 'moderate';
+      isLate = true;
+      expToGrant = 10;
+    } else {
+      // > 09:00 — terlambat berat, 25% EXP
+      lateTier = 'heavy';
+      isLate = true;
+      expToGrant = 5;
+    }
 
     // Insert attendance
     const { data: att, error } = await supabase
@@ -156,7 +191,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Weekday normal → Grant EXP langsung
+    // Weekday normal → Grant EXP berjenjang berdasarkan keterlambatan
     const { data: internData } = await supabase
       .from('interns')
       .select('total_exp, streak_count')
@@ -164,12 +199,75 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (internData) {
-      const newExp = (internData.total_exp || 0) + EXP_REWARDS.CHECK_IN;
+      const newExp = (internData.total_exp || 0) + expToGrant;
       const newStreak = (internData.streak_count || 0) + 1;
       await supabase
         .from('interns')
         .update({ total_exp: newExp, streak_count: newStreak })
         .eq('id', intern.intern_id);
+    }
+
+    // ============================================================
+    // PESAN EDUKASI — penuh kasih, anak muda formal, tidak galak
+    // ============================================================
+    let lateEducation: any = undefined;
+
+    if (isLate) {
+      // Hitung berapa kali terlambat minggu ini & bulan ini
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const monthAgo = new Date();
+      monthAgo.setDate(monthAgo.getDate() - 30);
+
+      const { data: recentCIs } = await supabase
+        .from('attendance')
+        .select('timestamp, is_late')
+        .eq('intern_id', intern.intern_id)
+        .eq('type', 'Check-In')
+        .eq('is_late', true)
+        .gte('timestamp', weekAgo.toISOString());
+      const lateThisWeek = recentCIs?.length || 0;
+
+      const { data: monthCIs } = await supabase
+        .from('attendance')
+        .select('timestamp')
+        .eq('intern_id', intern.intern_id)
+        .eq('type', 'Check-In')
+        .eq('is_late', true)
+        .gte('timestamp', monthAgo.toISOString());
+      const lateThisMonth = monthCIs?.length || 0;
+
+      // Pesan berjenjang — penuh kasih, edukatif
+      let msg = '';
+      if (lateTier === 'light') {
+        msg = `Hai! Kamu check-in jam ${wibHourStr} WIB — sedikit telat ya? Tenang, EXP hari ini masih 75% (${expToGrant} dari 20). `;
+      } else if (lateTier === 'moderate') {
+        msg = `Halo! Kamu check-in jam ${wibHourStr} WIB — terlambat sekitar setengah jam. EXP hari ini 50% (${expToGrant} dari 20). `;
+      } else {
+        msg = `Halo! Kamu check-in jam ${wibHourStr} WIB — sudah lebih dari 1 jam dari jadwal. EXP hari ini 25% (${expToGrant} dari 20). `;
+      }
+
+      // Escalation berdasarkan frekuensi
+      if (lateThisMonth >= 5) {
+        msg += `\n\nAku perhatikan kamu sudah ${lateThisMonth}x terlambat bulan ini. Mungkin ada kendala yang perlu dibahas? Jangan ragu hubungi admin BPJS ya — mereka pasti ngerti dan siap bantu cari solusi. Jangan menyerah, setiap hari baru selalu ada kesempatan untuk lebih baik! 💪`;
+      } else if (lateThisWeek >= 3) {
+        msg += `\n\nMinggu ini sudah ${lateThisWeek}x telat. Kalau ada kendala transport atau jadwal, coba diskusi sama admin ya — mereka pasti bantu. Besok coba berangkat lebih pagi, semangat! 🙌`;
+      } else if (lateTier === 'heavy') {
+        msg += `\n\nKalau ada kendala transport atau memang jauh dari kantor, coba cari solusi ya — mungkin berangkat lebih pagi? Setiap usaha kamu pasti dihargai. Besok baru hari baru, semangat! ✨`;
+      } else {
+        msg += `\n\nTetap semangat ya! Besok coba datang lebih awal — kamu pasti bisa! ✨`;
+      }
+
+      lateEducation = {
+        late_tier: lateTier,
+        exp_granted: expToGrant,
+        exp_full: EXP_REWARDS.CHECK_IN,
+        exp_lost: EXP_REWARDS.CHECK_IN - expToGrant,
+        late_this_week: lateThisWeek,
+        late_this_month: lateThisMonth,
+        check_in_time: wibHourStr,
+        message: msg
+      };
     }
 
     // ============================================================
@@ -262,20 +360,17 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    // Build warning messages
-    const warnings: string[] = [];
-    if (isLate) {
-      warnings.push(`⚠️ Anda check-in terlambat (jam ${wibHourStr} WIB). Check-in seharusnya sebelum jam 08:00 WIB. Keterlambatan tercatat di sistem — mohon lebih disiplin besok.`);
-    }
-
     return NextResponse.json({
       success: true,
       attendance: att,
-      exp_gained: EXP_REWARDS.CHECK_IN,
+      exp_gained: expToGrant,
+      exp_full: EXP_REWARDS.CHECK_IN,
+      exp_lost: EXP_REWARDS.CHECK_IN - expToGrant,
+      late_tier: lateTier,
       distance_meters: distance,
-      new_total_exp: (internData?.total_exp || 0) + EXP_REWARDS.CHECK_IN,
+      new_total_exp: (internData?.total_exp || 0) + expToGrant,
       is_late: isLate,
-      warning: warnings.length > 0 ? warnings.join('\n\n') : undefined,
+      late_education: lateEducation,
       forgot_checkout_warning: forgotCheckoutWarning
     });
   } catch (e: any) {
