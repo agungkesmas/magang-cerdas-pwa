@@ -94,6 +94,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(req: NextRequest, { params }: Params) {
+  // DELETE = soft cancel (set status jadi 'cancelled', bukan hard delete)
   try {
     const teacher = await getBKKToken();
     if (!teacher) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -121,6 +122,46 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
     return NextResponse.json({ success: true });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
+
+// PATCH untuk cancel (sama seperti DELETE tapi lebih RESTful)
+export async function PATCH(req: NextRequest, { params }: Params) {
+  try {
+    const teacher = await getBKKToken();
+    if (!teacher) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const body = await req.json();
+
+    if (body.action === 'cancel') {
+      const supabase = createServerClient();
+      const { data: existing } = await supabase
+        .from('internship_requests')
+        .select('id, status, bkk_teacher_id')
+        .eq('id', params.id)
+        .single();
+
+      if (!existing) return NextResponse.json({ error: 'Permintaan tidak ditemukan' }, { status: 404 });
+      if (existing.bkk_teacher_id !== teacher.teacher_id) {
+        return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
+      }
+      if (['accepted', 'completed'].includes(existing.status)) {
+        return NextResponse.json({ error: 'Permintaan yang sudah diterima tidak bisa dibatalkan' }, { status: 400 });
+      }
+
+      const { error } = await supabase
+        .from('internship_requests')
+        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+        .eq('id', params.id);
+
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+      return NextResponse.json({ success: true, message: 'Permintaan dibatalkan' });
+    }
+
+    return NextResponse.json({ error: 'Action tidak dikenal' }, { status: 400 });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

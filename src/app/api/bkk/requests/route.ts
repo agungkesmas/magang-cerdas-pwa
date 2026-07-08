@@ -31,6 +31,7 @@ export async function GET() {
         cover_letter,
         additional_notes,
         attachment_url,
+        student_list_url,
         status,
         review_notes,
         accepted_slots,
@@ -59,16 +60,15 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
 
-    // Validate required fields
-    const required = ['school_name', 'request_title', 'requested_slots'];
-    for (const f of required) {
-      if (!body[f] || (typeof body[f] === 'string' && !body[f].trim())) {
-        return NextResponse.json({ error: `Field ${f} wajib diisi` }, { status: 400 });
-      }
+    // Validate required fields — sederhana: judul + slots + surat
+    if (!body.request_title?.trim()) {
+      return NextResponse.json({ error: 'Judul permintaan wajib diisi' }, { status: 400 });
     }
-
-    if (body.requested_slots < 1 || body.requested_slots > 100) {
-      return NextResponse.json({ error: 'Jumlah slot harus antara 1-100' }, { status: 400 });
+    if (!body.requested_slots || body.requested_slots < 1 || body.requested_slots > 100) {
+      return NextResponse.json({ error: 'Jumlah peserta harus antara 1-100' }, { status: 400 });
+    }
+    if (!body.attachment_url?.trim()) {
+      return NextResponse.json({ error: 'Surat resmi wajib diupload' }, { status: 400 });
     }
 
     if (body.proposed_start_date && body.proposed_end_date) {
@@ -79,8 +79,12 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerClient();
 
-    // Verify school_name is one of teacher's linked schools (or any school if teacher has none — allow)
-    const schoolOk = !teacher.schools?.length || teacher.schools.includes(body.school_name);
+    // School name: auto-set dari sekolah BKK (atau dari body kalau >1 sekolah)
+    const schoolName = body.school_name?.trim() || (teacher.schools?.length === 1 ? teacher.schools[0] : '');
+    if (!schoolName) {
+      return NextResponse.json({ error: 'Sekolah wajib diisi' }, { status: 400 });
+    }
+    const schoolOk = !teacher.schools?.length || teacher.schools.includes(schoolName);
     if (!schoolOk) {
       return NextResponse.json({ error: 'Sekolah yang dipilih tidak terdaftar pada akun BKK Anda' }, { status: 403 });
     }
@@ -89,7 +93,7 @@ export async function POST(req: NextRequest) {
       .from('internship_requests')
       .insert({
         bkk_teacher_id: teacher.teacher_id,
-        school_name: body.school_name.trim(),
+        school_name: schoolName,
         request_title: body.request_title.trim(),
         contact_person: body.contact_person?.trim() || null,
         contact_phone: body.contact_phone?.trim() || null,
@@ -102,6 +106,7 @@ export async function POST(req: NextRequest) {
         cover_letter: body.cover_letter?.trim() || null,
         additional_notes: body.additional_notes?.trim() || null,
         attachment_url: body.attachment_url?.trim() || null,
+        student_list_url: body.student_list_url?.trim() || null,
         status: 'submitted'
       })
       .select()
