@@ -61,6 +61,24 @@ export function middleware(req: NextRequest) {
   }
 
   // ============================================================
+  // CRITICAL: Cache-Control untuk halaman authenticated & API
+  // Tanpa ini, Vercel CDN edge cache HTML lama → user lihat data
+  // stale (bug "grup Pemasaran & Keuangan hilang" selama 8 jam).
+  // no-store = browser & CDN edge TIDAK boleh cache sama sekali.
+  // ============================================================
+  const isProtectedPage =
+    path.startsWith('/admin') ||
+    path.startsWith('/pembina') ||
+    path.startsWith('/bkk') ||
+    path.startsWith('/intern') ||
+    path.startsWith('/api/');
+  if (isProtectedPage) {
+    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    res.headers.set('Pragma', 'no-cache');
+    res.headers.set('Expires', '0');
+  }
+
+  // ============================================================
   // GUARD: If user already logged in, redirect FROM login page
   // to their dashboard (prevents sidebar from showing on login page)
   // ============================================================
