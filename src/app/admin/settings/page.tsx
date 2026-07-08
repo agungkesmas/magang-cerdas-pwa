@@ -44,8 +44,8 @@ export default function AdminSettingsPage() {
   const [office, setOffice] = useState({
     office_name: 'BPJS Ketenagakerjaan Cabang Cirebon',
     office_address: 'Jl. Evakuasi No. 11B, Karyamulya, Kesambi, Cirebon 45135',
-    office_lat: -6.7386200,
-    office_lng: 108.5372200,
+    office_lat: -6.7409720,
+    office_lng: 108.5430931,
     geofence_radius_meters: 150
   });
   const [llm, setLlm] = useState<{ provider: LLMProvider; model: string; keyConfigured: boolean }>({
@@ -69,8 +69,8 @@ export default function AdminSettingsPage() {
         setOffice({
           office_name: s.office_name || 'BPJS Ketenagakerjaan Cabang Cirebon',
           office_address: s.office_address || '',
-          office_lat: parseFloat(s.office_lat) || -6.7386200,
-          office_lng: parseFloat(s.office_lng) || 108.5372200,
+          office_lat: parseFloat(s.office_lat) || -6.7409720,
+          office_lng: parseFloat(s.office_lng) || 108.5430931,
           geofence_radius_meters: s.geofence_radius_meters || 150
         });
         setLlm({ provider: s.llm_provider || 'groq', model: s.llm_model || 'llama-3.3-70b-versatile', keyConfigured: s.llm_api_key_configured });

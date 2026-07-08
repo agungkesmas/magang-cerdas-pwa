@@ -201,8 +201,8 @@ CREATE TABLE Certificates (
 -- ============================================================
 CREATE TABLE App_Settings (
   id INT PRIMARY KEY DEFAULT 1,
-  office_lat DECIMAL(10,7) DEFAULT -6.7386200,
-  office_lng DECIMAL(10,7) DEFAULT 108.5372200,
+  office_lat DECIMAL(10,7) DEFAULT -6.7409720,
+  office_lng DECIMAL(10,7) DEFAULT 108.5430931,
   geofence_radius_meters INT DEFAULT 150,
   -- LLM provider config
   llm_provider VARCHAR(50) DEFAULT 'groq',

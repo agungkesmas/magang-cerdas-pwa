@@ -135,5 +135,5 @@ Setiap push ke branch `main` akan trigger Vercel auto-deploy (2-3 menit).
 ## 📝 Notes
 
 - **Groq API Key** yang diberikan user return 403 Forbidden dari server manapun (sudah di-test dari 4 endpoint berbeda). Sistem akan otomatis fallback ke stub sampai user update dengan key valid atau switch ke provider lain.
-- **Koordinat default** BPJS Cabang Cirebon: Jl. Evakuasi No. 11B, Karyamulya, Kesambi, Cirebon (-6.7386200, 108.5372200). Bisa diubah dari Admin Settings.
+- **Koordinat default** BPJS Cabang Cirebon: Jl. Evakuasi No. 11B, Karyamulya, Kesambi, Cirebon (-6.7409720, 108.5430931). Bisa diubah dari Admin Settings.
 - **Kepala Cabang default**: Zainal Abidin A. Bisa di-edit/ditambah dari Admin Settings → Officials.

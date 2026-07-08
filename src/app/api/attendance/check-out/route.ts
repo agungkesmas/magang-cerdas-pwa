@@ -73,8 +73,8 @@ export async function POST(req: NextRequest) {
       .eq('id', 1)
       .single();
 
-    const officeLat = settings?.office_lat ?? -6.7386200;
-    const officeLng = settings?.office_lng ?? 108.5372200;
+    const officeLat = settings?.office_lat ?? -6.7409720;
+    const officeLng = settings?.office_lng ?? 108.5430931;
     const radius = settings?.geofence_radius_meters ?? 200;
 
     const distance =
