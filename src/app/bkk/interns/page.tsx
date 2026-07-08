@@ -23,6 +23,7 @@ import {
   Bell
 } from 'lucide-react';
 import { fetchFresh } from '@/lib/fresh-fetch';
+import BatchUploadModal from '@/components/admin/BatchUploadModal';
 
 export default function BKKInternsPage() {
   return (
@@ -123,12 +124,20 @@ function InternList() {
             {data.interns.length} peserta dari {data.teacher.schools.length} institusi yang Anda bimbing
           </p>
         </div>
-        <a
-          href="/api/interns/template"
-          className="inline-flex items-center gap-1.5 bg-bpjs-green hover:bg-bpjs-green-dark text-white text-sm font-semibold px-3 py-2 rounded-lg shadow-sm"
-        >
-          <Upload className="w-4 h-4" /> Template Excel
-        </a>
+        <div className="flex gap-2">
+          <a
+            href="/api/interns/template"
+            className="inline-flex items-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium px-3 py-2 rounded-lg"
+          >
+            <Upload className="w-4 h-4" /> Template
+          </a>
+          <button
+            onClick={() => setShowBatchUpload(true)}
+            className="inline-flex items-center gap-1.5 bg-bpjs-green hover:bg-bpjs-green-dark text-white text-sm font-semibold px-3 py-2 rounded-lg shadow-sm"
+          >
+            <Upload className="w-4 h-4" /> Batch Upload
+          </button>
+        </div>
       </div>
 
       {/* Search + Filter */}
@@ -305,6 +314,20 @@ function InternList() {
             );
           })}
         </div>
+      )}
+
+      {showBatchUpload && (
+        <BatchUploadModal
+          role="bkk-interns"
+          onClose={() => setShowBatchUpload(false)}
+          onSuccess={() => {
+            setShowBatchUpload(false);
+            // Refresh data
+            fetchFresh('/api/dashboard/bkk')
+              .then((r) => r.json())
+              .then((d) => d.success && setData(d));
+          }}
+        />
       )}
     </div>
   );

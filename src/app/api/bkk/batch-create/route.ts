@@ -48,17 +48,17 @@ export async function POST(req: NextRequest) {
       try {
         // Validasi field wajib
         if (!item.name?.trim()) {
-          results.push({ row, status: 'error', message: 'Nama wajib diisi' });
+          results.push({ index: row, success: false, name: '', error: 'Nama wajib diisi' });
           failCount++;
           continue;
         }
         if (!item.major?.trim()) {
-          results.push({ row, status: 'error', message: 'Jurusan wajib diisi' });
+          results.push({ index: row, success: false, name: item.name, error: 'Jurusan wajib diisi' });
           failCount++;
           continue;
         }
         if (!item.department || !VALID_DEPARTMENTS.includes(item.department)) {
-          results.push({ row, status: 'error', message: `Departemen harus: ${VALID_DEPARTMENTS.join(', ')}` });
+          results.push({ index: row, success: false, name: item.name, error: `Departemen harus: ${VALID_DEPARTMENTS.join(', ')}` });
           failCount++;
           continue;
         }
@@ -73,13 +73,13 @@ export async function POST(req: NextRequest) {
         const schoolOrigin = item.school_origin?.trim() || (bkk.schools.length === 1 ? bkk.schools[0] : '');
 
         if (!schoolOrigin) {
-          results.push({ row, status: 'error', message: 'Sekolah wajib diisi (pilih dari sekolah yang Anda bimbing)' });
+          results.push({ index: row, success: false, name: item.name, error: 'Sekolah wajib diisi' });
           failCount++;
           continue;
         }
 
         if (!bkk.schools.includes(schoolOrigin)) {
-          results.push({ row, status: 'error', message: `Sekolah "${schoolOrigin}" tidak termasuk dalam sekolah yang Anda bimbing` });
+          results.push({ index: row, success: false, name: item.name, error: `Sekolah "${schoolOrigin}" tidak termasuk sekolah yang Anda bimbing` });
           failCount++;
           continue;
         }
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
           .single();
 
         if (error) {
-          results.push({ row, status: 'error', message: error.message, name: item.name });
+          results.push({ index: row, success: false, name: item.name, error: error.message });
           failCount++;
           continue;
         }
@@ -122,17 +122,17 @@ export async function POST(req: NextRequest) {
         await syncInternToSystemGroups(supabase, data.id, data.department, true);
 
         results.push({
-          row,
-          status: 'success',
+          index: row,
+          success: true,
           name: item.name,
           username,
-          password,
+          raw_password: password,
           department: item.department,
           school: schoolOrigin
         });
         successCount++;
       } catch (e: any) {
-        results.push({ row, status: 'error', message: e.message, name: item.name });
+        results.push({ index: row, success: false, name: item.name, error: e.message });
         failCount++;
       }
     }

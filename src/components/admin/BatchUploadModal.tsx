@@ -15,7 +15,7 @@ interface BatchResult {
 }
 
 interface Props {
-  role: 'pembina' | 'bkk';
+  role: 'pembina' | 'bkk' | 'bkk-interns';
   onClose: () => void;
   onSuccess: (results: BatchResult[]) => void;
 }
@@ -49,6 +49,16 @@ export default function BatchUploadModal({ role, onClose, onSuccess }: Props) {
       dataKey: 'teachers',
       idField: 'bkk_id',
       idLabel: 'ID BKK',
+      accentColor: 'bg-bpjs-green hover:bg-bpjs-green-dark',
+    },
+    'bkk-interns': {
+      title: 'Batch Upload Peserta Magang',
+      templateUrl: '/api/interns/template',
+      parseUrl: '/api/bkk/parse-excel',
+      createUrl: '/api/bkk/batch-create',
+      dataKey: 'interns',
+      idField: 'username',
+      idLabel: 'Username',
       accentColor: 'bg-bpjs-green hover:bg-bpjs-green-dark',
     },
   }[role];
@@ -106,12 +116,17 @@ export default function BatchUploadModal({ role, onClose, onSuccess }: Props) {
     if (!results) return;
     const headers = role === 'pembina'
       ? ['Index', 'Nama', 'ID Pembina', 'Email', 'Password', 'Departemen', 'Status', 'Error']
-      : ['Index', 'Nama', 'ID BKK', 'Email', 'Password', 'Sekolah', 'Status', 'Error'];
+      : role === 'bkk'
+      ? ['Index', 'Nama', 'ID BKK', 'Email', 'Password', 'Sekolah', 'Status', 'Error']
+      : ['Index', 'Nama', 'Username', 'Password', 'Departemen', 'Sekolah', 'Status', 'Error'];
     const rows = results.map((r) => {
       if (role === 'pembina') {
         return [r.index, r.name, r.pembina_id || '', r.email || '', r.raw_password || '', r.department || '', r.success ? 'Sukses' : 'Gagal', r.error || ''];
+      } else if (role === 'bkk') {
+        return [r.index, r.name, r.bkk_id || '', r.email || '', r.raw_password || '', (r.schools || []).join('; '), r.success ? 'Sukses' : 'Gagal', r.error || ''];
       }
-      return [r.index, r.name, r.bkk_id || '', r.email || '', r.raw_password || '', (r.schools || []).join('; '), r.success ? 'Sukses' : 'Gagal', r.error || ''];
+      // bkk-interns
+      return [r.index, r.name, r.username || '', r.raw_password || '', r.department || '', r.school || '', r.success ? 'Sukses' : 'Gagal', r.error || ''];
     });
     const csv = [headers, ...rows].map((row) => row.map((c) => `"${c}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -236,7 +251,7 @@ export default function BatchUploadModal({ role, onClose, onSuccess }: Props) {
                     className={`mt-3 inline-flex items-center gap-2 ${config.accentColor} text-white text-sm font-semibold px-4 py-2 rounded-lg disabled:opacity-50`}
                   >
                     {batchLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                    Buat {parsedData.length} {role === 'pembina' ? 'Pembina' : 'Guru BKK'}
+                    Buat {parsedData.length} {role === 'pembina' ? 'Pembina' : role === 'bkk' ? 'Guru BKK' : 'Peserta Magang'}
                   </button>
                 </div>
               )}
@@ -326,11 +341,12 @@ export default function BatchUploadModal({ role, onClose, onSuccess }: Props) {
 // ============================================================
 // BatchPrintResults — Print credentials dari batch results
 // ============================================================
-function BatchPrintResults({ results, role, onClose }: { results: BatchResult[]; role: 'pembina' | 'bkk'; onClose: () => void }) {
+function BatchPrintResults({ results, role, onClose }: { results: BatchResult[]; role: 'pembina' | 'bkk' | 'bkk-interns'; onClose: () => void }) {
   const handlePrint = () => window.print();
   const config = {
     pembina: { label: 'PEMBINA MAGANG', idField: 'pembina_id', idLabel: 'ID Pembina', loginUrl: '/pembina/login', accent: '#7C3AED', gradient: 'linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)', icon: '🎓' },
     bkk: { label: 'GURU BKK', idField: 'bkk_id', idLabel: 'ID BKK', loginUrl: '/bkk/login', accent: '#2E7D32', gradient: 'linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%)', icon: '🏫' },
+    'bkk-interns': { label: 'PESERTA MAGANG', idField: 'username', idLabel: 'Username', loginUrl: '/intern/login', accent: '#2E7D32', gradient: 'linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%)', icon: '🎓' },
   }[role];
 
   const copyAll = () => {
