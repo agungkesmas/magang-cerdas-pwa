@@ -96,11 +96,32 @@ export async function POST(req: NextRequest) {
     }
 
     // Buat timestamp dari actual_time yang diinput peserta
-    // Format: correction_date + actual_time (HH:MM) + WIB timezone
-    const actualTimeStr = correction.actual_time || (correction.type === 'Check-In' ? '08:00:00' : '17:00:00');
-    const attTimestamp = new Date(`${dateStr}T${actualTimeStr}:00+07:00`).toISOString();
+    // Format di DB: TIME → "HH:MM:SS" (mis. "08:00:00")
+    // Format di submit API: HH:MM (mis. "08:00")
+    // Normalize ke HH:MM:SS untuk konsistensi
+    let actualTimeStr = correction.actual_time || (correction.type === 'Check-In' ? '08:00:00' : '17:00:00');
+    // Jika format "HH:MM" (4 digit setelah split), tambahkan :00
+    if (/^\d{2}:\d{2}$/.test(actualTimeStr)) {
+      actualTimeStr = actualTimeStr + ':00';
+    }
+    // Safety: pastikan format final "HH:MM:SS"
+    if (!/^\d{2}:\d{2}:\d{2}$/.test(actualTimeStr)) {
+      return NextResponse.json(
+        { error: `Format actual_time tidak valid: "${correction.actual_time}". Expected HH:MM atau HH:MM:SS.` },
+        { status: 400 }
+      );
+    }
+    // Construct ISO timestamp dengan timezone WIB (+07:00)
+    const attDateObj = new Date(`${dateStr}T${actualTimeStr}+07:00`);
+    if (isNaN(attDateObj.getTime())) {
+      return NextResponse.json(
+        { error: `Gagal parse timestamp: date=${dateStr}, time=${actualTimeStr}` },
+        { status: 400 }
+      );
+    }
+    const attTimestamp = attDateObj.toISOString();
 
-    // Hitung is_late/is_early dari actual_time
+    // Hitung is_late/is_early dari actual_time (pakai actualTimeStr yang sudah dinormalize)
     const [actHour, actMin] = actualTimeStr.split(':').map((n: string) => parseInt(n, 10));
     const actTotalMin = actHour * 60 + actMin;
     const CHECKIN_DEADLINE = 8 * 60;  // 08:00
