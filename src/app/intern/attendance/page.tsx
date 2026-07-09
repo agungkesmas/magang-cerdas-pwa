@@ -54,12 +54,16 @@ export default function InternAttendancePage() {
   const [myLeaves, setMyLeaves] = useState<any[]>([]);
   const [todayLeave, setTodayLeave] = useState<any | null>(null);
 
+  // Pending quests state (gate: peserta harus selesaikan/batalkan sebelum check-out)
+  const [pendingQuests, setPendingQuests] = useState<any[]>([]);
+
   const fetchToday = async () => {
     setLoading(true);
     try {
-      const [attRes, leaveRes] = await Promise.all([
+      const [attRes, leaveRes, questRes] = await Promise.all([
         fetch('/api/attendance/list?limit=10'),
-        fetch('/api/leave/list')
+        fetch('/api/leave/list'),
+        fetch('/api/intern/active-quests').catch(() => null)
       ]);
       const attData = await attRes.json();
       const leaveData = await leaveRes.json();
@@ -85,6 +89,17 @@ export default function InternAttendancePage() {
           (lr: any) => lr.status === 'approved' && today >= lr.start_date && today <= lr.end_date
         );
         setTodayLeave(todayL || null);
+      }
+
+      // Parse active quests untuk identifikasi in_progress (gate check-out)
+      if (questRes && questRes.ok) {
+        try {
+          const questData = await questRes.json();
+          const quests = questData.quests || questData.active_quests || [];
+          setPendingQuests(quests.filter((q: any) => q.status === 'in_progress'));
+        } catch {
+          setPendingQuests([]);
+        }
       }
     } finally {
       setLoading(false);
@@ -558,9 +573,9 @@ export default function InternAttendancePage() {
       {error && (
         <div className="glass-card p-4 bg-red-500/10 border-red-400/30 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-          <div>
+          <div className="flex-1 min-w-0">
             <p className="text-red-200 font-medium text-sm">Gagal</p>
-            <p className="text-red-300/80 text-sm">{error}</p>
+            <p className="text-red-300/80 text-sm whitespace-pre-line">{error}</p>
           </div>
         </div>
       )}
@@ -611,6 +626,31 @@ export default function InternAttendancePage() {
               </>
             )}
           </button>
+        )}
+
+        {checkedIn && !checkedOut && pendingQuests.length > 0 && (
+          <div className="glass-card p-4 bg-amber-500/10 border-amber-400/40 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-amber-200 font-medium text-sm">
+                Ada {pendingQuests.length} quest yang sedang kamu kerjakan dan belum diselesaikan:
+              </p>
+              <ul className="text-amber-100/80 text-xs mt-1 space-y-0.5 list-disc list-inside">
+                {pendingQuests.map((q: any) => (
+                  <li key={q.id}>{q.title}</li>
+                ))}
+              </ul>
+              <p className="text-amber-200/70 text-xs mt-2">
+                Selesaikan (submit dengan keterangan) atau batalkan quest di halaman Aktivitas sebelum check-out pulang.
+              </p>
+              <a
+                href="/intern/activities"
+                className="inline-block mt-2 text-xs bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 px-3 py-1.5 rounded-lg font-medium"
+              >
+                Buka Halaman Aktivitas →
+              </a>
+            </div>
+          </div>
         )}
 
         {checkedIn && !checkedOut && (

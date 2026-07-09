@@ -115,6 +115,8 @@ export default function InternActivitiesPage() {
   const [questSubmitNotes, setQuestSubmitNotes] = useState('');
   const [completionNotes, setCompletionNotes] = useState('');
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
+  const [showAbandonModal, setShowAbandonModal] = useState<string | null>(null);
+  const [abandonReason, setAbandonReason] = useState('');
 
   const fetchAll = async () => {
     setLoading(true);
@@ -220,6 +222,35 @@ export default function InternActivitiesPage() {
       setTimeout(() => setRecentExp(null), 3000);
       setShowQuestSubmitModal(null);
       setQuestSubmitNotes('');
+      fetchAll();
+    } catch (e: any) {
+      setErrorMsg(e.message);
+      setTimeout(() => setErrorMsg(null), 5000);
+    } finally {
+      setQuestActionLoading(null);
+    }
+  };
+
+  // Batalkan quest sendiri (status in_progress → cancelled, tanpa EXP)
+  // Berguna saat peserta tidak bisa menyelesaikan quest dan ingin check-out pulang
+  const handleQuestAbandon = async (questId: string) => {
+    if (abandonReason.trim().length < 5) {
+      setErrorMsg('Alasan pembatalan minimal 5 karakter.');
+      setTimeout(() => setErrorMsg(null), 5000);
+      return;
+    }
+    setQuestActionLoading(questId);
+    setErrorMsg(null);
+    try {
+      const res = await fetch(`/api/quests/${questId}/abandon`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: abandonReason.trim() })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setShowAbandonModal(null);
+      setAbandonReason('');
       fetchAll();
     } catch (e: any) {
       setErrorMsg(e.message);
@@ -378,14 +409,65 @@ export default function InternActivitiesPage() {
                             {questActionLoading === q.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Kirim Quest
                           </button>
                         </div>
+                        <button
+                          onClick={() => { setShowQuestSubmitModal(null); setQuestSubmitNotes(''); setShowAbandonModal(q.id); setAbandonReason(''); }}
+                          className="text-xs text-red-400/70 hover:text-red-400 underline mt-1"
+                        >
+                          Tidak bisa menyelesaikan? Batalkan quest ini
+                        </button>
+                      </div>
+                    ) : showAbandonModal === q.id ? (
+                      <div className="mt-3 space-y-2 border border-red-400/30 bg-red-500/5 rounded-lg p-3">
+                        <p className="text-xs text-red-300 font-semibold">⚠️ Batalkan Quest?</p>
+                        <p className="text-xs text-white/60">
+                          Quest akan ditandai <b>dibatalkan</b> — tidak ada EXP yang diberikan.
+                          Anda bisa mengambil quest lain atau mengulang besok.
+                          <span className="text-bpjs-yellow"> Wajib beri alasan untuk audit trail.</span>
+                        </p>
+                        <textarea
+                          rows={2}
+                          value={abandonReason}
+                          onChange={(e) => setAbandonReason(e.target.value)}
+                          placeholder="Contoh: Tugas mendadak dari pembina, harus bantu acara kantor..."
+                          maxLength={300}
+                          className="w-full px-3 py-2 bg-white/5 border border-red-400/20 rounded-lg text-white text-sm placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-red-400/40"
+                        />
+                        <div className="flex items-center justify-between text-xs">
+                          <span className={abandonReason.trim().length >= 5 ? 'text-bpjs-green' : 'text-white/50'}>
+                            {abandonReason.trim().length >= 5 ? '✓ Alasan cukup' : `Min 5 karakter (saat ini ${abandonReason.trim().length})`}
+                          </span>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => { setShowAbandonModal(null); setAbandonReason(''); }}
+                            className="flex-1 px-3 py-2 border border-white/10 text-white/60 text-sm rounded-lg"
+                          >
+                            Kembali
+                          </button>
+                          <button
+                            onClick={() => handleQuestAbandon(q.id)}
+                            disabled={questActionLoading === q.id || abandonReason.trim().length < 5}
+                            className="flex-1 px-3 py-2 bg-red-500 hover:bg-red-600 text-white font-bold text-sm rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                          >
+                            {questActionLoading === q.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />} Ya, Batalkan
+                          </button>
+                        </div>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => { setShowQuestSubmitModal(q.id); setQuestSubmitNotes(''); }}
-                        className="w-full mt-2 flex items-center justify-center gap-2 bg-bpjs-green hover:bg-bpjs-green-dark text-white font-bold py-2.5 rounded-lg text-sm"
-                      >
-                        <CheckCircle2 className="w-4 h-4" /> KIRIM QUEST
-                      </button>
+                      <div className="mt-2 space-y-2">
+                        <button
+                          onClick={() => { setShowQuestSubmitModal(q.id); setQuestSubmitNotes(''); }}
+                          className="w-full flex items-center justify-center gap-2 bg-bpjs-green hover:bg-bpjs-green-dark text-white font-bold py-2.5 rounded-lg text-sm"
+                        >
+                          <CheckCircle2 className="w-4 h-4" /> KIRIM QUEST
+                        </button>
+                        <button
+                          onClick={() => { setShowAbandonModal(q.id); setAbandonReason(''); }}
+                          className="w-full text-xs text-red-400/70 hover:text-red-400 py-1"
+                        >
+                          Tidak bisa menyelesaikan? Batalkan quest
+                        </button>
+                      </div>
                     )
                   )}
 

@@ -67,6 +67,41 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Anda sudah check-out hari ini' }, { status: 400 });
     }
 
+    // ============================================================
+    // GATE: Peserta harus menyelesaikan (atau batalkan) semua quest
+    // yang sedang in_progress sebelum bisa check-out pulang.
+    // Tujuan: mencegah "sampah" quest yang di-START tapi ditinggal.
+    // ============================================================
+    const { data: pendingQuests } = await supabase
+      .from('quest_logs')
+      .select(`
+        id,
+        quest_id,
+        started_at,
+        activities!inner(id, title, is_active)
+      `)
+      .eq('intern_id', intern.intern_id)
+      .eq('status', 'in_progress')
+      .eq('activities.is_active', true);
+
+    if (pendingQuests && pendingQuests.length > 0) {
+      const questList = pendingQuests
+        .map((q: any, i: number) => `${i + 1}. ${q.activities?.title || 'Quest tanpa judul'}`)
+        .join('\n');
+      return NextResponse.json(
+        {
+          error: `Check-out DITOLAK. Anda masih memiliki ${pendingQuests.length} quest yang sedang dikerjakan dan belum diselesaikan:\n\n${questList}\n\nSilakan SUBMIT quest (dengan keterangan minimal 15 karakter) jika sudah selesai, atau BATALKAN quest di halaman Aktivitas jika tidak bisa diselesaikan hari ini.`,
+          blocked_by_pending_quests: true,
+          pending_quest_count: pendingQuests.length,
+          pending_quests: pendingQuests.map((q: any) => ({
+            quest_id: q.quest_id,
+            title: q.activities?.title
+          }))
+        },
+        { status: 409 }
+      );
+    }
+
     const { data: settings } = await supabase
       .from('app_settings')
       .select('office_lat, office_lng, geofence_radius_meters')
