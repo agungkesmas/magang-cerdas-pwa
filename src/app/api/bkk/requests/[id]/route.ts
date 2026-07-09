@@ -60,14 +60,29 @@ export async function PUT(req: NextRequest, { params }: Params) {
     const body = await req.json();
     const updateFields: any = { updated_at: new Date().toISOString() };
 
+    // P3-16: 'status' TIDAK boleh di-edit oleh BKK (state machine harus via admin atau endpoint cancel)
+    // BKK hanya bisa edit field konten permintaan selama masih draft/submitted
     const editable = [
       'school_name', 'request_title', 'contact_person', 'contact_phone', 'contact_email',
       'requested_slots', 'proposed_start_date', 'proposed_end_date',
       'requested_majors', 'requested_departments', 'cover_letter',
-      'additional_notes', 'attachment_url', 'status'
+      'additional_notes', 'attachment_url'
     ];
     for (const f of editable) {
       if (body[f] !== undefined) updateFields[f] = body[f];
+    }
+
+    // P1-7: Validate school_name baru masih dalam daftar sekolah BKK (mencegah exploit pindah ke sekolah lain)
+    if (updateFields.school_name !== undefined) {
+      const newSchool = String(updateFields.school_name).trim();
+      const schoolOk = !teacher.schools?.length || teacher.schools.includes(newSchool);
+      if (!schoolOk) {
+        return NextResponse.json(
+          { error: 'Sekolah yang dipilih tidak terdaftar pada akun BKK Anda' },
+          { status: 403 }
+        );
+      }
+      updateFields.school_name = newSchool;
     }
 
     if (updateFields.requested_slots !== undefined) {

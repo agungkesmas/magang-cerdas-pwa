@@ -97,7 +97,8 @@ export async function GET() {
       days_remaining: daysRemaining(i.end_date),
       duration_days: internshipDuration(i.start_date, i.end_date),
       attendance: attendanceSummary[i.id] || { check_in_count: 0, check_out_count: 0, last_attendance: null },
-      logbook_count: activityCounts[i.id] || 0, // keep field name for backward compat, but now counts activities
+      activity_count: activityCounts[i.id] || 0, // P2-10: rename dari logbook_count, sekarang hitung activities
+      logbook_count: activityCounts[i.id] || 0, // keep for backward compat (akan dihapus versi depan)
       tier: calculateTier(i.total_exp || 0, i.start_date, i.end_date)
     }));
 

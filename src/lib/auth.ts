@@ -5,6 +5,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
+import { createServerClient } from './supabase';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'magang-cerdas-jwt-secret-fallback-change-me';
 const ADMIN_COOKIE = 'magang_admin_token';
@@ -206,6 +207,20 @@ export async function getBKKToken(): Promise<BKKTokenPayload | null> {
   if (!token) return null;
   const payload = verifyToken<BKKTokenPayload>(token);
   if (!payload || payload.type !== 'bkk') return null;
+
+  // P1-8: Cek is_active di DB — BKK yang di-archive harus kehilangan akses meski JWT masih valid
+  // (mencegah BKK yang sudah di-nonaktifkan tetap bisa akses sampai JWT expire 7 hari)
+  try {
+    const supabase = createServerClient();
+    const { data } = await supabase
+      .from('bkk_teachers')
+      .select('is_active')
+      .eq('id', payload.teacher_id)
+      .maybeSingle();
+    if (!data || !data.is_active) return null;
+  } catch {
+    // DB error jangan block login (fail-open) — supabase down tidak harus logout semua BKK
+  }
   return payload;
 }
 
@@ -215,6 +230,19 @@ export async function getPembinaToken(): Promise<PembinaTokenPayload | null> {
   if (!token) return null;
   const payload = verifyToken<PembinaTokenPayload>(token);
   if (!payload || payload.type !== 'pembina') return null;
+
+  // P1-8: Cek is_active di DB — pembina yang di-archive harus kehilangan akses meski JWT masih valid
+  try {
+    const supabase = createServerClient();
+    const { data } = await supabase
+      .from('pembina_magang')
+      .select('is_active')
+      .eq('id', payload.pembina_id)
+      .maybeSingle();
+    if (!data || !data.is_active) return null;
+  } catch {
+    // DB error jangan block login (fail-open)
+  }
   return payload;
 }
 

@@ -97,9 +97,8 @@ export async function GET(req: NextRequest) {
     });
     activityHistory.sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime());
 
-    // task_completions query removed — tasks table is deprecated, replaced by activities
-    // Return empty array for backward compat
-    const completions: any[] = [];
+    // task_completions dihapus — tasks table sudah deprecated, diganti activities
+    // (P2-9: cleanup dead code)
 
     // Fetch certificate if unlocked
     let certificate = null;
@@ -157,14 +156,6 @@ export async function GET(req: NextRequest) {
         last_7_days: last7Days
       },
       activity_history: activityHistory,
-      task_completions: (completions || []).map((c: any) => ({
-        task_id: c.task_id,
-        task_title: c.tasks?.title,
-        task_department: c.tasks?.department,
-        completed_count: c.completed_count,
-        target_count: c.tasks?.target_count,
-        last_completed_at: c.last_completed_at
-      })),
       certificate
     });
   } catch (e: any) {

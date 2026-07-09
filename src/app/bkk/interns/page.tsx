@@ -361,7 +361,7 @@ function InternDetail({ internId }: { internId: string }) {
     );
   }
 
-  const { intern, attendance_summary, activity_history, task_completions, certificate } = data;
+  const { intern, attendance_summary, activity_history, certificate } = data;
 
   return (
     <div className="space-y-5">
@@ -504,33 +504,6 @@ function InternDetail({ internId }: { internId: string }) {
           </span>
         </div>
       </div>
-
-      {/* Task completion summary */}
-      {task_completions.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-5">
-          <h2 className="font-bold text-gray-900 mb-3" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-            Progress Tugas
-          </h2>
-          <div className="space-y-3">
-            {task_completions.map((t: any) => {
-              const pct = t.target_count > 0 ? Math.min(100, (t.completed_count / t.target_count) * 100) : 0;
-              return (
-                <div key={t.task_id}>
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-gray-700 font-medium truncate">{t.task_title}</span>
-                    <span className="text-gray-500 ml-2 whitespace-nowrap">
-                      {t.completed_count} / {t.target_count}
-                    </span>
-                  </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-bpjs-green" style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Activity history */}
       <div className="bg-white rounded-2xl border border-gray-200 p-5">

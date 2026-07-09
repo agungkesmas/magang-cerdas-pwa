@@ -124,6 +124,41 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+    // ============================================================
+    // Kirim notifikasi ke BKK teacher (P1-5: notifikasi admin→BKK)
+    // ============================================================
+    try {
+      const reqData: any = data;
+      let notifTitle = '';
+      let notifMsg = '';
+      if (action === 'review') {
+        notifTitle = 'Permintaan Sedang Direview';
+        notifMsg = `Permintaan "${reqData.request_title}" sedang direview oleh admin BPJS. Mohon tunggu keputusan.`;
+      } else if (action === 'accept') {
+        notifTitle = 'Permintaan Magang Diterima';
+        notifMsg = `Permintaan "${reqData.request_title}" telah DITERIMA admin. Slot disetujui: ${reqData.accepted_slots || '-'}. Silakan tambahkan peserta magang di menu Peserta Magang.`;
+      } else if (action === 'reject') {
+        notifTitle = 'Permintaan Magang Ditolak';
+        notifMsg = `Permintaan "${reqData.request_title}" DITOLAK admin. Catatan: ${body.review_notes || 'Tidak ada catatan'}. Hubungi admin BPJS untuk informasi lebih lanjut.`;
+      } else if (action === 'complete') {
+        notifTitle = 'Periode Magang Selesai';
+        notifMsg = `Periode magang untuk permintaan "${reqData.request_title}" telah selesai. Terima kasih atas kerja sama Anda.`;
+      }
+      if (notifTitle && reqData.bkk_teacher_id) {
+        await supabase.from('bkk_notifications').insert({
+          bkk_teacher_id: reqData.bkk_teacher_id,
+          type: 'request_update',
+          title: notifTitle,
+          message: notifMsg,
+          related_request_id: reqData.id,
+          is_read: false
+        });
+      }
+    } catch (notifErr) {
+      // Notif gagal insert jangan block main operation, cuma log
+      console.warn('[admin/requests] notif insert failed:', notifErr);
+    }
+
     return NextResponse.json({ success: true, request: data });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

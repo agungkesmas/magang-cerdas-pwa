@@ -89,6 +89,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Sekolah yang dipilih tidak terdaftar pada akun BKK Anda' }, { status: 403 });
     }
 
+    // P2-12: Quota check per school — total requested_slots dari semua request aktif
+    // (submitted/under_review/accepted) untuk school ini tidak boleh > 500 per tahun
+    const { data: existingReqs } = await supabase
+      .from('internship_requests')
+      .select('id, requested_slots, status')
+      .eq('bkk_teacher_id', teacher.teacher_id)
+      .eq('school_name', body.school_name.trim())
+      .in('status', ['submitted', 'under_review', 'accepted']);
+    const totalActive = (existingReqs || []).reduce((sum: number, r: any) => sum + (r.requested_slots || 0), 0);
+    const SCHOOL_SLOT_LIMIT = 500;
+    if (totalActive + parseInt(body.requested_slots, 10) > SCHOOL_SLOT_LIMIT) {
+      return NextResponse.json(
+        {
+          error: `Quota sekolah tercapai. Total slot aktif untuk ${body.school_name}: ${totalActive}/${SCHOOL_SLOT_LIMIT}. Anda mencoba menambah ${body.requested_slots} slot. Hubungi admin BPJS untuk pengecualian.`
+        },
+        { status: 429 }
+      );
+    }
+
     const { data, error } = await supabase
       .from('internship_requests')
       .insert({

@@ -6,8 +6,9 @@ export const dynamic = 'force-dynamic';
 
 export default async function PembinaLayout({ children }: { children: React.ReactNode }) {
   const pembina = await getPembinaToken();
+  // P2-13: kalau token invalid/expired/pembina archived → redirect ke login
   if (!pembina) {
-    return <>{children}</>;
+    redirect('/pembina/login');
   }
   return (
     <PembinaShell pembina={{ name: pembina.name, pembina_code: pembina.pembina_code, department: pembina.department }}>

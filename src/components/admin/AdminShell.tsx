@@ -20,7 +20,8 @@ import {
   Inbox,
   MessageCircle,
   UserCog,
-  Target
+  Target,
+  Bell
 } from 'lucide-react';
 
 const NAV = [
@@ -33,7 +34,8 @@ const NAV = [
   { href: '/admin/groups', label: 'Kelola Grup', icon: Users },
   { href: '/admin/certificate', label: 'Sertifikat', icon: Award },
   { href: '/admin/pembina', label: 'Pembina Magang', icon: UserCog },
-  { href: '/admin/schools', label: 'Institusi & BKK', icon: School }
+  { href: '/admin/schools', label: 'Institusi & BKK', icon: School },
+  { href: '/admin/nudges', label: 'Riwayat Nudge', icon: Bell }
 ];
 
 export default function AdminShell({

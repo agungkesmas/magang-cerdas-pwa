@@ -85,7 +85,7 @@ function BKKCertsContent() {
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-          Arsip Sertifikat
+          Sertifikat
         </h1>
         <p className="text-gray-500 text-sm mt-1">
           {certified.length} sertifikat terbit • {pending.length} siap diterbitkan • {interns.length} total peserta

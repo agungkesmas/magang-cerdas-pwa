@@ -6,7 +6,11 @@ export const dynamic = 'force-dynamic';
 
 export default async function BKKLayout({ children }: { children: React.ReactNode }) {
   const teacher = await getBKKToken();
-  if (!teacher) return <>{children}</>;
+  // P2-13: kalau token invalid/expired/BKK archived → redirect ke login
+  // (sebelumnya render children tanpa shell → UX buruk, page jadi blank/error)
+  if (!teacher) {
+    redirect('/bkk/login');
+  }
   return (
     <BKKShell teacher={{ name: teacher.name, schools: teacher.schools }}>
       {children}

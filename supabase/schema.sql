@@ -10,7 +10,7 @@ CREATE TABLE Interns (
   school_origin VARCHAR(255),
   major VARCHAR(255) NOT NULL,
   major_id UUID REFERENCES majors(id) ON DELETE SET NULL,
-  department VARCHAR(50) CHECK (department IN ('Pelayanan', 'Pemasaran', 'Keuangan')) NOT NULL,
+  department VARCHAR(50) CHECK (department IN ('Pelayanan', 'Pemasaran', 'Keuangan', 'Belum Ditempatkan')) NOT NULL,
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
   total_exp INT DEFAULT 0,
@@ -226,7 +226,11 @@ CREATE TABLE Nudges (
   message TEXT NOT NULL,
   type VARCHAR(50) DEFAULT 'check_in_reminder',
   is_read BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  -- Audit trail (admin/bkk/pembina/system)
+  created_by_type VARCHAR(20),
+  created_by_id UUID,
+  created_by_name VARCHAR(255)
 );
 
 -- ============================================================
