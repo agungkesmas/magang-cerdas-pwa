@@ -89,9 +89,11 @@ export default function InternSurvivalKitPage() {
           module={mod}
           progress={progress[mod.id]}
           onBack={() => setActiveModule(null)}
-          onComplete={(passed) => {
-            fetchProgress();
+          onComplete={async (passed) => {
+            // Pastikan progress di-fetch ulang dari server DAN tersimpan
+            await fetchProgress();
             if (passed) {
+              // Jeda 1.5 detik supaya user lihat "Modul Selesai" sebelum kembali
               setTimeout(() => setActiveModule(null), 1500);
             }
           }}
@@ -183,44 +185,57 @@ function ModuleDetailView({
   const [answers, setAnswers] = useState<number[]>([]);
   const [showResult, setShowResult] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingQuestion, setSavingQuestion] = useState(false);
 
   const Icon = ICONS[module.icon] || BookOpen;
 
-  const handleAnswer = (idx: number) => {
+  const handleAnswer = async (idx: number) => {
     const newAns = [...answers, idx];
     setAnswers(newAns);
+
     if (currentQ + 1 < module.quizQuestions.length) {
+      // Jeda: pastikan progress tersimpan DULU sebelum pindah ke pertanyaan berikutnya
+      setSavingQuestion(true);
+      try {
+        await fetch('/api/survival-kit/progress', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            module_id: module.id,
+            status: 'in_progress',
+            quiz_passed: false
+          })
+        });
+      } catch {
+        // Silent fail — progress akan di-save lagi di pertanyaan berikutnya
+      }
+      // Jeda visual 500ms supaya user lihat "Menyimpan..." lalu pindah
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setSavingQuestion(false);
       setCurrentQ(currentQ + 1);
-      // Save progress in_progress saat user menjawab (anti-lost progress)
-      fetch('/api/survival-kit/progress', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          module_id: module.id,
-          status: 'in_progress',
-          quiz_passed: false
-        })
-      }).catch(() => {});
     } else {
+      // Pertanyaan terakhir → hitung skor, simpan, tampilkan hasil
       setShowResult(true);
-      // Calculate score
       const correct = newAns.filter((a, i) => a === module.quizQuestions[i].answer).length;
       const passed = correct >= Math.ceil(module.quizQuestions.length * 0.7);
-      // Save to backend
       setSaving(true);
-      fetch('/api/survival-kit/progress', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          module_id: module.id,
-          status: passed ? 'completed' : 'in_progress',
-          quiz_passed: passed
-        })
-      })
-        .then(() => {
-          onComplete(passed);
-        })
-        .finally(() => setSaving(false));
+      try {
+        await fetch('/api/survival-kit/progress', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            module_id: module.id,
+            status: passed ? 'completed' : 'in_progress',
+            quiz_passed: passed
+          })
+        });
+        // Pastikan progress di-fetch ulang dari server supaya sinkron
+        await onComplete(passed);
+      } catch {
+        // Kalau gagal save, tetap tampilkan hasil
+      } finally {
+        setSaving(false);
+      }
     }
   };
 
@@ -251,23 +266,43 @@ function ModuleDetailView({
 
       {!showResult ? (
         <div className="glass-card p-5">
-          <div className="text-xs text-white/60 mb-2">
-            Pertanyaan {currentQ + 1} dari {module.quizQuestions.length}
-          </div>
-          <h3 className="text-base font-semibold text-white mb-4">
-            {module.quizQuestions[currentQ].q}
-          </h3>
-          <div className="space-y-2">
-            {module.quizQuestions[currentQ].options.map((opt, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleAnswer(idx)}
-                className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-bpjs-yellow/10 hover:border-bpjs-yellow/30 border border-white/10 transition-all"
-              >
-                <span className="text-sm text-white">{opt}</span>
-              </button>
-            ))}
-          </div>
+          {savingQuestion ? (
+            <div className="flex flex-col items-center justify-center py-8">
+              <Loader2 className="w-8 h-8 text-bpjs-yellow animate-spin mb-2" />
+              <p className="text-sm text-white/60">Menyimpan jawaban...</p>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xs text-white/60">
+                  Pertanyaan {currentQ + 1} dari {module.quizQuestions.length}
+                </div>
+                <div className="flex gap-1">
+                  {module.quizQuestions.map((_, i) => (
+                    <div
+                      key={i}
+                      className={`w-2 h-2 rounded-full ${i <= currentQ ? 'bg-bpjs-yellow' : 'bg-white/20'}`}
+                    />
+                  ))}
+                </div>
+              </div>
+              <h3 className="text-base font-semibold text-white mb-4">
+                {module.quizQuestions[currentQ].q}
+              </h3>
+              <div className="space-y-2">
+                {module.quizQuestions[currentQ].options.map((opt, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleAnswer(idx)}
+                    disabled={savingQuestion}
+                    className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-bpjs-yellow/10 hover:border-bpjs-yellow/30 border border-white/10 transition-all disabled:opacity-50"
+                  >
+                    <span className="text-sm text-white">{opt}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       ) : (
         <div className="glass-card p-5 text-center">
