@@ -72,6 +72,7 @@ export default function QuestCard({
   const [showSubmitForm, setShowSubmitForm] = useState(false);
   const [submissionNotes, setSubmissionNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [starting, setStarting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -107,6 +108,11 @@ export default function QuestCard({
   };
 
   const handleSubmit = async () => {
+    if (submissionNotes.trim().length < 15) {
+      setSubmitError('Keterangan minimal 15 karakter. Jelaskan singkat apa yang kamu kerjakan.');
+      return;
+    }
+    setSubmitError('');
     setSubmitting(true);
     try {
       await onSubmit?.(submissionNotes.trim());
@@ -320,17 +326,38 @@ export default function QuestCard({
           {/* Submit form */}
           {showSubmitForm && isInProgress && !isCompletedToday && (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3 space-y-2">
-              <label className="block text-xs font-semibold text-gray-700">Catatan hasil (opsional)</label>
+              <label className="block text-xs font-semibold text-gray-700">
+                Keterangan hasil <span className="text-red-500">*</span>
+                <span className="text-gray-500 font-normal"> (minimal 15 karakter)</span>
+              </label>
               <textarea
-                rows={2}
+                rows={3}
                 value={submissionNotes}
-                onChange={(e) => setSubmissionNotes(e.target.value)}
-                placeholder="Contoh: Selesai 8/10 dokumen, 2 kurang lengkap..."
+                onChange={(e) => { setSubmissionNotes(e.target.value); setSubmitError(''); }}
+                placeholder="Contoh: Selesai memindai 8 dari 10 berkas klaim, 2 sisanya menunggu kelengkapan dokumen dari peserta..."
+                maxLength={500}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-bpjs-green/40"
               />
+              <div className="flex items-center justify-between text-xs">
+                <span className={submissionNotes.trim().length >= 15 ? 'text-bpjs-green' : 'text-gray-500'}>
+                  {submissionNotes.trim().length >= 15
+                    ? '✓ Keterangan cukup, silakan kirim'
+                    : `Masih perlu ${15 - submissionNotes.trim().length} karakter lagi`}
+                </span>
+                <span className="text-gray-400">{submissionNotes.trim().length}/15</span>
+              </div>
+              {submitError && (
+                <p className="text-xs text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" /> {submitError}
+                </p>
+              )}
               <div className="flex gap-2">
-                <button onClick={() => setShowSubmitForm(false)} className="flex-1 px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded-md">Batal</button>
-                <button onClick={handleSubmit} disabled={submitting} className="flex-1 px-3 py-2 bg-bpjs-green text-white font-semibold text-sm rounded-md disabled:opacity-50 flex items-center justify-center gap-1">
+                <button onClick={() => { setShowSubmitForm(false); setSubmissionNotes(''); setSubmitError(''); }} className="flex-1 px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded-md">Batal</button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitting || submissionNotes.trim().length < 15}
+                  className="flex-1 px-3 py-2 bg-bpjs-green text-white font-semibold text-sm rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <StopCircle className="w-4 h-4" />} Submit Quest
                 </button>
               </div>

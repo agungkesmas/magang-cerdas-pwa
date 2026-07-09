@@ -200,13 +200,19 @@ export default function InternActivitiesPage() {
   };
 
   const handleQuestSubmit = async (questId: string, groupId: string) => {
+    // Double-check: minimal 15 karakter (front-end guard, API juga validate)
+    if (questSubmitNotes.trim().length < 15) {
+      setErrorMsg('Keterangan minimal 15 karakter. Jelaskan singkat apa yang kamu kerjakan.');
+      setTimeout(() => setErrorMsg(null), 5000);
+      return;
+    }
     setQuestActionLoading(questId);
     setErrorMsg(null);
     try {
       const res = await fetch('/api/quests/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quest_id: questId, group_id: groupId, submission_notes: questSubmitNotes.trim() || undefined })
+        body: JSON.stringify({ quest_id: questId, group_id: groupId, submission_notes: questSubmitNotes.trim() })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -342,16 +348,33 @@ export default function InternActivitiesPage() {
                   {q.status === 'in_progress' && (
                     showQuestSubmitModal === q.id ? (
                       <div className="mt-3 space-y-2">
+                        <label className="block text-xs font-semibold text-white/80">
+                          Keterangan hasil <span className="text-bpjs-yellow">*</span>
+                          <span className="text-white/50 font-normal"> (minimal 15 karakter)</span>
+                        </label>
                         <textarea
-                          rows={2}
+                          rows={3}
                           value={questSubmitNotes}
                           onChange={(e) => setQuestSubmitNotes(e.target.value)}
-                          placeholder="Catatan hasil (opsional)..."
+                          placeholder="Contoh: Selesai memindai 8 dari 10 berkas klaim, 2 sisanya menunggu kelengkapan dokumen dari peserta..."
+                          maxLength={500}
                           className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-bpjs-yellow"
                         />
+                        <div className="flex items-center justify-between text-xs">
+                          <span className={questSubmitNotes.trim().length >= 15 ? 'text-bpjs-green' : 'text-white/50'}>
+                            {questSubmitNotes.trim().length >= 15
+                              ? '✓ Keterangan cukup, silakan kirim'
+                              : `Masih perlu ${15 - questSubmitNotes.trim().length} karakter lagi`}
+                          </span>
+                          <span className="text-white/40">{questSubmitNotes.trim().length}/15</span>
+                        </div>
                         <div className="flex gap-2">
                           <button onClick={() => { setShowQuestSubmitModal(null); setQuestSubmitNotes(''); }} className="flex-1 px-3 py-2 border border-white/10 text-white/60 text-sm rounded-lg">Batal</button>
-                          <button onClick={() => handleQuestSubmit(q.id, q.group_id)} disabled={questActionLoading === q.id} className="flex-1 px-3 py-2 bg-bpjs-green text-white font-bold text-sm rounded-lg disabled:opacity-50 flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => handleQuestSubmit(q.id, q.group_id)}
+                            disabled={questActionLoading === q.id || questSubmitNotes.trim().length < 15}
+                            className="flex-1 px-3 py-2 bg-bpjs-green text-white font-bold text-sm rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                          >
                             {questActionLoading === q.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Kirim Quest
                           </button>
                         </div>

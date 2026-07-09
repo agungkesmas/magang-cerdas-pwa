@@ -19,6 +19,15 @@ export async function POST(req: NextRequest) {
     if (!quest_id) return NextResponse.json({ error: 'quest_id wajib diisi' }, { status: 400 });
     if (!group_id) return NextResponse.json({ error: 'group_id wajib diisi' }, { status: 400 });
 
+    // VALIDASI: Keterangan minimal 15 karakter (anti-asal submit)
+    const trimmedNotes = (submission_notes ?? '').toString().trim();
+    if (trimmedNotes.length < 15) {
+      return NextResponse.json(
+        { error: `Keterangan wajib diisi minimal 15 karakter (saat ini ${trimmedNotes.length} karakter). Jelaskan singkat apa yang kamu kerjakan.` },
+        { status: 400 }
+      );
+    }
+
     const supabase = createServerClient();
 
     // 0. CEK: Peserta sudah check-in hari ini? (timezone WIB)
