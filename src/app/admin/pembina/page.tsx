@@ -180,7 +180,7 @@ export default function AdminPembinaPage() {
                     </button>
                     <button
                       onClick={() => {
-                        const users: BatchPasswordUser[] = pembina
+                        const users: BatchPasswordUser[] = pembinaList
                           .filter((p) => selectedIds.has(p.id))
                           .map((p) => ({
                             id: p.id,
