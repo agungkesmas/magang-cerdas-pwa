@@ -191,6 +191,16 @@ function ModuleDetailView({
     setAnswers(newAns);
     if (currentQ + 1 < module.quizQuestions.length) {
       setCurrentQ(currentQ + 1);
+      // Save progress in_progress saat user menjawab (anti-lost progress)
+      fetch('/api/survival-kit/progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          module_id: module.id,
+          status: 'in_progress',
+          quiz_passed: false
+        })
+      }).catch(() => {});
     } else {
       setShowResult(true);
       // Calculate score
@@ -286,6 +296,15 @@ function ModuleDetailView({
                   setCurrentQ(0);
                   setAnswers([]);
                   setShowResult(false);
+                  // Refresh progress dari server supaya state sinkron
+                  fetch('/api/survival-kit/progress')
+                    .then(r => r.json())
+                    .then(d => {
+                      if (d.success) {
+                        // Progress sudah in_progress, modul tetap unlocked
+                      }
+                    })
+                    .catch(() => {});
                 }}
                 className="mt-3 inline-flex items-center gap-1 bg-bpjs-yellow text-bpjs-blue-dark font-bold px-4 py-2 rounded-lg"
               >
