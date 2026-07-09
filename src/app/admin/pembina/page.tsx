@@ -19,10 +19,12 @@ import {
   Award,
   Printer,
   Archive,
-  RotateCcw
+  RotateCcw,
+  KeyRound
 } from 'lucide-react';
 import PrintCredentialsModal, { PrintableCredential } from '@/components/admin/PrintCredentialsModal';
 import BatchUploadModal from '@/components/admin/BatchUploadModal';
+import BatchPasswordModal, { BatchPasswordUser } from '@/components/admin/BatchPasswordModal';
 import { Upload } from 'lucide-react';
 
 interface Pembina {
@@ -48,6 +50,7 @@ export default function AdminPembinaPage() {
   const [copied, setCopied] = useState<string | null>(null);
   const [printItems, setPrintItems] = useState<PrintableCredential[] | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchPwdUsers, setBatchPwdUsers] = useState<BatchPasswordUser[] | null>(null);
   const [showBatch, setShowBatch] = useState(false);
   const [tab, setTab] = useState<'active' | 'archived'>('active');
 
@@ -174,6 +177,22 @@ export default function AdminPembinaPage() {
                       className="inline-flex items-center gap-1 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white text-xs font-semibold px-3 py-1.5 rounded-md"
                     >
                       <Printer className="w-3.5 h-3.5" /> Print Terpilih ({selectedCount})
+                    </button>
+                    <button
+                      onClick={() => {
+                        const users: BatchPasswordUser[] = pembina
+                          .filter((p) => selectedIds.has(p.id))
+                          .map((p) => ({
+                            id: p.id,
+                            name: p.name,
+                            identifier: p.email,
+                            identifierLabel: 'Email'
+                          }));
+                        setBatchPwdUsers(users);
+                      }}
+                      className="inline-flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-3 py-1.5 rounded-md"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" /> Ubah Password Massal ({selectedCount})
                     </button>
                     {tab === 'active' ? (
                       <button
@@ -325,6 +344,17 @@ export default function AdminPembinaPage() {
 
       {printItems && (
         <PrintCredentialsModal items={printItems} role="pembina" onClose={() => setPrintItems(null)} />
+      )}
+
+      {batchPwdUsers && (
+        <BatchPasswordModal
+          open={true}
+          users={batchPwdUsers}
+          endpoint="/api/pembina/batch-password"
+          userType="pembina"
+          onClose={() => setBatchPwdUsers(null)}
+          onSuccess={fetchPembina}
+        />
       )}
 
       {showBatch && (

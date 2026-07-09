@@ -20,10 +20,12 @@ import {
   AlertCircle,
   Printer,
   Archive,
-  RotateCcw
+  RotateCcw,
+  KeyRound
 } from 'lucide-react';
 import PrintCredentialsModal, { PrintableCredential } from '@/components/admin/PrintCredentialsModal';
 import BatchUploadModal from '@/components/admin/BatchUploadModal';
+import BatchPasswordModal, { BatchPasswordUser } from '@/components/admin/BatchPasswordModal';
 import { Upload } from 'lucide-react';
 
 interface School {
@@ -57,6 +59,7 @@ export default function AdminBKKTeachersPage() {
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [printItems, setPrintItems] = useState<PrintableCredential[] | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchPwdUsers, setBatchPwdUsers] = useState<BatchPasswordUser[] | null>(null);
   const [showBatch, setShowBatch] = useState(false);
   const [tab, setTab] = useState<'active' | 'archived'>('active');
 
@@ -289,6 +292,22 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
                       className="inline-flex items-center gap-1 bg-bpjs-green hover:bg-bpjs-green-dark text-white text-xs font-semibold px-3 py-1.5 rounded-md"
                     >
                       <Printer className="w-3.5 h-3.5" /> Print Terpilih ({selectedCount})
+                    </button>
+                    <button
+                      onClick={() => {
+                        const users: BatchPasswordUser[] = teachers
+                          .filter((t) => selectedIds.has(t.id))
+                          .map((t) => ({
+                            id: t.id,
+                            name: t.name,
+                            identifier: t.email,
+                            identifierLabel: 'Email'
+                          }));
+                        setBatchPwdUsers(users);
+                      }}
+                      className="inline-flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-3 py-1.5 rounded-md"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" /> Ubah Password Massal ({selectedCount})
                     </button>
                     {tab === 'active' ? (
                       <button
@@ -578,6 +597,17 @@ Selamat membimbing siswa magang di BPJS Ketenagakerjaan Cabang Cirebon!`;
 
       {printItems && (
         <PrintCredentialsModal items={printItems} role="bkk" onClose={() => setPrintItems(null)} />
+      )}
+
+      {batchPwdUsers && (
+        <BatchPasswordModal
+          open={true}
+          users={batchPwdUsers}
+          endpoint="/api/bkk/batch-password"
+          userType="bkk"
+          onClose={() => setBatchPwdUsers(null)}
+          onSuccess={fetchAll}
+        />
       )}
 
       {showBatch && (

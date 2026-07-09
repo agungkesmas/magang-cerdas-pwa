@@ -21,10 +21,12 @@ import {
   Download,
   Printer,
   Archive,
-  RotateCcw
+  RotateCcw,
+  KeyRound
 } from 'lucide-react';
 import PrintCredentialsModal, { PrintableCredential } from '@/components/admin/PrintCredentialsModal';
 import LeaderboardPanel from '@/components/shared/LeaderboardPanel';
+import BatchPasswordModal, { BatchPasswordUser } from '@/components/admin/BatchPasswordModal';
 
 // Predefined tags with colors
 const PREDEFINED_TAGS = [
@@ -96,6 +98,7 @@ export default function AdminInternsPage() {
   const [batchLoading, setBatchLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [printItems, setPrintItems] = useState<PrintableCredential[] | null>(null);
+  const [batchPwdUsers, setBatchPwdUsers] = useState<BatchPasswordUser[] | null>(null);
   const [tab, setTab] = useState<'active' | 'archived'>('active');
   const [tagFilter, setTagFilter] = useState<string>('all');
   const [tagDropdownFor, setTagDropdownFor] = useState<string | null>(null);
@@ -240,6 +243,22 @@ export default function AdminInternsPage() {
                       className="inline-flex items-center gap-1 bg-bpjs-blue hover:bg-bpjs-blue-dark text-white text-xs font-semibold px-3 py-1.5 rounded-md"
                     >
                       <Printer className="w-3.5 h-3.5" /> Cetak Terpilih ({selectedCount})
+                    </button>
+                    <button
+                      onClick={() => {
+                        const users: BatchPasswordUser[] = interns
+                          .filter((i) => selectedIds.has(i.id))
+                          .map((i) => ({
+                            id: i.id,
+                            name: i.name,
+                            identifier: i.username,
+                            identifierLabel: 'Username'
+                          }));
+                        setBatchPwdUsers(users);
+                      }}
+                      className="inline-flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-3 py-1.5 rounded-md"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" /> Ubah Password Massal ({selectedCount})
                     </button>
                     {tab === 'active' ? (
                       <button
@@ -484,6 +503,17 @@ export default function AdminInternsPage() {
 
       {printItems && (
         <PrintCredentialsModal items={printItems} role="peserta" onClose={() => setPrintItems(null)} />
+      )}
+
+      {batchPwdUsers && (
+        <BatchPasswordModal
+          open={true}
+          users={batchPwdUsers}
+          endpoint="/api/interns/batch-password"
+          userType="peserta"
+          onClose={() => setBatchPwdUsers(null)}
+          onSuccess={fetchInterns}
+        />
       )}
 
       {createdCreds && (
