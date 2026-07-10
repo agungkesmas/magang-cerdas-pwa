@@ -11,11 +11,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getInternToken } from '@/lib/auth';
+<<<<<<< HEAD
 import { getWIBTodayRange, getWIBToday } from '@/lib/utils';
 
 const MAX_DAILY_SELF_ACTIVITIES = 2;
 const MAX_DAILY_TOTAL = 3;
 const THIRD_ACTIVITY_COOLDOWN_MS = 3 * 60 * 60 * 1000; // 3 jam
+=======
+import { checkTaskJeda } from '@/lib/task-jeda';
+>>>>>>> 070c804 (feat(jeda): jeda 2 jam antar task (task 1 → task 2) + anti-paralel quest)
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,6 +52,7 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerClient();
 
+<<<<<<< HEAD
     // 0. CEK: Peserta sudah check-in hari ini? (timezone WIB)
     const { start: todayStart, end: todayEnd } = getWIBTodayRange();
     const { data: todayCheckIn } = await supabase
@@ -117,10 +122,26 @@ export async function POST(req: NextRequest) {
     if (totalN >= MAX_DAILY_TOTAL) {
       return NextResponse.json(
         { error: `Batas harian tercapai (maksimal ${MAX_DAILY_TOTAL} aktivitas per hari). Kembali besok.` },
+=======
+    // ============================================================
+    // JEDA 2 JAM: cek apakah task terakhir selesai < 2 jam yang lalu
+    // (quest submit atau self-added activity complete)
+    // ============================================================
+    const jedaCheck = await checkTaskJeda(intern.intern_id, supabase);
+    if (jedaCheck.blocked) {
+      return NextResponse.json(
+        {
+          error: jedaCheck.message,
+          blocked_by_jeda: true,
+          remaining_minutes: jedaCheck.remainingMinutes,
+          tasks_today: jedaCheck.taskCountToday
+        },
+>>>>>>> 070c804 (feat(jeda): jeda 2 jam antar task (task 1 → task 2) + anti-paralel quest)
         { status: 429 }
       );
     }
 
+<<<<<<< HEAD
     // JEDA 3 JAM untuk aktivitas ke-3
     if (totalN >= 2) {
       let latestTime: Date | null = null;
@@ -164,6 +185,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
+=======
+>>>>>>> 070c804 (feat(jeda): jeda 2 jam antar task (task 1 → task 2) + anti-paralel quest)
     const { data, error } = await supabase
       .from('activities')
       .insert({

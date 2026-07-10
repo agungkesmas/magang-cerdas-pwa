@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getInternToken } from '@/lib/auth';
 import { getWIBTodayRange, getWIBToday } from '@/lib/utils';
+import { checkTaskJeda, hasInProgressQuest } from '@/lib/task-jeda';
 
 export async function POST(req: NextRequest) {
   try {
@@ -176,7 +177,7 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
     if (!membership) return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 });
 
-    // 3. Cek apakah sudah pernah start
+    // 3. Cek apakah sudah pernah start quest ini
     const { data: existing } = await supabase
       .from('quest_logs')
       .select('id, status')
@@ -195,6 +196,39 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Anda sudah menyelesaikan quest ini' }, { status: 409 });
       }
       // Untuk recurring (status='completed' legacy atau 'available'/'cancelled'): allow re-start
+    }
+
+    // ============================================================
+    // 3b. ANTI-PARALEL: cek apakah ada quest in_progress lain
+    // (peserta tidak bisa START 2 quest bersamaan)
+    // ============================================================
+    const inProgressCheck = await hasInProgressQuest(intern.intern_id, supabase);
+    if (inProgressCheck.blocked) {
+      return NextResponse.json(
+        { error: inProgressCheck.message, blocked_by_in_progress: true },
+        { status: 409 }
+      );
+    }
+
+    // ============================================================
+    // 3c. JEDA 2 JAM: cek apakah task terakhir selesai < 2 jam yang lalu
+    // (quest submit atau self-added activity complete)
+    // ============================================================
+    const jedaCheck = await checkTaskJeda(intern.intern_id, supabase);
+    if (jedaCheck.blocked) {
+      return NextResponse.json(
+        {
+          error: jedaCheck.message,
+          blocked_by_jeda: true,
+          remaining_minutes: jedaCheck.remainingMinutes,
+          tasks_today: jedaCheck.taskCountToday
+        },
+        { status: 429 }
+      );
+    }
+
+    if (existing) {
+      // Kalau status 'cancelled' atau 'available', allow re-start
       await supabase
         .from('quest_logs')
         .update({ status: 'in_progress', started_at: new Date().toISOString() })
