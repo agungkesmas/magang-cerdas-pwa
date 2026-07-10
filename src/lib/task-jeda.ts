@@ -37,11 +37,12 @@ export async function checkTaskJeda(
   const wibEnd = new Date(`${todayStr}T23:59:59.999+07:00`);
 
   // 1. Get latest quest submission today
+  // NOTE: jangan filter by status='completed' karena recurring quest
+  // bisa di-reset ke 'available' setelah submit. Yang penting submitted_at terisi.
   const { data: latestQuest } = await supabase
     .from('quest_logs')
     .select('submitted_at')
     .eq('intern_id', internId)
-    .eq('status', 'completed')
     .not('submitted_at', 'is', null)
     .gte('submitted_at', wibStart.toISOString())
     .lte('submitted_at', wibEnd.toISOString())
@@ -75,11 +76,12 @@ export async function checkTaskJeda(
     : null;
 
   // 4. Count total tasks completed today
+  // NOTE: count semua quest_logs dengan submitted_at hari ini (regardless of status)
   const { count: questCount } = await supabase
     .from('quest_logs')
     .select('id', { count: 'exact', head: true })
     .eq('intern_id', internId)
-    .eq('status', 'completed')
+    .not('submitted_at', 'is', null)
     .gte('submitted_at', wibStart.toISOString())
     .lte('submitted_at', wibEnd.toISOString());
 
