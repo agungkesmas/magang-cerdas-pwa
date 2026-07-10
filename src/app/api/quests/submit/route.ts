@@ -279,6 +279,32 @@ export async function POST(req: NextRequest) {
     // 6. (REMOVED) System message "✅ X menyelesaikan quest" — info sudah ada di Quest Card "Progress Peserta"
     // Aktivitas tetap tercatat di quest_logs / quest_daily_completions untuk audit trail
 
+    // ============================================================
+    // 6b. NOTIF RINGAN ke pembina grup — non-blocking (opsional review)
+    // Peserta sudah dapat EXP, pembina boleh review kalau perlu (Tolak/Revisi)
+    // Implementasi: system message di chat grup (visible semua anggota)
+    // ============================================================
+    try {
+      const { data: pembinaMembers } = await supabase
+        .from('group_members')
+        .select('user_id')
+        .eq('group_id', group_id)
+        .eq('user_type', 'pembina');
+
+      if (pembinaMembers && pembinaMembers.length > 0) {
+        await supabase.from('chat_messages').insert({
+          group_id,
+          sender_type: 'system',
+          sender_id: intern.intern_id,
+          sender_name: 'Sistem',
+          message_type: 'system',
+          content: `✅ ${intern.name} menyelesaikan quest "${quest.title}" (+${xpAwarded} XP). Pembina bisa review & Tolak/Revisi kalau perlu.`
+        });
+      }
+    } catch (notifErr) {
+      console.warn('[quests/submit] notif pembina failed:', notifErr);
+    }
+
     return NextResponse.json({
       success: true,
       xp_gained: xpAwarded,
