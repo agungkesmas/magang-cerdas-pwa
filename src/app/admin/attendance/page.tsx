@@ -843,7 +843,7 @@ export default function AdminAttendancePage() {
       )}
 
       {/* Approval history — check-in/out di hari libur yang sudah diproses pembina */}
-      {records.filter((r: any) => r.approval_status === 'approved' || r.approval_status === 'rejected').length > 0 && (
+      {records.filter((r: any) => r.is_holiday_checkin && (r.approval_status === 'approved' || r.approval_status === 'rejected')).length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-bpjs-blue" />
@@ -851,7 +851,7 @@ export default function AdminAttendancePage() {
           </h3>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {records
-              .filter((r: any) => r.approval_status === 'approved' || r.approval_status === 'rejected')
+              .filter((r: any) => r.is_holiday_checkin && (r.approval_status === 'approved' || r.approval_status === 'rejected'))
               .slice(0, 15)
               .map((r: any) => (
                 <div key={r.id} className="flex items-center justify-between text-xs p-2 bg-gray-50 rounded-lg">
