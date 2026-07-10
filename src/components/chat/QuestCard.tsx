@@ -31,6 +31,7 @@ interface QuestLogEntry {
   xp_awarded?: number;
   bonus_xp?: number; // sudah dapat bonus atau belum
   bonus_note?: string | null;
+  submission_notes?: string | null;
 }
 
 interface QuestCardProps {
@@ -95,6 +96,41 @@ export default function QuestCard({
   const [bonusNote, setBonusNote] = useState('');
   const [givingBonus, setGivingBonus] = useState(false);
   const [bonusError, setBonusError] = useState('');
+
+  // Reject/Revision modal state
+  const [reviewTarget, setReviewTarget] = useState<{ log: QuestLogEntry; action: 'reject' | 'revision' } | null>(null);
+  const [reviewReason, setReviewReason] = useState('');
+  const [reviewing, setReviewing] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+
+  const handleReview = async () => {
+    if (!reviewTarget) return;
+    if (reviewReason.trim().length < 10) {
+      setReviewError('Alasan minimal 10 karakter untuk feedback ke peserta.');
+      return;
+    }
+    setReviewing(true);
+    setReviewError('');
+    try {
+      const endpoint = reviewTarget.action === 'reject'
+        ? `/api/quests/${reviewTarget.log.id}/reject`
+        : `/api/quests/${reviewTarget.log.id}/request-revision`;
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reviewReason.trim() })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Gagal memproses');
+      setReviewTarget(null);
+      setReviewReason('');
+      onBonusXpGiven?.(); // refresh data
+    } catch (e: any) {
+      setReviewError(e.message);
+    } finally {
+      setReviewing(false);
+    }
+  };
 
   if (!quest) return null;
 
@@ -493,6 +529,33 @@ export default function QuestCard({
                         <Gift className="w-3 h-3" /> +Bonus XP
                       </button>
                     )}
+                    {/* Tombol Tolak & Revisi — untuk pembina/admin, hanya kalau sudah submit */}
+                    {((userRole === 'pembina' || userRole === 'admin') && (isCompletedLog || (isRecurringLog && hasDailyCompletions))) && (
+                      <div className="flex gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => {
+                            setReviewTarget({ log, action: 'revision' });
+                            setReviewReason('');
+                            setReviewError('');
+                          }}
+                          className="flex items-center gap-1 px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-[11px] font-semibold"
+                          title={`Minta ${log.intern_name} revisi submission ini`}
+                        >
+                          <Edit2 className="w-3 h-3" /> Revisi
+                        </button>
+                        <button
+                          onClick={() => {
+                            setReviewTarget({ log, action: 'reject' });
+                            setReviewReason('');
+                            setReviewError('');
+                          }}
+                          className="flex items-center gap-1 px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded text-[11px] font-semibold"
+                          title={`Tolak submission ${log.intern_name} — EXP di-debit, quest final`}
+                        >
+                          <Ban className="w-3 h-3" /> Tolak
+                        </button>
+                      </div>
+                    )}
                     {/* Badge sudah dapat bonus — disabled */}
                     {userRole === 'pembina' && hasBonus && (
                       <span className="text-[10px] text-amber-600 font-medium flex-shrink-0">
@@ -600,6 +663,111 @@ export default function QuestCard({
                 >
                   {givingBonus ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gift className="w-4 h-4" />}
                   Beri +{bonusXp} XP
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== REJECT / REVISION MODAL ===== */}
+      {reviewTarget && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${reviewTarget.action === 'reject' ? 'bg-red-100' : 'bg-blue-100'}`}>
+                  {reviewTarget.action === 'reject'
+                    ? <Ban className="w-5 h-5 text-red-600" />
+                    : <Edit2 className="w-5 h-5 text-blue-600" />}
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900">
+                    {reviewTarget.action === 'reject' ? 'Tolak Submission' : 'Minta Revisi'}
+                  </h3>
+                  <p className="text-xs text-gray-500">Untuk {reviewTarget.log.intern_name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setReviewTarget(null)}
+                className="p-1 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {/* Info banner */}
+              <div className={`p-3 rounded-lg text-xs ${reviewTarget.action === 'reject' ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-blue-50 border border-blue-200 text-blue-700'}`}>
+                {reviewTarget.action === 'reject' ? (
+                  <>
+                    <b>Tolak (final):</b> EXP quest ini akan di-debit balik dari peserta.{' '}
+                    {quest.is_recurring
+                      ? 'Quest bisa diulang besok.'
+                      : 'Quest ini tidak bisa diulang (sudah final).'}
+                  </>
+                ) : (
+                  <>
+                    <b>Minta Revisi:</b> EXP di-hold sementara, quest balik ke <code>in_progress</code>.
+                    Peserta harus kerjakan ulang & submit ulang. EXP dikembalikan setelah submit ulang.
+                    Tidak kena jeda 2 jam (revisi task yang sama).
+                  </>
+                )}
+              </div>
+
+              {/* Show original submission */}
+              {reviewTarget.log.submission_notes && (
+                <div className="p-2 bg-gray-50 rounded text-xs">
+                  <p className="text-gray-500 mb-1">Keterangan asli peserta:</p>
+                  <p className="text-gray-700 italic">"{reviewTarget.log.submission_notes.substring(0, 200)}"</p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Alasan / Feedback ke peserta <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={reviewReason}
+                  onChange={(e) => setReviewReason(e.target.value)}
+                  placeholder={reviewTarget.action === 'reject'
+                    ? "Contoh: Foto bukti tidak sesuai dengan keterangan. Kualitas kerja tidak memenuhi standar..."
+                    : "Contoh: Dokumen belum lengkap, mohon tambahkan bagian X. Format perlu diperbaiki..."}
+                  maxLength={500}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400/40"
+                />
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-[11px] text-gray-500">Minimal 10 karakter</span>
+                  <span className="text-[11px] text-gray-400">{reviewReason.trim().length}/500</span>
+                </div>
+              </div>
+
+              {reviewError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-red-700 text-xs">
+                  {reviewError}
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setReviewTarget(null)}
+                  disabled={reviewing}
+                  className="flex-1 px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleReview}
+                  disabled={reviewing || reviewReason.trim().length < 10}
+                  className={`flex-1 px-3 py-2 text-white font-semibold text-sm rounded-lg disabled:opacity-50 flex items-center justify-center gap-1 ${
+                    reviewTarget.action === 'reject'
+                      ? 'bg-red-500 hover:bg-red-600'
+                      : 'bg-blue-500 hover:bg-blue-600'
+                  }`}
+                >
+                  {reviewing ? <Loader2 className="w-4 h-4 animate-spin" /> : (reviewTarget.action === 'reject' ? <Ban className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />)}
+                  {reviewTarget.action === 'reject' ? 'Tolak Submission' : 'Minta Revisi'}
                 </button>
               </div>
             </div>
