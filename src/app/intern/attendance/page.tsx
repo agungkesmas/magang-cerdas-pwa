@@ -18,7 +18,8 @@ import {
   FileText,
   Send,
   Clock as ClockIcon,
-  XCircle
+  XCircle,
+  Target
 } from 'lucide-react';
 
 // Helper timezone WIB — bug fix: lama pakai UTC, jam 00-07 WIB dianggap hari kemarin
@@ -40,6 +41,9 @@ export default function InternAttendancePage() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [geoStatus, setGeoStatus] = useState<'idle' | 'checking' | 'ok' | 'fail'>('idle');
   const [geoInfo, setGeoInfo] = useState<{ distance: number; within: boolean } | null>(null);
+
+  // Quest reminder popup state — muncul setelah check-in berhasil
+  const [questReminder, setQuestReminder] = useState<{ available: any[]; inProgress: any[] } | null>(null);
 
   // Camera modal state (getUserMedia — kamera depan live)
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -362,6 +366,32 @@ export default function InternAttendancePage() {
         }
       }
 
+      // ============================================================
+      // Quest Reminder Popup — setelah check-in berhasil, fetch active quests
+      // dan tampilkan popup reminder (bukan blocker)
+      // ============================================================
+      if (type === 'check-in') {
+        try {
+          const qRes = await fetch('/api/intern/active-quests');
+          const qData = await qRes.json();
+          if (qData.success) {
+            const quests = qData.quests || [];
+            const available = quests.filter((q: any) => q.status === 'available');
+            const inProgress = quests.filter((q: any) => q.status === 'in_progress');
+            // Tampilkan popup kalau ada quest available atau in_progress
+            if (available.length > 0 || inProgress.length > 0) {
+              // Delay 2.5s supaya confetti & success message sempat tampil dulu
+              setTimeout(() => {
+                setSuccess(null); // tutup success card
+                setQuestReminder({ available, inProgress });
+              }, 2800);
+            }
+          }
+        } catch {
+          // Quest fetch gagal jangan block check-in flow
+        }
+      }
+
       setTimeout(() => setSuccess(null), 5000);
     } catch (err: any) {
       setError(err.message);
@@ -590,6 +620,104 @@ export default function InternAttendancePage() {
             <Zap className="w-4 h-4" /> +{success.exp} EXP
           </div>
           <p className="text-xs text-white/50 mt-2">Total EXP: {success.total}</p>
+        </div>
+      )}
+
+      {/* ============================================================
+          Quest Reminder Popup — muncul setelah check-in berhasil
+          Bukan blocker — peserta bisa skip. Reminder visual saja.
+          ============================================================ */}
+      {questReminder && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setQuestReminder(null)}
+        >
+          <div
+            className="glass-card max-w-md w-full p-5 bg-gradient-to-br from-purple-600/20 to-bpjs-blue/20 border-purple-400/30"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center mb-4">
+              <div className="w-14 h-14 rounded-full bg-bpjs-green/20 flex items-center justify-center mx-auto mb-3">
+                <CheckCircle2 className="w-8 h-8 text-bpjs-green" />
+              </div>
+              <h3 className="text-lg font-bold text-white">Check-in Berhasil!</h3>
+              <p className="text-sm text-white/60 mt-1">
+                {questReminder.available.length + questReminder.inProgress.length > 0
+                  ? 'Ada quest yang bisa kamu kerjakan hari ini:'
+                  : 'Hari ini belum ada quest. Cek lagi nanti!'}
+              </p>
+            </div>
+
+            {/* Available quests */}
+            {questReminder.available.length > 0 && (
+              <div className="mb-3">
+                <p className="text-xs font-semibold text-bpjs-yellow mb-2 flex items-center gap-1">
+                  <Target className="w-3 h-3" /> {questReminder.available.length} Quest Tersedia
+                </p>
+                <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                  {questReminder.available.slice(0, 4).map((q: any) => (
+                    <a
+                      key={q.id}
+                      href="/intern/activities"
+                      className="block p-2.5 bg-white/5 hover:bg-white/10 border border-purple-400/20 rounded-lg transition-colors"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white truncate">{q.title}</p>
+                          <span className="text-[10px] px-1.5 py-0.5 bg-bpjs-yellow/20 text-bpjs-yellow rounded-full font-bold">
+                            +{q.xp_reward} XP
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-purple-300 font-bold flex-shrink-0">START →</span>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* In-progress quests (warning: harus selesai sebelum check-out) */}
+            {questReminder.inProgress.length > 0 && (
+              <div className="mb-3">
+                <p className="text-xs font-semibold text-amber-400 mb-2 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" /> {questReminder.inProgress.length} Quest Sedang Dikerjakan
+                </p>
+                <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                  {questReminder.inProgress.slice(0, 3).map((q: any) => (
+                    <a
+                      key={q.id}
+                      href={`/intern/chat/${q.group_id}`}
+                      className="block p-2.5 bg-amber-500/5 hover:bg-amber-500/10 border border-amber-400/30 rounded-lg transition-colors"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white truncate">{q.title}</p>
+                          <span className="text-[10px] text-amber-300">Selesaikan sebelum check-out</span>
+                        </div>
+                        <span className="text-[10px] text-bpjs-green font-bold flex-shrink-0">SUBMIT →</span>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => setQuestReminder(null)}
+                className="flex-1 px-4 py-2.5 border border-white/20 text-white/70 text-sm font-medium rounded-lg hover:bg-white/5"
+              >
+                Lihat Nanti
+              </button>
+              <a
+                href="/intern/activities"
+                className="flex-1 px-4 py-2.5 bg-bpjs-yellow text-bpjs-blue-dark text-sm font-bold rounded-lg text-center"
+              >
+                Mulai Quest →
+              </a>
+            </div>
+          </div>
         </div>
       )}
 

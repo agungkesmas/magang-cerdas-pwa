@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     const intern = await getInternToken();
     if (!intern) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { quest_id, group_id, submission_notes } = await req.json();
+    const { quest_id, group_id, submission_notes, submission_photo_url } = await req.json();
     if (!quest_id) return NextResponse.json({ error: 'quest_id wajib diisi' }, { status: 400 });
     if (!group_id) return NextResponse.json({ error: 'group_id wajib diisi' }, { status: 400 });
 
@@ -28,6 +28,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
+<<<<<<< HEAD
+=======
+    // VALIDASI: photo_url opsional, kalau ada harus URL valid
+    let photoUrl: string | null = null;
+    if (submission_photo_url) {
+      const urlStr = String(submission_photo_url).trim();
+      if (urlStr.length > 1000) {
+        return NextResponse.json({ error: 'URL foto terlalu panjang' }, { status: 400 });
+      }
+      try {
+        new URL(urlStr);
+        photoUrl = urlStr;
+      } catch {
+        return NextResponse.json({ error: 'URL foto tidak valid' }, { status: 400 });
+      }
+    }
+
+>>>>>>> 29295fe (feat(dashboard): Quick Quest Card di home + check-in success popup reminder)
     const supabase = createServerClient();
 
     // 0. CEK: Peserta sudah check-in hari ini? (timezone WIB)
@@ -82,6 +100,7 @@ export async function POST(req: NextRequest) {
     }
 
     const xpAwarded = quest.xp_reward || 20;
+<<<<<<< HEAD
     const todayStr = getWIBToday();
 
     // 3b. Untuk quest RECURRING: cek race condition + limit + jeda 3 jam (timezone WIB)
@@ -248,6 +267,19 @@ export async function POST(req: NextRequest) {
         console.error('[quests/submit] upsert activity_completions error:', upsertErr);
       }
     }
+=======
+    const { error: uErr } = await supabase
+      .from('quest_logs')
+      .update({
+        status: 'completed',
+        submitted_at: new Date().toISOString(),
+        submission_notes: trimmedNotes,
+        submission_photo_url: photoUrl,
+        xp_awarded: xpAwarded
+      })
+      .eq('id', log.id);
+    if (uErr) return NextResponse.json({ error: uErr.message }, { status: 500 });
+>>>>>>> 29295fe (feat(dashboard): Quick Quest Card di home + check-in success popup reminder)
 
     // 5. Grant XP ke intern
     const { data: internData } = await supabase
@@ -258,8 +290,35 @@ export async function POST(req: NextRequest) {
     const newTotalExp = (internData?.total_exp || 0) + xpAwarded;
     await supabase.from('interns').update({ total_exp: newTotalExp }).eq('id', intern.intern_id);
 
+<<<<<<< HEAD
     // 6. (REMOVED) System message "✅ X menyelesaikan quest" — info sudah ada di Quest Card "Progress Peserta"
     // Aktivitas tetap tercatat di quest_logs / quest_daily_completions untuk audit trail
+=======
+    // 5b. Insert ke activity_completions supaya muncul di activities history peserta
+    // Pakai upsert karena UNIQUE(activity_id, intern_id) — kalau sudah ada, update notes
+    const { error: upsertErr } = await supabase
+      .from('activity_completions')
+      .upsert({
+        activity_id: quest_id,
+        intern_id: intern.intern_id,
+        completion_notes: trimmedNotes
+      }, { onConflict: 'activity_id,intern_id' });
+    if (upsertErr) {
+      console.error('[quests/submit] upsert activity_completions error:', upsertErr);
+      // Tetap lanjut — Quest sudah completed di quest_logs, XP sudah masuk
+      // History akan tetap muncul via query quest_logs (bukan via activity_completions)
+    }
+
+    // 6. Insert system message di chat
+    await supabase.from('chat_messages').insert({
+      group_id,
+      sender_type: 'system',
+      sender_id: intern.intern_id,
+      sender_name: 'Sistem',
+      message_type: 'system',
+      content: `✅ ${intern.name} menyelesaikan quest "${quest.title}" (+${xpAwarded} XP)`
+    });
+>>>>>>> 29295fe (feat(dashboard): Quick Quest Card di home + check-in success popup reminder)
 
     return NextResponse.json({
       success: true,

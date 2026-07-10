@@ -14,7 +14,10 @@ import {
   Star,
   BookOpen,
   ArrowRight,
-  Calendar
+  Calendar,
+  Target,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 import { calculateTierProgress } from '@/lib/utils';
 
@@ -41,16 +44,64 @@ interface DashboardData {
   nudges: any[];
 }
 
+interface ActiveQuest {
+  id: string;
+  title: string;
+  description: string;
+  xp_reward: number;
+  is_recurring: boolean;
+  due_date: string | null;
+  group_id: string;
+  group_name: string | null;
+  status: 'available' | 'in_progress' | 'completed_today' | 'completed_permanent' | 'overdue';
+  started_at: string | null;
+  today_xp: number | null;
+}
+
 export default function InternHomePage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeQuests, setActiveQuests] = useState<ActiveQuest[]>([]);
+  const [questActionLoading, setQuestActionLoading] = useState<string | null>(null);
+  const [questError, setQuestError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/dashboard/intern')
       .then((r) => r.json())
       .then((d) => d.success && setData(d))
       .finally(() => setLoading(false));
+    // Fetch active quests untuk Quick Quest Card
+    fetch('/api/intern/active-quests')
+      .then((r) => r.json())
+      .then((d) => d.success && setActiveQuests(d.quests || []))
+      .catch(() => {});
   }, []);
+
+  const refreshQuests = async () => {
+    const r = await fetch('/api/intern/active-quests');
+    const d = await r.json();
+    if (d.success) setActiveQuests(d.quests || []);
+  };
+
+  const handleQuickStart = async (questId: string, groupId: string) => {
+    setQuestActionLoading(questId);
+    setQuestError(null);
+    try {
+      const res = await fetch('/api/quests/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quest_id: questId, group_id: groupId })
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      await refreshQuests();
+    } catch (e: any) {
+      setQuestError(e.message);
+      setTimeout(() => setQuestError(null), 5000);
+    } finally {
+      setQuestActionLoading(null);
+    }
+  };
 
   if (loading || !data) {
     return (
@@ -67,6 +118,12 @@ export default function InternHomePage() {
 
   // My rank in leaderboard
   const myRank = data.leaderboard.findIndex((l) => l.id === profile.id) + 1;
+
+  // Quest stats untuk Quick Quest Card
+  const questAvailable = activeQuests.filter((q) => q.status === 'available');
+  const questInProgress = activeQuests.filter((q) => q.status === 'in_progress');
+  const questCompletedToday = activeQuests.filter((q) => q.status === 'completed_today');
+  const hasPendingQuests = questInProgress.length > 0;
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -200,6 +257,124 @@ export default function InternHomePage() {
             <div className="text-xs text-white/50">{checkedIn ? '+20 EXP hari ini' : 'Ayo check-in!'}</div>
           </div>
         </div>
+      </div>
+
+      {/* Quick Quest Card — tampilkan quest hari ini dengan tombol START cepat */}
+      <div className="glass-card p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Target className="w-4 h-4 text-purple-400" />
+            <span className="text-sm font-semibold text-white">Quest Hari Ini</span>
+          </div>
+          <Link href="/intern/activities" className="text-xs text-bpjs-yellow hover:underline">
+            Lihat Semua →
+          </Link>
+        </div>
+
+        {questError && (
+          <div className="mb-2 text-xs text-red-400 bg-red-500/10 border border-red-400/30 rounded p-2">
+            {questError}
+          </div>
+        )}
+
+        {/* Summary chips */}
+        <div className="flex items-center gap-2 flex-wrap mb-3 text-xs">
+          <span className="px-2 py-1 bg-purple-500/20 text-purple-300 rounded-full font-medium">
+            {questAvailable.length} tersedia
+          </span>
+          {questInProgress.length > 0 && (
+            <span className="px-2 py-1 bg-amber-500/20 text-amber-300 rounded-full font-medium">
+              {questInProgress.length} sedang dikerjakan
+            </span>
+          )}
+          {questCompletedToday.length > 0 && (
+            <span className="px-2 py-1 bg-bpjs-green/20 text-bpjs-green rounded-full font-medium">
+              ✓ {questCompletedToday.length} selesai
+            </span>
+          )}
+          {activeQuests.length === 0 && (
+            <span className="text-white/40">Belum ada quest hari ini</span>
+          )}
+        </div>
+
+        {/* Warning: ada quest in_progress (gate check-out) */}
+        {hasPendingQuests && checkedIn && !checkedOut && (
+          <div className="mb-3 p-2 bg-amber-500/10 border border-amber-400/30 rounded-lg flex items-start gap-2">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-200">
+              Kamu punya {questInProgress.length} quest yang belum diselesaikan. Selesaikan sebelum check-out sore.
+            </p>
+          </div>
+        )}
+
+        {/* List quest (max 3) */}
+        <div className="space-y-2">
+          {activeQuests.slice(0, 3).map((q) => (
+            <div
+              key={q.id}
+              className={`p-3 rounded-lg border ${
+                q.status === 'in_progress'
+                  ? 'border-amber-400/30 bg-amber-500/5'
+                  : q.status === 'completed_today'
+                  ? 'border-bpjs-green/30 bg-bpjs-green/5'
+                  : 'border-white/10 bg-white/5'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">{q.title}</p>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <span className="text-[10px] px-1.5 py-0.5 bg-bpjs-yellow/20 text-bpjs-yellow rounded-full font-bold">
+                      +{q.xp_reward} XP
+                    </span>
+                    {q.status === 'in_progress' && (
+                      <span className="text-[10px] px-1.5 py-0.5 bg-amber-500/30 text-amber-200 rounded-full">
+                        ⏳ Sedang dikerjakan
+                      </span>
+                    )}
+                    {q.status === 'completed_today' && (
+                      <span className="text-[10px] px-1.5 py-0.5 bg-bpjs-green/30 text-bpjs-green rounded-full">
+                        ✓ Selesai
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {/* Action button */}
+                {q.status === 'available' && (
+                  <button
+                    onClick={() => handleQuickStart(q.id, q.group_id)}
+                    disabled={questActionLoading === q.id}
+                    className="text-xs px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-md disabled:opacity-50 flex items-center gap-1 flex-shrink-0"
+                  >
+                    {questActionLoading === q.id ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Target className="w-3 h-3" />
+                    )}
+                    START
+                  </button>
+                )}
+                {q.status === 'in_progress' && (
+                  <Link
+                    href={`/intern/chat/${q.group_id}`}
+                    className="text-xs px-3 py-1.5 bg-bpjs-green hover:bg-bpjs-green-dark text-white font-bold rounded-md flex items-center gap-1 flex-shrink-0"
+                  >
+                    <CheckCircle2 className="w-3 h-3" /> Submit
+                  </Link>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {activeQuests.length > 3 && (
+          <Link
+            href="/intern/activities"
+            className="block text-center text-xs text-white/50 hover:text-bpjs-yellow mt-2"
+          >
+            + {activeQuests.length - 3} quest lagi →
+          </Link>
+        )}
       </div>
 
       {/* Survival Kit quick access */}
